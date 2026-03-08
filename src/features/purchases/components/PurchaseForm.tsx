@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,6 @@ import {
 } from "@/components/ui/select";
 import {
   purchaseSchema,
-  PurchaseInput,
   Purchase,
 } from "@/features/purchases/schemas";
 import {
@@ -38,6 +38,7 @@ import {
 interface PurchaseFormProps {
   initialData?: Purchase;
 }
+type PurchaseFormValues = z.input<typeof purchaseSchema>;
 
 const countryOptions = [
   { label: "India (+91)", code: "+91" },
@@ -81,9 +82,26 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
   const [countryCode, setCountryCode] = useState(initialMobile.countryCode);
   const [mobileNumber, setMobileNumber] = useState(initialMobile.mobile);
 
-  const form = useForm<PurchaseInput>({
+  const form = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData
+      ? {
+          id: initialData.id,
+          date: initialData.date,
+          name: initialData.name,
+          place: initialData.place,
+          mob: initialData.mob,
+          bags: initialData.bags,
+          weight: initialData.weight,
+          less_percent: initialData.less_percent,
+          rate: initialData.rate,
+          bag_less: initialData.bag_less,
+          add_amount: initialData.add_amount,
+          cash_paid: initialData.cash_paid,
+          upi_paid: initialData.upi_paid,
+          source: initialData.source,
+        }
+      : {
       date: new Date().toISOString().split("T")[0],
       name: "",
       place: "",
@@ -122,12 +140,12 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
     (upiPaid || 0);
   const bagAvg = (bags || 0) > 0 ? netWeight / (bags || 1) : 0;
 
-  async function onSubmit(values: PurchaseInput) {
+  async function onSubmit(values: PurchaseFormValues) {
     setIsLoading(true);
     try {
       const digits = mobileNumber.replace(/\D/g, "");
       const normalizedMob = digits ? `${countryCode}${digits}` : "";
-      const payload: PurchaseInput = { ...values, mob: normalizedMob };
+      const payload = purchaseSchema.parse({ ...values, mob: normalizedMob });
 
       if (isEditing && initialData?.id) {
         await updatePurchaseAction(initialData.id, payload);
@@ -205,7 +223,7 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                       <div className="flex gap-2">
                         <Select
                           value={countryCode}
-                          onValueChange={(value) => setCountryCode(value)}
+                          onValueChange={(value) => setCountryCode(value ?? "+91")}
                         >
                           <SelectTrigger className="w-[80px]">
                             <SelectValue />

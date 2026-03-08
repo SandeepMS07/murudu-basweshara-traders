@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { addDays, format, parseISO } from "date-fns";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +20,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { billSchema, BillInput, Bill } from "@/features/bills/schemas";
+import { billSchema, Bill } from "@/features/bills/schemas";
 import { createBillAction, updateBillAction } from "@/app/bills/actions";
 
 interface BillFormProps {
   initialData?: Bill;
 }
+
+type BillFormValues = z.input<typeof billSchema>;
 
 export function BillForm({ initialData }: BillFormProps) {
   const router = useRouter();
@@ -34,9 +37,19 @@ export function BillForm({ initialData }: BillFormProps) {
   const isGenerateMode = isEditing && searchParams.get("mode") === "generate";
   const [isGenerated, setIsGenerated] = useState(!isGenerateMode);
 
-  const form = useForm<BillInput>({
+  const form = useForm<BillFormValues>({
     resolver: zodResolver(billSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData
+      ? {
+          id: initialData.id,
+          bill_date: initialData.bill_date,
+          net_weight: initialData.net_weight,
+          rate: initialData.rate,
+          freight: initialData.freight,
+          payment_term_days: initialData.payment_term_days,
+          source: initialData.source,
+        }
+      : {
       bill_date: new Date().toISOString().split("T")[0],
       net_weight: 0,
       rate: 0,
@@ -52,17 +65,21 @@ export function BillForm({ initialData }: BillFormProps) {
   const rate = watch("rate");
   const freight = watch("freight");
   const paymentTermDays = watch("payment_term_days");
+  const safeNetWeight = netWeight ?? 0;
+  const safeRate = rate ?? 0;
+  const safeFreight = freight ?? 0;
+  const safePaymentTermDays = paymentTermDays ?? 0;
 
   // Computed preview values
-  const amount = (netWeight || 0) * (rate || 0);
-  const finalAmount = amount - (freight || 0);
+  const amount = safeNetWeight * safeRate;
+  const finalAmount = amount - safeFreight;
 
   let dueDateString = "Invalid Date";
   let printDate = billDate;
   if (billDate) {
     try {
       const parsedDate = parseISO(billDate);
-      dueDateString = format(addDays(parsedDate, paymentTermDays || 0), "yyyy-MM-dd");
+      dueDateString = format(addDays(parsedDate, safePaymentTermDays), "yyyy-MM-dd");
       printDate = format(parsedDate, "dd/MM/yyyy");
     } catch {
       dueDateString = "Invalid Date";
@@ -70,11 +87,12 @@ export function BillForm({ initialData }: BillFormProps) {
     }
   }
 
-  async function onSubmit(values: BillInput) {
+  async function onSubmit(values: BillFormValues) {
     setIsLoading(true);
     try {
+      const payload = billSchema.parse(values);
       if (isEditing && initialData?.id) {
-        await updateBillAction(initialData.id, values);
+        await updateBillAction(initialData.id, payload);
         if (isGenerateMode && !isGenerated) {
           toast.success("Bill Generated");
           setIsGenerated(true);
@@ -85,7 +103,7 @@ export function BillForm({ initialData }: BillFormProps) {
           router.refresh();
         }
       } else {
-        await createBillAction(values);
+        await createBillAction(payload);
         toast.success("Bill Created");
         router.push("/bills");
         router.refresh();
@@ -180,10 +198,10 @@ export function BillForm({ initialData }: BillFormProps) {
             <table className="bill-print-table">
               <tbody>
                 <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-                <tr><td>WEIGHT</td><td>{netWeight.toFixed(2)}</td></tr>
-                <tr><td>LESS</td><td>{freight.toFixed(2)}</td></tr>
-                <tr><td>NET WEIGHT</td><td>{netWeight.toFixed(2)}</td></tr>
-                <tr><td>RATE</td><td>{rate.toFixed(2)}</td></tr>
+                <tr><td>WEIGHT</td><td>{safeNetWeight.toFixed(2)}</td></tr>
+                <tr><td>LESS</td><td>{safeFreight.toFixed(2)}</td></tr>
+                <tr><td>NET WEIGHT</td><td>{safeNetWeight.toFixed(2)}</td></tr>
+                <tr><td>RATE</td><td>{safeRate.toFixed(2)}</td></tr>
                 <tr><td>AMOUNT</td><td>{amount.toFixed(2)}</td></tr>
                 <tr><td>TOTAL</td><td>{finalAmount.toFixed(2)}</td></tr>
               </tbody>
