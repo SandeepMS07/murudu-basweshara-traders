@@ -127,3 +127,361 @@
     @apply font-sans;
   }
 }
+
+.bill-print-root {
+  display: none;
+}
+
+.bill-print-root.bill-print-preview {
+  display: none;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 0;
+  padding: 18px;
+  align-items: start;
+  background: #d9dde3;
+  color: #1f2535;
+  font-family: "Segoe UI", "Avenir Next", sans-serif;
+  min-height: 100vh;
+}
+
+.bill-print-root.bill-print-preview.bill-print-inline-preview {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0;
+  min-height: auto;
+  background: transparent;
+}
+
+.bill-print-inline-preview .bill-print-copy {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: 126mm;
+  box-shadow: 0 8px 20px rgba(43, 50, 66, 0.12);
+}
+
+.bill-print-inline-preview .bill-print-copy:first-of-type,
+.bill-print-inline-preview .bill-print-copy:last-of-type {
+  transform: none !important;
+}
+
+.bill-print-copy {
+  border: 1px solid #d9cfb7;
+  display: flex;
+  flex-direction: column;
+  height: 126mm;
+  background: #fffdf3;
+  overflow: hidden;
+  box-shadow: 0 18px 30px rgba(43, 50, 66, 0.18);
+}
+
+.bill-print-preview .bill-print-copy:first-of-type {
+  z-index: 2;
+}
+
+.bill-print-preview .bill-print-copy:last-of-type {
+  transform: translate(-44px, 92px) scale(0.96);
+  transform-origin: top left;
+  z-index: 1;
+}
+
+.bill-print-header {
+  border-bottom: 1px solid #e6dcc7;
+  padding: 14px 16px 11px;
+}
+
+.bill-print-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bill-print-logo-mark {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #2f577f;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.bill-print-title {
+  font-size: 25px;
+  font-weight: 900;
+  color: #2f577f;
+  letter-spacing: 0.2px;
+  line-height: 1;
+}
+
+.bill-print-info {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  border-bottom: 1px solid #e2d9c4;
+  min-height: 27mm;
+  background: #fffdf4;
+}
+
+.bill-print-info-left {
+  padding: 8px 10px 6px;
+}
+
+.bill-print-yard {
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 3px;
+  color: #121826;
+}
+
+.bill-print-info-left div {
+  font-size: 9.5px;
+  line-height: 1.3;
+  color: #2f3750;
+}
+
+.bill-print-info-right {
+  padding: 8px 10px 0;
+}
+
+.bill-print-kv {
+  display: grid;
+  grid-template-columns: 14px 33% 53%;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.bill-print-icon {
+  color: #c3a45b;
+  font-size: 7px;
+  transform: translateY(-0.5px);
+}
+
+.bill-print-icon-empty {
+  width: 8px;
+}
+
+.bill-print-empty-label {
+  color: transparent !important;
+}
+
+.bill-print-kv span {
+  color: #9f7531;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.bill-print-kv strong {
+  font-size: 8.8px;
+  color: #1f2435;
+  font-weight: 800;
+}
+
+.bill-print-main-table {
+  width: 100%;
+  border-collapse: collapse;
+  flex: 1;
+}
+
+.bill-print-main-table th,
+.bill-print-main-table td {
+  border: 1px solid #d7cfbb;
+  height: 18px;
+  padding: 1px 8px;
+  font-size: 8.8px;
+  color: #1f2435;
+}
+
+.bill-print-main-table th {
+  text-align: left;
+  font-weight: 900;
+  background: #d8e9f3;
+  color: #161b2b;
+  text-transform: uppercase;
+}
+
+.bill-print-main-table tr:nth-child(odd) td:first-child {
+  background: #e7f2f8;
+}
+
+.bill-print-main-table th:last-child,
+.bill-print-main-table td:last-child {
+  text-align: right;
+  width: 32%;
+  font-variant-numeric: tabular-nums;
+  background: #faf7ea;
+}
+
+.bill-print-key-row td:last-child {
+  background: #f2ecda;
+  font-weight: 900;
+}
+
+.bill-print-note-row {
+  display: grid;
+  grid-template-columns: 68% 32%;
+  border-top: 1px solid #d7cfbb;
+}
+
+.bill-print-note-left,
+.bill-print-note-right {
+  min-height: 34px;
+  border-right: 1px solid #d7cfbb;
+  border-bottom: 1px solid #d7cfbb;
+  padding: 4px 8px;
+  font-size: 7.6px;
+  line-height: 1.25;
+  color: #2c3245;
+  background: #fffef8;
+}
+
+.bill-print-note-right {
+  border-right: 0;
+}
+
+.bill-print-note-icons {
+  float: right;
+  color: #9f8a58;
+  font-weight: 700;
+}
+
+.bill-print-sign-row {
+  display: grid;
+  grid-template-columns: 54% 46%;
+  border-bottom: 1px solid #d7cfbb;
+}
+
+.bill-print-sign {
+  border-right: 1px solid #d7cfbb;
+  min-height: 68px;
+  position: relative;
+  font-size: 12px;
+  text-align: center;
+  font-weight: 900;
+  padding: 6px 10px;
+  color: #1c2435;
+  background: #fffef8;
+}
+
+.bill-print-sign-title {
+  font-size: 11px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.bill-print-sign-line {
+  width: 72%;
+  margin: 0 auto;
+  border-top: 1px solid #a3a3a3;
+}
+
+.bill-print-sign-caption {
+  margin-top: 4px;
+  font-size: 6.6px;
+  color: #4f5669;
+}
+
+.bill-print-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bill-print-summary-table td {
+  border: 1px solid #d7cfbb;
+  height: 17px;
+  padding: 2px 8px;
+  font-size: 8.8px;
+  color: #1f2435;
+}
+
+.bill-print-summary-table td:first-child {
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #2f3e57;
+  background: #dceaf3;
+}
+
+.bill-print-summary-table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bill-print-total-row {
+  display: grid;
+  grid-template-columns: 54% 17% 29%;
+}
+
+.bill-print-thanks,
+.bill-print-total-label,
+.bill-print-total-value {
+  border-top: 1px solid #c9bb97;
+  border-right: 1px solid #c9bb97;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.bill-print-thanks {
+  font-size: 8.8px;
+  letter-spacing: 0.2px;
+  color: #161b2b;
+  background: #fffef8;
+}
+
+.bill-print-total-label {
+  background: #f1ead3;
+  font-size: 11px;
+  color: #675735;
+}
+
+.bill-print-total-value {
+  border-right: 0;
+  background: #fffdfa;
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  color: #0e1322;
+  letter-spacing: 0.3px;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .bill-print-root,
+  .bill-print-root * {
+    visibility: visible !important;
+  }
+
+  .bill-print-root {
+    position: fixed;
+    inset: 0;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+    padding: 4mm;
+    align-items: start;
+    background: #f4f0e5;
+    color: #000;
+  }
+
+  .bill-print-copy {
+    height: 126mm;
+    box-shadow: none;
+    transform: none !important;
+  }
+}
