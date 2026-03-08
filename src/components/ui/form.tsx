@@ -95,8 +95,14 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof Label>) 
 function FormControl({ ...props }: React.ComponentProps<"div">) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
+  type ControlChildProps = {
+    id?: string
+    "aria-describedby"?: string
+    "aria-invalid"?: boolean
+  }
+
   const child = React.Children.only(props.children)
-  if (!React.isValidElement(child)) {
+  if (!React.isValidElement<ControlChildProps>(child)) {
     return null
   }
 
