@@ -13,8 +13,8 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
     <DataTable
       columns={purchaseColumns}
       data={data}
-      searchKey="date"
-      searchPlaceholder="Filter by date..."
+      searchKey="name"
+      searchPlaceholder="Filter by name..."
     />
   );
 }
