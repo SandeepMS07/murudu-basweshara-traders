@@ -58,9 +58,26 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
     startTransition(async () => {
       try {
         const bill = await generateBillFromPurchaseAction(purchase.id);
+        const printUrl = `/bills/${bill.id}/print?pid=${purchase.id}`;
+
+        // Keep user on the same page and print using a hidden iframe.
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        iframe.style.opacity = "0";
+        iframe.style.pointerEvents = "none";
+        iframe.src = printUrl;
+        document.body.appendChild(iframe);
+
+        window.setTimeout(() => {
+          iframe.remove();
+        }, 60000);
+
         toast.success("Bill generated from purchase");
         setGenerateOpen(false);
-        router.push(`/bills/${bill.id}/print?pid=${purchase.id}`);
+        router.refresh();
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Failed to generate bill";
