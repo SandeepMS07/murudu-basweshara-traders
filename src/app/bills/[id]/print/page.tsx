@@ -67,7 +67,7 @@ export default async function BillPrintPage({
 
   return (
     <main className={rootClassName}>
-      {!previewMode ? <BillPrintAuto redirectTo="/bills" /> : null}
+      {!previewMode ? <BillPrintAuto redirectTo="/purchases" /> : null}
       {copies.map((copy) => (
         <section className="bill-print-copy" key={copy}>
           <header className="bill-print-header">

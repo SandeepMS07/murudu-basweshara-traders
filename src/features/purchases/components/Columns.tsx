@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
 import {
   deletePurchaseAction,
   generateBillFromPurchaseAction,
@@ -257,12 +258,20 @@ export const purchaseColumns: ColumnDef<Purchase>[] = [
     cell: ({ row }) => row.index + 1,
   },
   {
-    accessorKey: "date",
-    header: "DATE",
-  },
-  {
     accessorKey: "name",
     header: "NAME",
+  },
+  {
+    accessorKey: "date",
+    header: "DATE",
+    cell: ({ row }) => {
+      const rawDate = String(row.getValue("date"));
+      try {
+        return format(parseISO(rawDate), "dd-MM-yyyy");
+      } catch {
+        return rawDate;
+      }
+    },
   },
   {
     accessorKey: "place",

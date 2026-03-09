@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShoppingCart, FileText, Settings, LogOut, Loader2 } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, LogOut, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,7 +10,6 @@ import { useState } from "react";
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
-  { name: "Bills", href: "/bills", icon: FileText },
 ];
 
 export function Sidebar() {
