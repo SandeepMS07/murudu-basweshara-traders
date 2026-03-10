@@ -22,7 +22,12 @@ const navItems = [
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  className?: string;
+  onNavigate?: () => void;
+};
+
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -66,7 +71,13 @@ export function Sidebar() {
   }, []);
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r bg-card px-4 py-6 text-card-foreground">
+    <div
+      className={cn(
+        "flex w-full flex-col border-b bg-card px-4 py-6 text-card-foreground",
+        "lg:border-b-0 lg:border-r lg:px-4 lg:py-6 lg:h-screen",
+        className
+      )}
+    >
       <div className="flex items-center gap-2 px-2 pb-8">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <LayersIcon className="h-5 w-5" />
@@ -83,6 +94,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
                 isActive
