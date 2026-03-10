@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { createPurchaseColumns } from "@/features/purchases/components/Columns";
@@ -17,6 +17,17 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
   const [paymentMethods, setPaymentMethods] = useState<
     Record<string, PaymentMethod>
   >({});
+
+  useEffect(() => {
+    setPaymentMethods(
+      Object.fromEntries(
+        data.map((purchase) => [
+          purchase.id,
+          purchase.payment_through ?? "none",
+        ])
+      ) as Record<string, PaymentMethod>
+    );
+  }, [data]);
 
   const handlePaymentMethodChange = useCallback(
     (purchaseId: string, method: PaymentMethod) => {
