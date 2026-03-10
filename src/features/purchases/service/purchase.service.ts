@@ -1,4 +1,8 @@
-import { Purchase, PurchaseInput } from "../schemas";
+import {
+  PaymentMethod,
+  Purchase,
+  PurchaseInput,
+} from "../schemas";
 import { calculatePurchase } from "../utils/calculations";
 import { requireAuth } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -17,6 +21,7 @@ type PurchaseRow = {
   add_amount: number | string;
   cash_paid: number | string;
   upi_paid: number | string;
+  payment_through: PaymentMethod | null;
   source: "manual" | "app";
   less_weight: number | string;
   net_weight: number | string;
@@ -49,6 +54,7 @@ function toPurchase(row: PurchaseRow): Purchase {
     add_amount: n(row.add_amount),
     cash_paid: n(row.cash_paid),
     upi_paid: n(row.upi_paid),
+    payment_through: (row.payment_through ?? "none") as PaymentMethod,
     source: row.source,
     less_weight: n(row.less_weight),
     net_weight: n(row.net_weight),
@@ -103,6 +109,7 @@ export async function createPurchase(input: PurchaseInput): Promise<Purchase> {
     add_amount: calculated.add_amount,
     cash_paid: calculated.cash_paid,
     upi_paid: calculated.upi_paid,
+    payment_through: calculated.payment_through,
     source: calculated.source,
     less_weight: calculated.less_weight,
     net_weight: calculated.net_weight,
@@ -150,6 +157,7 @@ export async function updatePurchase(id: string, input: PurchaseInput): Promise<
     add_amount: calculated.add_amount,
     cash_paid: calculated.cash_paid,
     upi_paid: calculated.upi_paid,
+    payment_through: calculated.payment_through,
     source: calculated.source,
     less_weight: calculated.less_weight,
     net_weight: calculated.net_weight,
@@ -167,6 +175,32 @@ export async function updatePurchase(id: string, input: PurchaseInput): Promise<
 
   if (error) {
     throw new Error(`Failed to update purchase: ${error.message}`);
+  }
+
+  return toPurchase(data as PurchaseRow);
+}
+
+export async function updatePurchasePaymentThrough(
+  id: string,
+  payment_through: PaymentMethod
+): Promise<Purchase> {
+  const user = await requireAuth();
+  if (user.role !== "admin" && user.role !== "operator") {
+    throw new Error("Forbidden");
+  }
+
+  const { data, error } = await supabaseServer
+    .from("purchases")
+    .update({
+      payment_through,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update payment method: ${error.message}`);
   }
 
   return toPurchase(data as PurchaseRow);

@@ -1,7 +1,10 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { Purchase } from "@/features/purchases/schemas";
+import {
+  PaymentMethod,
+  Purchase,
+} from "@/features/purchases/schemas";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, ReceiptText, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -251,129 +254,172 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   );
 }
 
-export const purchaseColumns: ColumnDef<Purchase>[] = [
-  {
-    id: "sl_no",
-    header: "SL NO",
-    cell: ({ row }) => row.index + 1,
-  },
-  {
-    accessorKey: "name",
-    header: "NAME",
-  },
-  {
-    accessorKey: "date",
-    header: "DATE",
-    cell: ({ row }) => {
-      const rawDate = String(row.getValue("date"));
-      try {
-        return format(parseISO(rawDate), "dd-MM-yyyy");
-      } catch {
-        return rawDate;
-      }
-    },
-  },
-  {
-    accessorKey: "place",
-    header: "PLACE",
-  },
-  {
-    accessorKey: "mob",
-    header: "MOB",
-  },
-  {
-    accessorKey: "bags",
-    header: "BAGS",
-  },
-  {
-    accessorKey: "weight",
-    header: "WEIGHT",
-  },
-  {
-    accessorKey: "less_weight",
-    header: "LESS",
-  },
-  {
-    accessorKey: "net_weight",
-    header: "NET WEIGHT",
-  },
-  {
-    accessorKey: "rate",
-    header: "RATE",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("rate"));
-      return amount.toFixed(2);
-    },
-  },
-  {
-    accessorKey: "amount",
-    header: "AMOUNT",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("amount"));
-      return amount.toFixed(2);
-    },
-  },
-  {
-    accessorKey: "bag_less",
-    header: "LESS",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("bag_less"));
-      return amount.toFixed(2);
-    },
-  },
-  {
-    accessorKey: "add_amount",
-    header: "ADD",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("add_amount"));
-      return amount.toFixed(2);
-    },
-  },
-  {
-    accessorKey: "cash_paid",
-    header: "CASH",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("cash_paid"));
-      return amount.toFixed(2);
-    },
-  },
-  {
-    accessorKey: "upi_paid",
-    header: "PHONE PAY",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("upi_paid"));
-      return amount.toFixed(2);
-    },
-  },
-  {
-    accessorKey: "final_total",
-    header: "TOTAL AMOUNT",
-    cell: ({ row }) => {
-      const amount = Number(row.getValue("final_total"));
-      return <div className="font-medium">{amount.toFixed(2)}</div>;
-    },
-  },
-  {
-    id: "mode",
-    header: "MODE",
-    cell: ({ row }) => {
-      return String(row.original.source || "").toUpperCase();
-    },
-  },
-  {
-    accessorKey: "bag_avg",
-    header: "BAG AVG",
-    cell: ({ row }) => {
-      const avg = Number(row.getValue("bag_avg"));
-      return avg.toFixed(2);
-    },
-  },
-  {
-    id: "actions",
-    header: "ACTIONS",
-    cell: ({ row }) => {
-      const purchase = row.original;
-      return <PurchaseActionsCell purchase={purchase} />;
-    },
-  },
+export interface PurchaseColumnOptions {
+  paymentMethodById: Record<string, PaymentMethod>;
+  onPaymentMethodChange: (purchaseId: string, method: PaymentMethod) => void;
+}
+
+const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [
+  { label: "RTGS", value: "RTGS" },
+  { label: "UPI", value: "UPI" },
+  { label: "None", value: "none" },
 ];
+
+export function createPurchaseColumns(
+  options: PurchaseColumnOptions
+): ColumnDef<Purchase>[] {
+  const { paymentMethodById, onPaymentMethodChange } = options;
+
+  return [
+    {
+      id: "sl_no",
+      header: "SL NO",
+      cell: ({ row }) => row.index + 1,
+    },
+    {
+      accessorKey: "name",
+      header: "NAME",
+    },
+    {
+      accessorKey: "date",
+      header: "DATE",
+      cell: ({ row }) => {
+        const rawDate = String(row.getValue("date"));
+        try {
+          return format(parseISO(rawDate), "dd-MM-yyyy");
+        } catch {
+          return rawDate;
+        }
+      },
+    },
+    {
+      accessorKey: "place",
+      header: "PLACE",
+    },
+    {
+      accessorKey: "mob",
+      header: "MOB",
+    },
+    {
+      accessorKey: "bags",
+      header: "BAGS",
+    },
+    {
+      accessorKey: "weight",
+      header: "WEIGHT",
+    },
+    {
+      accessorKey: "less_weight",
+      header: "LESS",
+    },
+    {
+      accessorKey: "net_weight",
+      header: "NET WEIGHT",
+    },
+    {
+      accessorKey: "rate",
+      header: "RATE",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("rate"));
+        return amount.toFixed(2);
+      },
+    },
+    {
+      accessorKey: "amount",
+      header: "AMOUNT",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("amount"));
+        return amount.toFixed(2);
+      },
+    },
+    {
+      accessorKey: "bag_less",
+      header: "LESS",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("bag_less"));
+        return amount.toFixed(2);
+      },
+    },
+    {
+      accessorKey: "add_amount",
+      header: "ADD",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("add_amount"));
+        return amount.toFixed(2);
+      },
+    },
+    {
+      accessorKey: "cash_paid",
+      header: "CASH",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("cash_paid"));
+        return amount.toFixed(2);
+      },
+    },
+    {
+      accessorKey: "upi_paid",
+      header: "PHONE PAY",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("upi_paid"));
+        return amount.toFixed(2);
+      },
+    },
+    {
+      accessorKey: "final_total",
+      header: "TOTAL AMOUNT",
+      cell: ({ row }) => {
+        const amount = Number(row.getValue("final_total"));
+        return <div className="font-medium">{amount.toFixed(2)}</div>;
+      },
+    },
+    {
+      id: "payment_through",
+      header: "PAYMENT THROUGH",
+      cell: ({ row }) => {
+        const purchaseId = row.original.id;
+        const current = paymentMethodById[purchaseId] ?? "none";
+        return (
+          <select
+            value={current}
+            onChange={(event) =>
+              onPaymentMethodChange(
+                purchaseId,
+                event.target.value as PaymentMethod
+              )
+            }
+            className="w-full rounded border border-slate-300/80 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            {paymentSelectOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        );
+      },
+    },
+    {
+      id: "mode",
+      header: "MODE",
+      cell: ({ row }) => {
+        return String(row.original.source || "").toUpperCase();
+      },
+    },
+    {
+      accessorKey: "bag_avg",
+      header: "BAG AVG",
+      cell: ({ row }) => {
+        const avg = Number(row.getValue("bag_avg"));
+        return avg.toFixed(2);
+      },
+    },
+    {
+      id: "actions",
+      header: "ACTIONS",
+      cell: ({ row }) => {
+        const purchase = row.original;
+        return <PurchaseActionsCell purchase={purchase} />;
+      },
+    },
+  ];
+}

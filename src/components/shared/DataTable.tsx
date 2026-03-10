@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   SortingState,
   getFilteredRowModel,
+  Row,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { Search } from "lucide-react";
@@ -29,6 +30,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
+  rowClassName?: (row: Row<TData>) => string | undefined;
 }
 
 export function DataTable<TData, TValue>({
@@ -36,6 +38,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   searchPlaceholder = "Search...",
+  rowClassName,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -103,6 +106,7 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className={rowClassName?.(row)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

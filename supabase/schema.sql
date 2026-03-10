@@ -25,6 +25,7 @@ create table if not exists public.purchases (
   cash_paid numeric(12,2) not null default 0,
   upi_paid numeric(12,2) not null default 0,
   source text not null check (source in ('manual', 'app')) default 'app',
+  payment_through text not null check (payment_through in ('RTGS', 'UPI', 'none')) default 'none',
   less_weight numeric(12,2) not null default 0,
   net_weight numeric(12,2) not null default 0,
   amount numeric(14,2) not null default 0,
@@ -39,6 +40,7 @@ alter table public.purchases add column if not exists place text not null defaul
 alter table public.purchases add column if not exists mob text not null default '';
 alter table public.purchases add column if not exists bags numeric(12,2) not null default 0;
 alter table public.purchases add column if not exists bag_avg numeric(12,2) not null default 0;
+alter table public.purchases add column if not exists payment_through text not null default 'none' check (payment_through in ('RTGS', 'UPI', 'none'));
 
 create table if not exists public.bills (
   id text primary key,

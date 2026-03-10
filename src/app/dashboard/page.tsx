@@ -190,32 +190,6 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Top Places by Total Amount</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topPlaces.length > 0 ? (
-              topPlaces.map((item) => (
-                <div key={item.place} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{item.place}</span>
-                    <span>{formatINR(item.amount)}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted">
-                    <div
-                      className="h-2 rounded-full bg-sky-500"
-                      style={{ width: `${(item.amount / topPlaceMax) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No place-wise data yet.</p>
-            )}
-          </CardContent>
-        </Card>
-        
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">

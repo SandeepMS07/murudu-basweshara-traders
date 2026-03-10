@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const paymentMethodEnum = z.enum(["RTGS", "UPI", "none"]);
+export type PaymentMethod = z.infer<typeof paymentMethodEnum>;
+
 export const purchaseSchema = z.object({
   id: z.string().optional(),
   date: z.string().min(1, "Date is required"),
@@ -15,6 +18,7 @@ export const purchaseSchema = z.object({
   cash_paid: z.number().min(0).default(0),
   upi_paid: z.number().min(0).default(0),
   source: z.enum(["manual", "app"]).default("app"),
+  payment_through: paymentMethodEnum.default("none"),
 });
 
 export type PurchaseInput = z.infer<typeof purchaseSchema>;

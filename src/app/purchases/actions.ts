@@ -5,8 +5,9 @@ import {
   getPurchaseById,
   deletePurchase,
   updatePurchase,
+  updatePurchasePaymentThrough,
 } from "@/features/purchases/service/purchase.service";
-import { purchaseSchema, PurchaseInput } from "@/features/purchases/schemas";
+import { purchaseSchema, PurchaseInput, PaymentMethod } from "@/features/purchases/schemas";
 import { upsertBillById } from "@/features/bills/service/bill.service";
 
 export async function createPurchaseAction(data: PurchaseInput) {
@@ -40,4 +41,11 @@ export async function generateBillFromPurchaseAction(purchaseId: string) {
   });
 
   return bill;
+}
+
+export async function updatePurchasePaymentThroughAction(
+  purchaseId: string,
+  paymentThrough: PaymentMethod
+) {
+  return updatePurchasePaymentThrough(purchaseId, paymentThrough);
 }

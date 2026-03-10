@@ -1,11 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShoppingCart, LogOut, Loader2 } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { SessionUser } from "@/features/auth/types";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -16,8 +26,11 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
 
   const handleLogout = async () => {
+    setIsDialogOpen(false);
     setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -29,6 +42,28 @@ export function Sidebar() {
       setIsLoggingOut(false);
     }
   };
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (!active || !response.ok) return;
+        const payload = await response.json();
+        if (!active) return;
+        setUserInfo(payload.user ?? null);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchUser();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-card px-4 py-6 text-card-foreground">
@@ -64,7 +99,8 @@ export function Sidebar() {
 
       <div className="mt-auto pt-4 border-t">
         <button
-          onClick={handleLogout}
+          type="button"
+          onClick={() => setIsDialogOpen(true)}
           disabled={isLoggingOut}
           className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer disabled:opacity-50"
         >
@@ -76,6 +112,43 @@ export function Sidebar() {
           Logout
         </button>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogDescription>
+              You will be signed out of PB Manager. Please confirm that you want to
+              log out of the console.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-foreground">
+            {userInfo ? (
+              <div className="rounded-md border border-muted/40 bg-muted/10 p-3">
+                <p className="text-xs text-muted-foreground uppercase tracking-[0.2em]">
+                  Signing out
+                </p>
+                <p className="font-semibold text-foreground">{userInfo.email}</p>
+                <p className="text-muted-foreground">Role: {userInfo.role}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading user details…</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isLoggingOut}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Logout"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
