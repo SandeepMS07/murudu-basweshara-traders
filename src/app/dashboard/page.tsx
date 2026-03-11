@@ -15,7 +15,6 @@ export default async function DashboardPage() {
   const bills = await getBills();
 
   const totalPurchasesAmount = purchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const totalBillsAmount = bills.reduce((acc, bill) => acc + (bill.final_amount || 0), 0);
   const rtgsAmount = purchases
     .filter((p) => p.payment_through === "RTGS")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
@@ -25,6 +24,8 @@ export default async function DashboardPage() {
   const pendingAmount = purchases
     .filter((p) => p.payment_through === "none")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
+  // Bill amount is counted only for completed payment modes.
+  const totalBillsAmount = rtgsAmount + upiAmount;
 
   const byDate = new Map<string, number>();
   for (const p of purchases) {

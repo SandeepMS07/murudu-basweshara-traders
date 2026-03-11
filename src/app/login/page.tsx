@@ -20,9 +20,14 @@ import { Input } from "@/components/ui/input";
 import { loginSchema } from "@/features/auth/schemas";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { LoginThreeScene } from "@/components/auth/LoginThreeScene";
+import { LoginHeroPanel } from "@/components/auth/LoginHeroPanel";
+import { LoginLoadingOverlay } from "@/components/auth/LoginLoadingOverlay";
 
 const SAVED_LOGIN_KEY = "pb_manager_saved_login";
+type RememberedLogin = {
+  email: string;
+  rememberMe: boolean;
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,13 +51,13 @@ export default function LoginPage() {
     }
 
     try {
-      const parsed = JSON.parse(savedLogin) as { email?: string; password?: string };
+      const parsed = JSON.parse(savedLogin) as Partial<RememberedLogin>;
 
       form.reset({
         email: parsed.email ?? "",
-        password: parsed.password ?? "",
+        password: "",
       });
-      setRememberMe(Boolean(parsed.email && parsed.password));
+      setRememberMe(Boolean(parsed.rememberMe && parsed.email));
     } catch {
       localStorage.removeItem(SAVED_LOGIN_KEY);
     }
@@ -63,7 +68,11 @@ export default function LoginPage() {
 
     try {
       if (rememberMe) {
-        localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify(values));
+        const payload: RememberedLogin = {
+          email: values.email,
+          rememberMe: true,
+        };
+        localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify(payload));
       } else {
         localStorage.removeItem(SAVED_LOGIN_KEY);
       }
@@ -74,7 +83,13 @@ export default function LoginPage() {
         body: JSON.stringify(values),
       });
 
-      const data = await response.json();
+      let data: { error?: string } = {};
+
+      try {
+        data = (await response.json()) as { error?: string };
+      } catch {
+        data = {};
+      }
 
       if (!response.ok) {
         toast.error("Login Failed", { description: data.error || "Invalid credentials." });
@@ -85,7 +100,7 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
       
-    } catch (error) {
+    } catch {
       toast.error("Something went wrong", { description: "Please try again later." });
     } finally {
       setIsLoading(false);
@@ -95,21 +110,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-zinc-100">
       <div className="grid min-h-screen w-full overflow-hidden bg-[#0f1013] lg:grid-cols-[1.25fr_1fr]">
-        <div className="relative hidden border-r border-[#1d1f24] p-14 lg:flex lg:flex-col">
-          <div>
-            <p className="text-sm uppercase tracking-[0.18em] text-zinc-500">PB Manager</p>
-            <h1 className="mt-4 text-4xl font-semibold leading-tight">
-              Manage Purchases
-              <br />
-              With Better Control
-            </h1>
-            <p className="mt-4 max-w-md text-zinc-400">
-              Centralized purchase records, payment tracking, and printable bills in one place.
-            </p>
-          </div>
-
-          <LoginThreeScene />
-        </div>
+        <LoginHeroPanel />
 
         <div className="flex items-center justify-center p-6 sm:p-10 lg:p-16">
           <Card className="relative w-full max-w-lg border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-none">
@@ -120,14 +121,7 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#0b0d11]/75 backdrop-blur-[1px]">
-                  <div className="flex items-center gap-2 rounded-lg border border-[#2a2d34] bg-[#15171c] px-4 py-2 text-sm text-zinc-200">
-                    <Loader2 className="h-4 w-4 animate-spin text-[#ff6a3d]" />
-                    Authenticating...
-                  </div>
-                </div>
-              ) : null}
+              <LoginLoadingOverlay visible={isLoading} />
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
@@ -167,7 +161,7 @@ export default function LoginPage() {
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-zinc-200"
                               aria-label={showPassword ? "Hide password" : "Show password"}
                             >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                             </button>
                           </div>
                         </FormControl>

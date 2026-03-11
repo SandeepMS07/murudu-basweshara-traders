@@ -191,14 +191,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
                   <div className="flex min-w-0 flex-col gap-1">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        aria-label={menuOpen ? "Close menu" : "Open menu"}
-                        onClick={() => setMenuOpen((value) => !value)}
-                        className="hidden h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#282b31] bg-[#181a1f] text-zinc-300 lg:inline-flex"
-                      >
-                        {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-                      </button>
                       {isNestedPage ? (
                         <button
                           type="button"
