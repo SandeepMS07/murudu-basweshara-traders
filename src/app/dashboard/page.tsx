@@ -4,10 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { getPurchases } from "@/features/purchases/service/purchase.service";
 import { getBills } from "@/features/bills/service/bill.service";
 import { PurchaseTrendChart } from "@/features/dashboard/components/PurchaseTrendChart";
-
-function formatINR(value: number) {
-  return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
-}
+import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
@@ -60,7 +57,7 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium text-zinc-400">Total Purchase Amount</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{formatINR(totalPurchasesAmount)}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalPurchasesAmount)}</div>
             </CardContent>
           </Card>
 
@@ -79,7 +76,7 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium text-zinc-400">Total Bill Amount</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{formatINR(totalBillsAmount)}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalBillsAmount)}</div>
             </CardContent>
           </Card>
         </div>
@@ -106,7 +103,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>RTGS</span>
-                  <span className="font-medium">{formatINR(rtgsAmount)}</span>
+                  <span className="font-medium">{formatCurrencyINR(rtgsAmount)}</span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
@@ -118,7 +115,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>UPI</span>
-                  <span className="font-medium">{formatINR(upiAmount)}</span>
+                  <span className="font-medium">{formatCurrencyINR(upiAmount)}</span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
@@ -130,7 +127,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>Pending</span>
-                  <span className="font-medium">{formatINR(pendingAmount)}</span>
+                  <span className="font-medium">{formatCurrencyINR(pendingAmount)}</span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
@@ -150,7 +147,10 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
-                {(purchases.reduce((acc, p) => acc + p.bags, 0) / Math.max(purchases.length, 1)).toFixed(1)}
+                {formatNumberIN(
+                  purchases.reduce((acc, p) => acc + p.bags, 0) / Math.max(purchases.length, 1),
+                  { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                )}
               </div>
             </CardContent>
           </Card>
@@ -160,7 +160,10 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
-                {(purchases.reduce((acc, p) => acc + p.net_weight, 0) / Math.max(purchases.length, 1)).toFixed(1)}
+                {formatNumberIN(
+                  purchases.reduce((acc, p) => acc + p.net_weight, 0) / Math.max(purchases.length, 1),
+                  { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                )}
               </div>
             </CardContent>
           </Card>
@@ -170,7 +173,9 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
-                ₹{(purchases.reduce((acc, p) => acc + p.rate, 0) / Math.max(purchases.length, 1)).toFixed(2)}
+                {formatCurrencyINR(
+                  purchases.reduce((acc, p) => acc + p.rate, 0) / Math.max(purchases.length, 1)
+                )}
               </div>
             </CardContent>
           </Card>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PurchasesTableClient } from "@/features/purchases/components/PurchasesTableClient";
+import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 
 export default async function PurchasesPage() {
   await requireAuth();
@@ -19,10 +20,6 @@ export default async function PurchasesPage() {
     },
     { bags: 0, weight: 0, amount: 0 }
   );
-  const formatter = new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 2,
-  });
-
   return (
     <AppShell>
       <div className="mb-6 flex items-center justify-between">
@@ -45,7 +42,7 @@ export default async function PurchasesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold text-[#ff8f6b]">
-              {formatter.format(totals.bags)}
+              {formatNumberIN(totals.bags, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>
@@ -55,7 +52,7 @@ export default async function PurchasesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold text-[#ff8f6b]">
-              {formatter.format(totals.weight)} kg
+              {formatNumberIN(totals.weight)} kg
             </p>
           </CardContent>
         </Card>
@@ -65,7 +62,7 @@ export default async function PurchasesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold text-[#ff8f6b]">
-              ₹{formatter.format(totals.amount)}
+              {formatCurrencyINR(totals.amount)}
             </p>
           </CardContent>
         </Card>

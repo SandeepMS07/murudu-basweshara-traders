@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 
 function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const router = useRouter();
@@ -31,8 +32,6 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const isManual = purchase.source === "manual";
-  const fmtInt = (value: number) =>
-    new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
 
   const handleDelete = () => {
     if (isManual) return;
@@ -197,11 +196,11 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                 <table className="bill-print-table bill-print-main-table">
                   <tbody>
                     <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-                    <tr><td>WEIGHT</td><td>{fmtInt(purchase.weight)}</td></tr>
-                    <tr><td>LESS</td><td>{fmtInt(purchase.less_weight)}</td></tr>
-                    <tr><td>NET WEIGHT</td><td>{fmtInt(purchase.net_weight)}</td></tr>
-                    <tr><td>RATE</td><td>{fmtInt(purchase.rate)}</td></tr>
-                    <tr className="bill-print-key-row"><td>AMOUNT</td><td>{fmtInt(purchase.amount)}</td></tr>
+                    <tr><td>WEIGHT</td><td>{formatNumberIN(purchase.weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                    <tr><td>LESS</td><td>{formatNumberIN(purchase.less_weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                    <tr><td>NET WEIGHT</td><td>{formatNumberIN(purchase.net_weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                    <tr><td>RATE</td><td>{formatCurrencyINR(purchase.rate, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                    <tr className="bill-print-key-row"><td>AMOUNT</td><td>{formatCurrencyINR(purchase.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                   </tbody>
                 </table>
 
@@ -223,10 +222,10 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                   </div>
                   <table className="bill-print-table bill-print-summary-table">
                     <tbody>
-                      <tr><td>AMOUNT</td><td>{fmtInt(purchase.amount)}</td></tr>
-                      <tr><td>LESS</td><td>{fmtInt(purchase.bag_less)}</td></tr>
-                      <tr><td>CASH</td><td>{fmtInt(purchase.cash_paid)}</td></tr>
-                      <tr><td>EXTRA</td><td>{fmtInt(purchase.add_amount)}</td></tr>
+                      <tr><td>AMOUNT</td><td>{formatCurrencyINR(purchase.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                      <tr><td>LESS</td><td>{formatCurrencyINR(purchase.bag_less, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                      <tr><td>CASH</td><td>{formatCurrencyINR(purchase.cash_paid, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                      <tr><td>EXTRA</td><td>{formatCurrencyINR(purchase.add_amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                     </tbody>
                   </table>
                 </section>
@@ -234,7 +233,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                 <footer className="bill-print-total-row">
                   <div className="bill-print-thanks">THANK YOU FOR YOUR BUSINESS!</div>
                   <div className="bill-print-total-label">TOTAL</div>
-                  <div className="bill-print-total-value">{fmtInt(purchase.final_total)}</div>
+                  <div className="bill-print-total-value">{formatCurrencyINR(purchase.final_total, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </footer>
               </section>
             </div>
@@ -331,7 +330,7 @@ export function createPurchaseColumns(
       header: "RATE",
       cell: ({ row }) => {
         const amount = Number(row.getValue("rate"));
-        return amount.toFixed(2);
+        return formatCurrencyINR(amount);
       },
     },
     {
@@ -339,7 +338,7 @@ export function createPurchaseColumns(
       header: "AMOUNT",
       cell: ({ row }) => {
         const amount = Number(row.getValue("amount"));
-        return amount.toFixed(2);
+        return formatCurrencyINR(amount);
       },
     },
     {
@@ -347,7 +346,7 @@ export function createPurchaseColumns(
       header: "LESS",
       cell: ({ row }) => {
         const amount = Number(row.getValue("bag_less"));
-        return amount.toFixed(2);
+        return formatCurrencyINR(amount);
       },
     },
     {
@@ -355,7 +354,7 @@ export function createPurchaseColumns(
       header: "ADD",
       cell: ({ row }) => {
         const amount = Number(row.getValue("add_amount"));
-        return amount.toFixed(2);
+        return formatCurrencyINR(amount);
       },
     },
     {
@@ -363,7 +362,7 @@ export function createPurchaseColumns(
       header: "CASH",
       cell: ({ row }) => {
         const amount = Number(row.getValue("cash_paid"));
-        return amount.toFixed(2);
+        return formatCurrencyINR(amount);
       },
     },
     {
@@ -371,7 +370,7 @@ export function createPurchaseColumns(
       header: "PHONE PAY",
       cell: ({ row }) => {
         const amount = Number(row.getValue("upi_paid"));
-        return amount.toFixed(2);
+        return formatCurrencyINR(amount);
       },
     },
     {
@@ -379,7 +378,7 @@ export function createPurchaseColumns(
       header: "TOTAL AMOUNT",
       cell: ({ row }) => {
         const amount = Number(row.getValue("final_total"));
-        return <div className="font-medium">{amount.toFixed(2)}</div>;
+        return <div className="font-medium">{formatCurrencyINR(amount)}</div>;
       },
     },
     {
@@ -420,7 +419,7 @@ export function createPurchaseColumns(
       header: "BAG AVG",
       cell: ({ row }) => {
         const avg = Number(row.getValue("bag_avg"));
-        return avg.toFixed(2);
+        return formatNumberIN(avg);
       },
     },
     {
@@ -434,7 +433,7 @@ export function createPurchaseColumns(
         sticky: true,
         right: "0px",
         zIndex: 30,
-        width: "200px",
+        width: "132px",
         headClassName: "bg-[#15171c] border-l border-[#252932]",
         cellClassName: "bg-[#111214] border-l border-[#252932]",
         boxShadow: "-8px 0 12px rgba(0, 0, 0, 0.45)",

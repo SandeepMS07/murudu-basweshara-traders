@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { billSchema, Bill } from "@/features/bills/schemas";
 import { createBillAction, updateBillAction } from "@/app/bills/actions";
+import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 
 interface BillFormProps {
   initialData?: Bill;
@@ -148,10 +149,10 @@ export function BillForm({ initialData }: BillFormProps) {
               </div>
 
               <div className="bg-muted p-4 rounded-md mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><span className="text-muted-foreground block">Amount:</span> ₹{amount.toFixed(2)}</div>
+                <div><span className="text-muted-foreground block">Amount:</span> {formatCurrencyINR(amount)}</div>
                 <div><span className="text-muted-foreground block">Due Date:</span> {dueDateString}</div>
                 <div className="font-bold text-lg text-primary md:col-span-2">
-                  <span className="text-muted-foreground block text-sm font-normal">Final Amount:</span> ₹{finalAmount.toFixed(2)}
+                  <span className="text-muted-foreground block text-sm font-normal">Final Amount:</span> {formatCurrencyINR(finalAmount)}
                 </div>
               </div>
 
@@ -198,12 +199,12 @@ export function BillForm({ initialData }: BillFormProps) {
             <table className="bill-print-table">
               <tbody>
                 <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-                <tr><td>WEIGHT</td><td>{safeNetWeight.toFixed(2)}</td></tr>
-                <tr><td>LESS</td><td>{safeFreight.toFixed(2)}</td></tr>
-                <tr><td>NET WEIGHT</td><td>{safeNetWeight.toFixed(2)}</td></tr>
-                <tr><td>RATE</td><td>{safeRate.toFixed(2)}</td></tr>
-                <tr><td>AMOUNT</td><td>{amount.toFixed(2)}</td></tr>
-                <tr><td>TOTAL</td><td>{finalAmount.toFixed(2)}</td></tr>
+                <tr><td>WEIGHT</td><td>{formatNumberIN(safeNetWeight)}</td></tr>
+                <tr><td>LESS</td><td>{formatNumberIN(safeFreight)}</td></tr>
+                <tr><td>NET WEIGHT</td><td>{formatNumberIN(safeNetWeight)}</td></tr>
+                <tr><td>RATE</td><td>{formatCurrencyINR(safeRate)}</td></tr>
+                <tr><td>AMOUNT</td><td>{formatCurrencyINR(amount)}</td></tr>
+                <tr><td>TOTAL</td><td>{formatCurrencyINR(finalAmount)}</td></tr>
               </tbody>
             </table>
 

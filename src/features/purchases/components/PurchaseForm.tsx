@@ -34,6 +34,7 @@ import {
   createPurchaseAction,
   updatePurchaseAction,
 } from "@/app/purchases/actions";
+import { formatCurrencyINR } from "@/lib/number-format";
 
 interface PurchaseFormProps {
   initialData?: Purchase;
@@ -501,7 +502,7 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                 </div>
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-zinc-500">Amount</span>
-                  <span className="text-base font-medium text-zinc-100">₹{amount.toFixed(2)}</span>
+                  <span className="text-base font-medium text-zinc-100">{formatCurrencyINR(amount)}</span>
                 </div>
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-zinc-500">Bag Avg</span>
@@ -510,7 +511,7 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
               </div>
               <div className="mt-3 border-t border-[#252932] pt-2">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">Final Total</p>
-                <p className="text-2xl font-bold text-[#ff8f6b]">₹{finalTotal.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(finalTotal)}</p>
               </div>
             </div>
 

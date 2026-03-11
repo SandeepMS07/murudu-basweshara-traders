@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
+import { formatCurrencyINR } from "@/lib/number-format";
 
 type TrendPoint = {
   date: string;
@@ -49,8 +50,6 @@ export function PurchaseTrendChart({ data }: PurchaseTrendChartProps) {
     : "";
 
   const activePoint = hoverIndex !== null ? points[hoverIndex] : null;
-  const formatINR = (value: number) =>
-    `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
   return (
     <div
@@ -107,7 +106,7 @@ export function PurchaseTrendChart({ data }: PurchaseTrendChartProps) {
           }}
         >
           <p className="text-zinc-400">{format(parseISO(activePoint.date), "dd MMM yyyy")}</p>
-          <p className="font-semibold text-zinc-100">{formatINR(activePoint.amount)}</p>
+          <p className="font-semibold text-zinc-100">{formatCurrencyINR(activePoint.amount)}</p>
         </div>
       ) : null}
     </div>
