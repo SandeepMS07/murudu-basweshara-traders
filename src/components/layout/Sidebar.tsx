@@ -73,16 +73,16 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   return (
     <div
       className={cn(
-        "flex w-full flex-col border-b bg-card px-4 py-6 text-card-foreground",
-        "lg:border-b-0 lg:border-r lg:px-4 lg:py-6 lg:h-screen",
+        "flex h-full w-full flex-col bg-[#0f1013] px-4 py-6 text-zinc-100",
+        "lg:px-4 lg:py-6",
         className
       )}
     >
       <div className="flex items-center gap-2 px-2 pb-8">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#181a1f] text-zinc-200">
           <LayersIcon className="h-5 w-5" />
         </div>
-        <span className="text-xl font-bold tracking-tight text-primary">PB Manager</span>
+        <span className="text-xl font-bold tracking-tight text-zinc-100">PB Manager</span>
       </div>
 
       <nav className="flex-1 space-y-1">
@@ -96,10 +96,10 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+                "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                  ? "border border-[#ff6a3d]/40 bg-[#ff6a3d]/14 text-[#ff8f6b]"
+                  : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100"
               )}
             >
               <Icon className="h-5 w-5 shrink-0" />
@@ -109,12 +109,18 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         })}
       </nav>
 
-      <div className="mt-auto pt-4 border-t">
+      <div className="mt-auto border-t border-[#1d1f24] pt-4">
+        {userInfo ? (
+          <div className="mb-3 rounded-md border border-[#282b31] bg-[#15171c] p-3 text-xs text-zinc-400">
+            <p className="truncate text-sm font-semibold text-zinc-100">{userInfo.email}</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">{userInfo.role}</p>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={() => setIsDialogOpen(true)}
           disabled={isLoggingOut}
-          className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer disabled:opacity-50"
+          className="group flex w-full items-center gap-3 rounded-md border border-[#282b31] bg-[#15171c] px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:border-[#3b3f47] hover:text-zinc-100 disabled:opacity-50"
         >
           {isLoggingOut ? (
             <Loader2 className="h-5 w-5 animate-spin shrink-0" />
@@ -126,32 +132,42 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-[#2a2d34] [&_[data-slot=dialog-close]]:bg-[#1b1e24] [&_[data-slot=dialog-close]]:text-zinc-300 [&_[data-slot=dialog-close]]:hover:bg-[#23262e] [&_[data-slot=dialog-close]]:hover:text-zinc-100">
           <DialogHeader>
-            <DialogTitle>Confirm Logout</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-zinc-100">Confirm Logout</DialogTitle>
+            <DialogDescription className="text-zinc-400">
               You will be signed out of PB Manager. Please confirm that you want to
               log out of the console.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 text-sm text-foreground">
+          <div className="space-y-2 text-sm text-zinc-100">
             {userInfo ? (
-              <div className="rounded-md border border-muted/40 bg-muted/10 p-3">
-                <p className="text-xs text-muted-foreground uppercase tracking-[0.2em]">
+              <div className="rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                   Signing out
                 </p>
-                <p className="font-semibold text-foreground">{userInfo.email}</p>
-                <p className="text-muted-foreground">Role: {userInfo.role}</p>
+                <p className="font-semibold text-zinc-100">{userInfo.email}</p>
+                <p className="text-zinc-400">Role: {userInfo.role}</p>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Loading user details…</p>
+              <p className="text-sm text-zinc-500">Loading user details…</p>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isLoggingOut}>
+          <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isLoggingOut}
+              className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
               {isLoggingOut ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

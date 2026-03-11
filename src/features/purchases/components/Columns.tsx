@@ -124,20 +124,24 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent showCloseButton={false}>
+        <DialogContent
+          showCloseButton={false}
+          className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
+        >
           <DialogHeader>
-            <DialogTitle>Delete Purchase</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-zinc-100">Delete Purchase</DialogTitle>
+            <DialogDescription className="text-zinc-400">
               Are you sure you want to delete this purchase? This action cannot be
               undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
               onClick={() => setConfirmOpen(false)}
+              className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
             >
               Cancel
             </Button>
@@ -146,6 +150,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
               variant="destructive"
               disabled={isPending}
               onClick={confirmDelete}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
             >
               {isPending ? "Deleting..." : "Delete"}
             </Button>
@@ -154,14 +159,17 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
       </Dialog>
 
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
-        <DialogContent showCloseButton={false} className="sm:max-w-5xl">
+        <DialogContent
+          showCloseButton={false}
+          className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-5xl"
+        >
           <DialogHeader>
-            <DialogTitle>Generate Bill</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-zinc-100">Generate Bill</DialogTitle>
+            <DialogDescription className="text-zinc-400">
               Preview the invoice below, then click Generate Bill.
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-auto rounded-md border bg-muted/20 p-3">
+          <div className="overflow-auto rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
             <div className="bill-print-root bill-print-preview bill-print-inline-preview">
               <section className="bill-print-copy w-full max-w-none">
                 <header className="bill-print-header">
@@ -231,12 +239,13 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
               </section>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
             <Button
               type="button"
               variant="outline"
               disabled={isPending}
               onClick={() => setGenerateOpen(false)}
+              className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
             >
               Cancel
             </Button>
@@ -244,6 +253,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
               type="button"
               disabled={isPending}
               onClick={confirmGenerateBill}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
             >
               {isPending ? "Generating..." : "Generate Bill"}
             </Button>
@@ -387,7 +397,7 @@ export function createPurchaseColumns(
                 event.target.value as PaymentMethod
               )
             }
-            className="w-full rounded border border-slate-300/80 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            className="w-full rounded border border-[#2a2d34] bg-[#17191f] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-300"
           >
             {paymentSelectOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -425,9 +435,9 @@ export function createPurchaseColumns(
         right: "0px",
         zIndex: 30,
         width: "200px",
-        headClassName: "bg-card/90",
-        cellClassName: "bg-card/90",
-        boxShadow: "-2px 0 8px rgba(15, 23, 42, 0.08)",
+        headClassName: "bg-[#15171c] border-l border-[#252932]",
+        cellClassName: "bg-[#111214] border-l border-[#252932]",
+        boxShadow: "-8px 0 12px rgba(0, 0, 0, 0.45)",
       },
     },
   ];

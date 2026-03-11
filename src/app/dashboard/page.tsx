@@ -62,92 +62,92 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 text-zinc-100">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {user.email} ({user.role})</p>
+          <p className="text-zinc-500">Welcome back, {user.email} ({user.role})</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Purchases</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Total Purchases</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{purchases.length}</div>
-              <p className="text-xs text-muted-foreground">Entries in workbook</p>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{purchases.length}</div>
+              <p className="text-xs text-zinc-500">Entries in workbook</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Purchase Amount</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Total Purchase Amount</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatINR(totalPurchasesAmount)}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{formatINR(totalPurchasesAmount)}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bills</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Total Bills</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{bills.length}</div>
-              <p className="text-xs text-muted-foreground">Entries in workbook</p>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{bills.length}</div>
+              <p className="text-xs text-zinc-500">Entries in workbook</p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bill Amount</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Total Bill Amount</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatINR(totalBillsAmount)}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{formatINR(totalBillsAmount)}</div>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100 lg:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">Purchase Trend (Last {trend.length || 0} Days)</CardTitle>
+              <CardTitle className="text-base text-zinc-100">Purchase Trend (Last {trend.length || 0} Days)</CardTitle>
             </CardHeader>
             <CardContent>
               {trend.length > 0 ? (
                 <div className="space-y-3">
-                  <svg viewBox="0 0 300 110" className="h-40 w-full rounded-md border bg-gradient-to-b from-muted/30 to-background p-2">
+                  <svg viewBox="0 0 300 110" className="h-40 w-full rounded-md border border-[#252932] bg-gradient-to-b from-[#14171d] to-[#101216] p-2">
                     <polyline
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2.5"
                       points={trendPoints}
-                      className="text-primary"
+                      className="text-[#ff6a3d]"
                     />
                     {trendValues.map((value, i) => {
                       const x = trend.length === 1 ? 150 : (i / (trend.length - 1)) * 300;
                       const y = 100 - (value / trendMax) * 90;
-                      return <circle key={`${x}-${y}`} cx={x} cy={y} r="2.5" className="fill-primary" />;
+                      return <circle key={`${x}-${y}`} cx={x} cy={y} r="2.5" className="fill-[#ff6a3d]" />;
                     })}
                   </svg>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-5">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-zinc-400 md:grid-cols-5">
                     {trend.slice(-5).map((item) => (
-                      <div key={item.date} className="rounded border p-2">
+                      <div key={item.date} className="rounded border border-[#252932] bg-[#13161b] p-2">
                         <div>{item.date}</div>
-                        <div className="font-medium text-foreground">{formatINR(item.amount)}</div>
+                        <div className="font-medium text-zinc-100">{formatINR(item.amount)}</div>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No purchase data yet.</p>
+                <p className="text-sm text-zinc-400">No purchase data yet.</p>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader>
-              <CardTitle className="text-base">Collection Split</CardTitle>
+              <CardTitle className="text-base text-zinc-100">Collection Split</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -155,9 +155,9 @@ export default async function DashboardPage() {
                   <span>Cash</span>
                   <span className="font-medium">{formatINR(totalCash)}</span>
                 </div>
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
-                    className="h-2 rounded-full bg-primary"
+                    className="h-2 rounded-full bg-[#ff6a3d]"
                     style={{ width: `${totalPurchasesAmount ? (totalCash / totalPurchasesAmount) * 100 : 0}%` }}
                   />
                 </div>
@@ -167,9 +167,9 @@ export default async function DashboardPage() {
                   <span>UPI</span>
                   <span className="font-medium">{formatINR(totalUpi)}</span>
                 </div>
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
-                    className="h-2 rounded-full bg-emerald-500"
+                    className="h-2 rounded-full bg-[#ff8f6b]"
                     style={{ width: `${totalPurchasesAmount ? (totalUpi / totalPurchasesAmount) * 100 : 0}%` }}
                   />
                 </div>
@@ -179,9 +179,9 @@ export default async function DashboardPage() {
                   <span>Pending</span>
                   <span className="font-medium">{formatINR(pendingAmount)}</span>
                 </div>
-                <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
-                    className="h-2 rounded-full bg-amber-500"
+                    className="h-2 rounded-full bg-[#ffb79e]"
                     style={{ width: `${totalPurchasesAmount ? (pendingAmount / totalPurchasesAmount) * 100 : 0}%` }}
                   />
                 </div>
@@ -191,32 +191,32 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Average Bags / Purchase</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Average Bags / Purchase</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-[#ff8f6b]">
                 {(purchases.reduce((acc, p) => acc + p.bags, 0) / Math.max(purchases.length, 1)).toFixed(1)}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Average Net Weight</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Average Net Weight</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-[#ff8f6b]">
                 {(purchases.reduce((acc, p) => acc + p.net_weight, 0) / Math.max(purchases.length, 1)).toFixed(1)}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Average Rate</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Average Rate</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-[#ff8f6b]">
                 ₹{(purchases.reduce((acc, p) => acc + p.rate, 0) / Math.max(purchases.length, 1)).toFixed(2)}
               </div>
             </CardContent>

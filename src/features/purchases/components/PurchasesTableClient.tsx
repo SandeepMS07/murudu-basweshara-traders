@@ -75,12 +75,12 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
       rowClassName={(row) => {
         const method = paymentMethods[row.original.id] ?? "none";
         if (method === "RTGS") {
-          return "bg-emerald-50";
+          return "bg-emerald-950/20 hover:bg-emerald-950/30";
         }
         if (method === "UPI") {
-          return "bg-sky-50";
+          return "bg-sky-950/20 hover:bg-sky-950/30";
         }
-        return undefined;
+        return "bg-[#111214] hover:bg-[#17191f]";
       }}
     />
   );

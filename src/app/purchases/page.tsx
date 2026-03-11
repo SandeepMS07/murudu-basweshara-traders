@@ -25,46 +25,46 @@ export default async function PurchasesPage() {
 
   return (
     <AppShell>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Purchases</h1>
-          <p className="text-muted-foreground">Manage your purchases records here.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Purchases</h1>
+          <p className="text-zinc-500">Manage your purchases records here.</p>
         </div>
         <Link href="/purchases/new">
-          <Button>
+          <Button className="border border-[#2a2d34] bg-[#17191f] text-zinc-100 hover:bg-[#1d2026]">
             <Plus className="mr-2 h-4 w-4" />
             Add Purchase
           </Button>
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="border-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 shadow">
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Total Bags</CardTitle>
+            <CardTitle className="text-sm text-zinc-400">Total Bags</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-emerald-900">
+            <p className="text-3xl font-semibold text-[#ff8f6b]">
               {formatter.format(totals.bags)}
             </p>
           </CardContent>
         </Card>
-        <Card className="border-0 bg-gradient-to-br from-sky-50 via-white to-sky-100 shadow">
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Total Weight</CardTitle>
+            <CardTitle className="text-sm text-zinc-400">Total Weight</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-sky-900">
-              {formatter.format(totals.weight)}
+            <p className="text-3xl font-semibold text-[#ff8f6b]">
+              {formatter.format(totals.weight)} kg
             </p>
           </CardContent>
         </Card>
-        <Card className="border-0 bg-gradient-to-br from-orange-50 via-white to-orange-100 shadow">
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Total Amount</CardTitle>
+            <CardTitle className="text-sm text-zinc-400">Total Amount</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-orange-900">
+            <p className="text-3xl font-semibold text-[#ff8f6b]">
               ₹{formatter.format(totals.amount)}
             </p>
           </CardContent>

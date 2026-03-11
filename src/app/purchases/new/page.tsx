@@ -7,9 +7,9 @@ export default async function NewPurchasePage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Create Purchase</h1>
-        <p className="text-muted-foreground">Add a new record to the APP_PURCHASE sheet.</p>
+      <div className="mb-4">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Create Purchase</h1>
+        <p className="text-zinc-500">Enter purchase details to create a new entry.</p>
       </div>
       <PurchaseForm />
     </AppShell>
