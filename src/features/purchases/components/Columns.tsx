@@ -271,15 +271,15 @@ export function createPurchaseColumns(
   const { paymentMethodById, onPaymentMethodChange } = options;
 
   return [
-    {
-      id: "sl_no",
-      header: "SL NO",
-      cell: ({ row }) => row.index + 1,
-    },
-    {
-      accessorKey: "name",
-      header: "NAME",
-    },
+  {
+    id: "sl_no",
+    header: "SL NO",
+    cell: ({ row }) => row.index + 1,
+  },
+  {
+    accessorKey: "name",
+    header: "NAME",
+  },
     {
       accessorKey: "date",
       header: "DATE",
@@ -419,6 +419,15 @@ export function createPurchaseColumns(
       cell: ({ row }) => {
         const purchase = row.original;
         return <PurchaseActionsCell purchase={purchase} />;
+      },
+      meta: {
+        sticky: true,
+        right: "0px",
+        zIndex: 30,
+        width: "200px",
+        headClassName: "bg-card/90",
+        cellClassName: "bg-card/90",
+        boxShadow: "-2px 0 8px rgba(15, 23, 42, 0.08)",
       },
     },
   ];

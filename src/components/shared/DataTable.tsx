@@ -11,8 +11,9 @@ import {
   getFilteredRowModel,
   Row,
 } from "@tanstack/react-table";
-import { useState } from "react";
+import { CSSProperties, useState } from "react";
 import { Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import {
   Table,
@@ -24,6 +25,17 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+interface ColumnMeta {
+  sticky?: boolean;
+  left?: string;
+  right?: string;
+  width?: string;
+  zIndex?: number;
+  headClassName?: string;
+  cellClassName?: string;
+  boxShadow?: string;
+}
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -86,8 +98,23 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
+                  const meta = header.column.columnDef.meta as ColumnMeta | undefined;
+                  const headerStyle: CSSProperties | undefined = meta?.sticky
+                    ? {
+                        position: "sticky",
+                        left: meta.left,
+                        right: meta.right,
+                        zIndex: meta.zIndex,
+                        width: meta.width,
+                        boxShadow: meta.boxShadow,
+                      }
+                    : undefined;
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={cn(meta?.headClassName)}
+                      style={headerStyle}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -108,14 +135,31 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                   className={rowClassName?.(row)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                    const cellStyle: CSSProperties | undefined = meta?.sticky
+                      ? {
+                          position: "sticky",
+                          left: meta.left,
+                          right: meta.right,
+                          zIndex: meta.zIndex,
+                          width: meta.width,
+                          boxShadow: meta.boxShadow,
+                        }
+                      : undefined;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(meta?.cellClassName)}
+                        style={cellStyle}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (
