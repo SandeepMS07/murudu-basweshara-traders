@@ -3,7 +3,7 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { AppShell } from "@/components/layout/AppShell";
 import { getPurchases } from "@/features/purchases/service/purchase.service";
 import { getBills } from "@/features/bills/service/bill.service";
-import { getPurchaseById } from "@/features/purchases/service/purchase.service";
+import { PurchaseTrendChart } from "@/features/dashboard/components/PurchaseTrendChart";
 
 function formatINR(value: number) {
   return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
@@ -15,32 +15,16 @@ export default async function DashboardPage() {
   const bills = await getBills();
 
   const totalPurchasesAmount = purchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const totalBillsAmountParts = await Promise.all(
-    bills.map(async (bill) => {
-      if (!bill.id.startsWith("PUR_BILL_")) {
-        return bill.final_amount || 0;
-      }
-      const purchaseId = bill.id.slice("PUR_BILL_".length);
-      if (!purchaseId) return bill.final_amount || 0;
-      const purchase = await getPurchaseById(purchaseId);
-      return purchase?.final_total ?? bill.final_amount ?? 0;
-    })
-  );
-  const totalBillsAmount = totalBillsAmountParts.reduce((acc, amount) => acc + amount, 0);
-  const totalCash = purchases.reduce((acc, p) => acc + (p.cash_paid || 0), 0);
-  const totalUpi = purchases.reduce((acc, p) => acc + (p.upi_paid || 0), 0);
-  const pendingAmount = Math.max(totalPurchasesAmount - (totalCash + totalUpi), 0);
-
-  const byPlace = new Map<string, number>();
-  for (const p of purchases) {
-    const key = (p.place || "Unknown").toUpperCase();
-    byPlace.set(key, (byPlace.get(key) || 0) + p.final_total);
-  }
-  const topPlaces = [...byPlace.entries()]
-    .map(([place, amount]) => ({ place, amount }))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
-  const topPlaceMax = topPlaces[0]?.amount || 1;
+  const totalBillsAmount = bills.reduce((acc, bill) => acc + (bill.final_amount || 0), 0);
+  const rtgsAmount = purchases
+    .filter((p) => p.payment_through === "RTGS")
+    .reduce((acc, p) => acc + (p.final_total || 0), 0);
+  const upiAmount = purchases
+    .filter((p) => p.payment_through === "UPI")
+    .reduce((acc, p) => acc + (p.final_total || 0), 0);
+  const pendingAmount = purchases
+    .filter((p) => p.payment_through === "none")
+    .reduce((acc, p) => acc + (p.final_total || 0), 0);
 
   const byDate = new Map<string, number>();
   for (const p of purchases) {
@@ -50,15 +34,6 @@ export default async function DashboardPage() {
     .map(([date, amount]) => ({ date, amount }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-10);
-  const trendValues = trend.map((t) => t.amount);
-  const trendMax = Math.max(...trendValues, 1);
-  const trendPoints = trendValues
-    .map((value, i) => {
-      const x = trend.length === 1 ? 150 : (i / (trend.length - 1)) * 300;
-      const y = 100 - (value / trendMax) * 90;
-      return `${x},${y}`;
-    })
-    .join(" ");
 
   return (
     <AppShell>
@@ -115,30 +90,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               {trend.length > 0 ? (
-                <div className="space-y-3">
-                  <svg viewBox="0 0 300 110" className="h-40 w-full rounded-md border border-[#252932] bg-gradient-to-b from-[#14171d] to-[#101216] p-2">
-                    <polyline
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      points={trendPoints}
-                      className="text-[#ff6a3d]"
-                    />
-                    {trendValues.map((value, i) => {
-                      const x = trend.length === 1 ? 150 : (i / (trend.length - 1)) * 300;
-                      const y = 100 - (value / trendMax) * 90;
-                      return <circle key={`${x}-${y}`} cx={x} cy={y} r="2.5" className="fill-[#ff6a3d]" />;
-                    })}
-                  </svg>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-zinc-400 md:grid-cols-5">
-                    {trend.slice(-5).map((item) => (
-                      <div key={item.date} className="rounded border border-[#252932] bg-[#13161b] p-2">
-                        <div>{item.date}</div>
-                        <div className="font-medium text-zinc-100">{formatINR(item.amount)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <PurchaseTrendChart data={trend} />
               ) : (
                 <p className="text-sm text-zinc-400">No purchase data yet.</p>
               )}
@@ -147,30 +99,30 @@ export default async function DashboardPage() {
 
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader>
-              <CardTitle className="text-base text-zinc-100">Collection Split</CardTitle>
+              <CardTitle className="text-base text-zinc-100">Payment Through</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Cash</span>
-                  <span className="font-medium">{formatINR(totalCash)}</span>
+                  <span>RTGS</span>
+                  <span className="font-medium">{formatINR(rtgsAmount)}</span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
                     className="h-2 rounded-full bg-[#ff6a3d]"
-                    style={{ width: `${totalPurchasesAmount ? (totalCash / totalPurchasesAmount) * 100 : 0}%` }}
+                    style={{ width: `${totalPurchasesAmount ? (rtgsAmount / totalPurchasesAmount) * 100 : 0}%` }}
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>UPI</span>
-                  <span className="font-medium">{formatINR(totalUpi)}</span>
+                  <span className="font-medium">{formatINR(upiAmount)}</span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
                     className="h-2 rounded-full bg-[#ff8f6b]"
-                    style={{ width: `${totalPurchasesAmount ? (totalUpi / totalPurchasesAmount) * 100 : 0}%` }}
+                    style={{ width: `${totalPurchasesAmount ? (upiAmount / totalPurchasesAmount) * 100 : 0}%` }}
                   />
                 </div>
               </div>
