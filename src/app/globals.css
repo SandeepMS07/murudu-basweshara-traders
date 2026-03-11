@@ -134,13 +134,13 @@
 
 .bill-print-root.bill-print-preview {
   display: none;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 0;
-  padding: 18px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 20px;
   align-items: start;
-  background: #d9dde3;
-  color: #1f2535;
-  font-family: "Segoe UI", "Avenir Next", sans-serif;
+  background: #eef2f7;
+  color: #1f2937;
+  font-family: "Inter", "Segoe UI", "Avenir Next", sans-serif;
   min-height: 100vh;
 }
 
@@ -166,13 +166,15 @@
 }
 
 .bill-print-copy {
-  border: 1px solid #d9cfb7;
+  border: 1px solid #e4e8ef;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  height: 126mm;
-  background: #fffdf3;
+  height: auto;
+  min-height: 126mm;
+  background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 18px 30px rgba(43, 50, 66, 0.18);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
 }
 
 .bill-print-preview .bill-print-copy:first-of-type {
@@ -180,14 +182,14 @@
 }
 
 .bill-print-preview .bill-print-copy:last-of-type {
-  transform: translate(-44px, 92px) scale(0.96);
+  transform: translate(-30px, 40px) scale(0.97);
   transform-origin: top left;
   z-index: 1;
 }
 
 .bill-print-header {
-  border-bottom: 1px solid #e6dcc7;
-  padding: 14px 16px 11px;
+  border-bottom: 1px solid #e5e9f0;
+  padding: 18px 20px;
 }
 
 .bill-print-brand {
@@ -197,66 +199,66 @@
 }
 
 .bill-print-logo-mark {
-  width: 50px;
-  height: 50px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: #2f577f;
+  background: #1d4ed8;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
 .bill-print-title {
-  font-size: 25px;
-  font-weight: 900;
-  color: #2f577f;
-  letter-spacing: 0.2px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 
 .bill-print-info {
   display: grid;
-  grid-template-columns: 50% 50%;
-  border-bottom: 1px solid #e2d9c4;
-  min-height: 27mm;
-  background: #fffdf4;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #e5e9f0;
+  min-height: 28mm;
+  background: #f8fafc;
 }
 
 .bill-print-info-left {
-  padding: 8px 10px 6px;
+  padding: 14px 16px 12px;
 }
 
 .bill-print-yard {
   font-size: 15px;
-  font-weight: 900;
-  margin-bottom: 3px;
-  color: #121826;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #0f172a;
 }
 
 .bill-print-info-left div {
-  font-size: 9.5px;
-  line-height: 1.3;
-  color: #2f3750;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #475569;
 }
 
 .bill-print-info-right {
-  padding: 8px 10px 0;
+  padding: 14px 16px 10px;
 }
 
 .bill-print-kv {
   display: grid;
-  grid-template-columns: 14px 33% 53%;
+  grid-template-columns: 14px 30% 56%;
   align-items: baseline;
-  margin-bottom: 4px;
+  margin-bottom: 7px;
 }
 
 .bill-print-icon {
-  color: #c3a45b;
-  font-size: 7px;
+  color: #3b82f6;
+  font-size: 8px;
   transform: translateY(-0.5px);
 }
 
@@ -269,43 +271,43 @@
 }
 
 .bill-print-kv span {
-  color: #9f7531;
-  font-size: 8.5px;
-  font-weight: 800;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.2px;
 }
 
 .bill-print-kv strong {
-  font-size: 8.8px;
-  color: #1f2435;
-  font-weight: 800;
+  font-size: 11px;
+  color: #0f172a;
+  font-weight: 700;
 }
 
 .bill-print-main-table {
   width: 100%;
   border-collapse: collapse;
-  flex: 1;
+  flex: 1 1 auto;
 }
 
 .bill-print-main-table th,
 .bill-print-main-table td {
-  border: 1px solid #d7cfbb;
-  height: 18px;
-  padding: 1px 8px;
-  font-size: 8.8px;
-  color: #1f2435;
+  border: 1px solid #e2e8f0;
+  height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #1e293b;
 }
 
 .bill-print-main-table th {
   text-align: left;
-  font-weight: 900;
-  background: #d8e9f3;
-  color: #161b2b;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #0f172a;
   text-transform: uppercase;
 }
 
 .bill-print-main-table tr:nth-child(odd) td:first-child {
-  background: #e7f2f8;
+  background: #fcfdff;
 }
 
 .bill-print-main-table th:last-child,
@@ -313,30 +315,30 @@
   text-align: right;
   width: 32%;
   font-variant-numeric: tabular-nums;
-  background: #faf7ea;
+  background: #ffffff;
 }
 
 .bill-print-key-row td:last-child {
-  background: #f2ecda;
-  font-weight: 900;
+  background: #f8fafc;
+  font-weight: 700;
 }
 
 .bill-print-note-row {
   display: grid;
   grid-template-columns: 68% 32%;
-  border-top: 1px solid #d7cfbb;
+  border-top: 1px solid #e2e8f0;
 }
 
 .bill-print-note-left,
 .bill-print-note-right {
-  min-height: 34px;
-  border-right: 1px solid #d7cfbb;
-  border-bottom: 1px solid #d7cfbb;
-  padding: 4px 8px;
-  font-size: 7.6px;
-  line-height: 1.25;
-  color: #2c3245;
-  background: #fffef8;
+  min-height: 42px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 7px 10px;
+  font-size: 9px;
+  line-height: 1.4;
+  color: #475569;
+  background: #ffffff;
 }
 
 .bill-print-note-right {
@@ -345,32 +347,32 @@
 
 .bill-print-note-icons {
   float: right;
-  color: #9f8a58;
+  color: #2563eb;
   font-weight: 700;
 }
 
 .bill-print-sign-row {
   display: grid;
   grid-template-columns: 54% 46%;
-  border-bottom: 1px solid #d7cfbb;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .bill-print-sign {
-  border-right: 1px solid #d7cfbb;
-  min-height: 68px;
+  border-right: 1px solid #e2e8f0;
+  min-height: 86px;
   position: relative;
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
-  font-weight: 900;
-  padding: 6px 10px;
-  color: #1c2435;
-  background: #fffef8;
+  font-weight: 700;
+  padding: 12px 10px 8px;
+  color: #0f172a;
+  background: #ffffff;
 }
 
 .bill-print-sign-title {
-  font-size: 11px;
-  margin-top: 5px;
-  margin-bottom: 10px;
+  font-size: 12px;
+  margin-top: 9px;
+  margin-bottom: 12px;
 }
 
 .bill-print-sign-line {
@@ -381,8 +383,8 @@
 
 .bill-print-sign-caption {
   margin-top: 4px;
-  font-size: 6.6px;
-  color: #4f5669;
+  font-size: 8px;
+  color: #64748b;
 }
 
 .bill-print-summary-table {
@@ -391,18 +393,18 @@
 }
 
 .bill-print-summary-table td {
-  border: 1px solid #d7cfbb;
-  height: 17px;
-  padding: 2px 8px;
-  font-size: 8.8px;
-  color: #1f2435;
+  border: 1px solid #e2e8f0;
+  height: 22px;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: #1e293b;
 }
 
 .bill-print-summary-table td:first-child {
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  color: #2f3e57;
-  background: #dceaf3;
+  color: #334155;
+  background: #f1f5f9;
 }
 
 .bill-print-summary-table td:last-child {
@@ -412,44 +414,46 @@
 
 .bill-print-total-row {
   display: grid;
-  grid-template-columns: 54% 17% 29%;
+  grid-template-columns: 52% 16% 32%;
 }
 
 .bill-print-thanks,
 .bill-print-total-label,
 .bill-print-total-value {
-  border-top: 1px solid #c9bb97;
-  border-right: 1px solid #c9bb97;
-  padding: 5px;
+  border-top: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  padding: 8px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .bill-print-thanks {
-  font-size: 8.8px;
+  font-size: 10px;
   letter-spacing: 0.2px;
-  color: #161b2b;
-  background: #fffef8;
+  color: #0f172a;
+  background: #ffffff;
 }
 
 .bill-print-total-label {
-  background: #f1ead3;
-  font-size: 11px;
-  color: #675735;
+  background: #f8fafc;
+  font-size: 12px;
+  color: #334155;
 }
 
 .bill-print-total-value {
   border-right: 0;
-  background: #fffdfa;
-  font-size: 20px;
+  background: #ffffff;
+  font-size: 26px;
   line-height: 1;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   font-variant-numeric: tabular-nums;
-  color: #0e1322;
-  letter-spacing: 0.3px;
+  color: #1e3a8a;
+  letter-spacing: 0.1px;
+  justify-content: flex-end;
+  padding-right: 10px;
 }
 
 @media print {
@@ -475,7 +479,7 @@
     gap: 3mm;
     padding: 3mm;
     align-items: stretch;
-    background: #f4f0e5;
+    background: #eef2f7;
     color: #000;
   }
 
@@ -486,6 +490,7 @@
     width: 100%;
     min-height: 100%;
     padding: 6mm 6mm 5mm;
-    border: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 0;
   }
 }
