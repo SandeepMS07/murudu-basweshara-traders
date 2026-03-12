@@ -3,7 +3,7 @@ import { getPurchases } from "@/features/purchases/service/purchase.service";
 import { requireAuth } from "@/features/auth/lib/session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import Link from "next/link";
 import { PurchasesTableClient } from "@/features/purchases/components/PurchasesTableClient";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
@@ -27,12 +27,23 @@ export default async function PurchasesPage() {
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">Purchases</h1>
           <p className="text-zinc-500">Manage your purchases records here.</p>
         </div>
-        <Link href="/purchases/new">
-          <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Purchase
-          </Button>
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <a href="/api/purchases/export" className="w-full sm:w-auto">
+            <Button
+              className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto"
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export XLSX
+            </Button>
+          </a>
+          <Link href="/purchases/new" className="w-full sm:w-auto">
+            <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Purchase
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-4">
