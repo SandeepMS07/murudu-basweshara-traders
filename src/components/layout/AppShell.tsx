@@ -23,6 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const labelMap: Record<string, string> = {
     dashboard: "Dashboard",
     purchases: "Purchases",
+    sales: "Sales",
     bills: "Bills",
     new: "New",
     edit: "Edit",
@@ -47,6 +48,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       { label: "Dashboard", href: "/dashboard", keywords: "home overview" },
       { label: "Purchases", href: "/purchases", keywords: "purchase list table" },
       { label: "Create Purchase", href: "/purchases/new", keywords: "new add purchase" },
+      { label: "Sales", href: "/sales", keywords: "sales bill list table" },
+      { label: "Create Sale", href: "/sales/new", keywords: "new add sale" },
     ],
     []
   );

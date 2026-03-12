@@ -57,6 +57,33 @@ create table if not exists public.bills (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.sales (
+  id text primary key,
+  sl_no integer null,
+  bill_number text not null unique,
+  sale_date date not null,
+  lorry_number text not null default '',
+  party text not null default '',
+  payment_terms text not null default '',
+  bags numeric(12,2) not null default 0,
+  net_weight numeric(12,2) not null default 0,
+  factory_weight numeric(12,2) not null default 0,
+  rate numeric(12,2) not null default 0,
+  flight numeric(12,2) not null default 0,
+  amount numeric(14,2) not null default 0,
+  bag_avg numeric(12,2) not null default 0,
+  factory_rate numeric(12,4) not null default 0,
+  factory_amount numeric(14,2) not null default 0,
+  pending_amount numeric(14,2) not null default 0,
+  source text not null check (source in ('manual', 'import')) default 'manual',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_sales_sale_date on public.sales (sale_date desc);
+create index if not exists idx_sales_bill_number on public.sales (bill_number);
+create index if not exists idx_sales_party on public.sales (party);
+
 insert into public.users (email, password_hash, role)
 values
   ('admin@gmail.com', '$2b$10$mtlXo3dxE2pjFidG2wnXK.S0wtVnsGatekCL/YbUd.wGn4xGQS3si', 'admin'),

@@ -13,9 +13,25 @@ export function formatNumberIN(
   }
 ) {
   const numeric = toSafeNumber(value);
+  const hasMin = typeof options?.minimumFractionDigits === "number";
+  const hasMax = typeof options?.maximumFractionDigits === "number";
+
+  const minCandidate = hasMin
+    ? options!.minimumFractionDigits!
+    : hasMax
+      ? options!.maximumFractionDigits!
+      : 2;
+  const maxCandidate = hasMax ? options!.maximumFractionDigits! : 2;
+
+  const minimumFractionDigits = Math.max(0, Math.min(20, Math.trunc(minCandidate)));
+  const maximumFractionDigits = Math.max(
+    minimumFractionDigits,
+    Math.max(0, Math.min(20, Math.trunc(maxCandidate)))
+  );
+
   return numeric.toLocaleString(INDIAN_LOCALE, {
-    minimumFractionDigits: options?.minimumFractionDigits ?? 2,
-    maximumFractionDigits: options?.maximumFractionDigits ?? 2,
+    minimumFractionDigits,
+    maximumFractionDigits,
   });
 }
 
