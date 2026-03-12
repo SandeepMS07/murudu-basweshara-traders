@@ -2,14 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/features/auth/lib/session";
 import { AppShell } from "@/components/layout/AppShell";
 import { getPurchases } from "@/features/purchases/service/purchase.service";
-import { getBills } from "@/features/bills/service/bill.service";
 import { PurchaseTrendChart } from "@/features/dashboard/components/PurchaseTrendChart";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
   const purchases = await getPurchases();
-  const bills = await getBills();
 
   const totalPurchasesAmount = purchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
   const rtgsAmount = purchases
@@ -21,9 +19,6 @@ export default async function DashboardPage() {
   const pendingAmount = purchases
     .filter((p) => p.payment_through === "none")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  // Bill amount is counted only for completed payment modes.
-  const totalBillsAmount = rtgsAmount + upiAmount;
-
   const byDate = new Map<string, number>();
   for (const p of purchases) {
     byDate.set(p.date, (byDate.get(p.date) || 0) + p.final_total);
@@ -41,7 +36,7 @@ export default async function DashboardPage() {
           <p className="text-zinc-500">Welcome back, {user.email} ({user.role})</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-zinc-400">Total Purchases</CardTitle>
@@ -61,24 +56,6 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Bills</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{bills.length}</div>
-              <p className="text-xs text-zinc-500">Entries in workbook</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Bill Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalBillsAmount)}</div>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">

@@ -166,7 +166,7 @@
 }
 
 .bill-print-copy {
-  border: 1px solid #e4e8ef;
+  border: 1px solid #cbd5e1;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
@@ -188,7 +188,7 @@
 }
 
 .bill-print-header {
-  border-bottom: 1px solid #e5e9f0;
+  border-bottom: 1px solid #cbd5e1;
   padding: 18px 20px;
 }
 
@@ -223,7 +223,7 @@
 .bill-print-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid #e5e9f0;
+  border-bottom: 1px solid #cbd5e1;
   min-height: 28mm;
   background: #f8fafc;
 }
@@ -283,6 +283,12 @@
   font-weight: 700;
 }
 
+.bill-print-billno-value {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px;
+}
+
 .bill-print-main-table {
   width: 100%;
   border-collapse: collapse;
@@ -291,7 +297,7 @@
 
 .bill-print-main-table th,
 .bill-print-main-table td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   height: 28px;
   padding: 4px 10px;
   font-size: 11px;
@@ -326,14 +332,14 @@
 .bill-print-note-row {
   display: grid;
   grid-template-columns: 68% 32%;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #cbd5e1;
 }
 
 .bill-print-note-left,
 .bill-print-note-right {
   min-height: 42px;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
   padding: 7px 10px;
   font-size: 9px;
   line-height: 1.4;
@@ -354,11 +360,11 @@
 .bill-print-sign-row {
   display: grid;
   grid-template-columns: 54% 46%;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
 }
 
 .bill-print-sign {
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
   min-height: 86px;
   position: relative;
   font-size: 13px;
@@ -393,7 +399,7 @@
 }
 
 .bill-print-summary-table td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   height: 22px;
   padding: 3px 8px;
   font-size: 10px;
@@ -420,8 +426,8 @@
 .bill-print-thanks,
 .bill-print-total-label,
 .bill-print-total-value {
-  border-top: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
+  border-top: 1px solid #cbd5e1;
+  border-right: 1px solid #cbd5e1;
   padding: 8px 6px;
   display: flex;
   align-items: center;

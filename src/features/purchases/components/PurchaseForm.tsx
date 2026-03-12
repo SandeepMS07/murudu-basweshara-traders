@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ interface PurchaseFormProps {
   initialData?: Purchase;
 }
 type PurchaseFormValues = z.input<typeof purchaseSchema>;
+const BAG_LESS_PER_BAG = 6;
 
 const countryOptions = [
   { label: "India (+91)", code: "+91" },
@@ -128,6 +129,11 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
   const addAmount = watch("add_amount");
   const cashPaid = watch("cash_paid");
   const upiPaid = watch("upi_paid");
+
+  useEffect(() => {
+    const computedBagLess = Number(((bags || 0) * BAG_LESS_PER_BAG).toFixed(2));
+    form.setValue("bag_less", computedBagLess, { shouldValidate: true });
+  }, [bags, form]);
 
   // Computed preview values
   const lessWeight = ((weight || 0) * (lessPercent || 0)) / 100;
@@ -322,17 +328,22 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   <FormItem>
                     <FormLabel>Weight</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter weight"
-                        className={fieldClassName}
-                        {...field}
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter weight"
+                          className={`${fieldClassName} pr-10`}
+                          {...field}
+                          value={field.value === 0 ? "" : field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                          kg
+                        </span>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -379,17 +390,22 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   <FormItem>
                     <FormLabel>Rate</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter rate"
-                        className={fieldClassName}
-                        {...field}
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter rate"
+                          className={`${fieldClassName} pl-8`}
+                          {...field}
+                          value={field.value === 0 ? "" : field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                          ₹
+                        </span>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -400,19 +416,22 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                 name="bag_less"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bag Less Amount</FormLabel>
+                    <FormLabel>Bag Less Amount (Auto: Bags * 6)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter bag less amount"
-                        className={fieldClassName}
-                        {...field}
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Auto calculated from bags"
+                          className={`${fieldClassName} pl-8`}
+                          {...field}
+                          readOnly
+                          value={field.value ?? 0}
+                        />
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                          ₹
+                        </span>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -425,17 +444,22 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   <FormItem>
                     <FormLabel>Add Amount</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter add amount"
-                        className={fieldClassName}
-                        {...field}
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter add amount"
+                          className={`${fieldClassName} pl-8`}
+                          {...field}
+                          value={field.value === 0 ? "" : field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                          ₹
+                        </span>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -448,17 +472,22 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   <FormItem>
                     <FormLabel>Cash Paid</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter cash paid"
-                        className={fieldClassName}
-                        {...field}
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter cash paid"
+                          className={`${fieldClassName} pl-8`}
+                          {...field}
+                          value={field.value === 0 ? "" : field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                          ₹
+                        </span>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -471,17 +500,22 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   <FormItem>
                     <FormLabel>UPI Paid</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Enter UPI paid"
-                        className={fieldClassName}
-                        {...field}
-                        value={field.value === 0 ? "" : field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter UPI paid"
+                          className={`${fieldClassName} pl-8`}
+                          {...field}
+                          value={field.value === 0 ? "" : field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
+                          ₹
+                        </span>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

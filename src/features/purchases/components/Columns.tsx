@@ -32,6 +32,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const isManual = purchase.source === "manual";
+  const previewBillNumber = purchase.id.slice(-6).toUpperCase();
 
   const handleDelete = () => {
     if (isManual) return;
@@ -186,6 +187,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                     <div>Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398</div>
                   </div>
                   <div className="bill-print-info-right">
+                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL NO:</span> <strong className="bill-print-billno-value">{previewBillNumber}</strong></div>
                     <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>DATE:</span> <strong>{purchase.date}</strong></div>
                     <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase.mob || "-"}</strong></div>
                     <div className="bill-print-kv"><span className="bill-print-icon-empty" /> <span className="bill-print-empty-label" /> <strong>{purchase.name || "-"}</strong></div>

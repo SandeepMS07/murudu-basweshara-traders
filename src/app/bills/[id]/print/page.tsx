@@ -57,6 +57,7 @@ export default async function BillPrintPage({
   const summaryCash = purchase ? purchase.cash_paid : 0;
   const summaryExtra = purchase ? purchase.add_amount : 0;
   const summaryTotal = purchase ? purchase.final_total : bill.final_amount;
+  const billNumber = bill.id.slice(-6).toUpperCase();
   const copies = previewMode ? [1] : [1, 2];
   const rootClassName = `bill-print-root bill-print-preview${
     previewMode ? " bill-print-inline-preview" : ""
@@ -82,6 +83,7 @@ export default async function BillPrintPage({
               <div>Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398</div>
             </div>
             <div className="bill-print-info-right">
+              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL NO:</span> <strong className="bill-print-billno-value">{billNumber}</strong></div>
               <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>DATE:</span> <strong>{printDate}</strong></div>
               <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase?.mob || "-"}</strong></div>
               <div className="bill-print-kv"><span className="bill-print-icon-empty" /> <span className="bill-print-empty-label" /> <strong>{purchase?.name || "-"}</strong></div>
