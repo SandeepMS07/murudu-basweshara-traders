@@ -135,8 +135,8 @@
 .bill-print-root.bill-print-preview {
   display: none;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 20px;
+  gap: 112px;
+  padding: 16px;
   align-items: start;
   background: #eef2f7;
   color: #1f2937;
@@ -156,7 +156,7 @@
   width: 100%;
   max-width: none;
   height: auto;
-  min-height: 126mm;
+  min-height: 118mm;
   box-shadow: 0 8px 20px rgba(43, 50, 66, 0.12);
 }
 
@@ -167,11 +167,11 @@
 
 .bill-print-copy {
   border: 1px solid #cbd5e1;
-  border-radius: 16px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   height: auto;
-  min-height: 126mm;
+  min-height: 118mm;
   background: #ffffff;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
@@ -189,7 +189,14 @@
 
 .bill-print-header {
   border-bottom: 1px solid #cbd5e1;
-  padding: 18px 20px;
+  padding: 12px 14px;
+}
+
+.bill-print-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .bill-print-brand {
@@ -199,61 +206,89 @@
 }
 
 .bill-print-logo-mark {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #1d4ed8;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.2px;
 }
 
 .bill-print-title {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 800;
   color: #1e3a8a;
   letter-spacing: -0.01em;
   line-height: 1;
 }
 
+.bill-print-invoice-box {
+  min-width: 150px;
+  border: 1px solid #a9b7cc;
+  background: #ffffff;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.bill-print-invoice-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  color: #475569;
+  border-bottom: 1px solid #a9b7cc;
+  padding: 2px 8px 1px;
+  text-transform: uppercase;
+}
+
+.bill-print-invoice-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  padding: 6px 8px 5px;
+  text-align: center;
+}
+
 .bill-print-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border-bottom: 1px solid #cbd5e1;
-  min-height: 28mm;
+  min-height: 22mm;
   background: #f8fafc;
 }
 
 .bill-print-info-left {
-  padding: 14px 16px 12px;
+  padding: 10px 12px 8px;
 }
 
 .bill-print-yard {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: #0f172a;
 }
 
 .bill-print-info-left div {
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 10px;
+  line-height: 1.35;
   color: #475569;
 }
 
 .bill-print-info-right {
-  padding: 14px 16px 10px;
+  padding: 10px 12px 8px;
 }
 
 .bill-print-kv {
   display: grid;
   grid-template-columns: 14px 30% 56%;
   align-items: baseline;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
 }
 
 .bill-print-icon {
@@ -272,13 +307,13 @@
 
 .bill-print-kv span {
   color: #475569;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.2px;
 }
 
 .bill-print-kv strong {
-  font-size: 11px;
+  font-size: 10px;
   color: #0f172a;
   font-weight: 700;
 }
@@ -298,9 +333,9 @@
 .bill-print-main-table th,
 .bill-print-main-table td {
   border: 1px solid #cbd5e1;
-  height: 28px;
-  padding: 4px 10px;
-  font-size: 11px;
+  height: 24px;
+  padding: 3px 8px;
+  font-size: 10px;
   color: #1e293b;
 }
 
@@ -337,11 +372,11 @@
 
 .bill-print-note-left,
 .bill-print-note-right {
-  min-height: 42px;
+  min-height: 34px;
   border-right: 1px solid #cbd5e1;
   border-bottom: 1px solid #cbd5e1;
-  padding: 7px 10px;
-  font-size: 9px;
+  padding: 5px 8px;
+  font-size: 8px;
   line-height: 1.4;
   color: #475569;
   background: #ffffff;
@@ -365,20 +400,20 @@
 
 .bill-print-sign {
   border-right: 1px solid #cbd5e1;
-  min-height: 86px;
+  min-height: 70px;
   position: relative;
   font-size: 13px;
   text-align: center;
   font-weight: 700;
-  padding: 12px 10px 8px;
+  padding: 8px 8px 6px;
   color: #0f172a;
   background: #ffffff;
 }
 
 .bill-print-sign-title {
-  font-size: 12px;
-  margin-top: 9px;
-  margin-bottom: 12px;
+  font-size: 11px;
+  margin-top: 6px;
+  margin-bottom: 8px;
 }
 
 .bill-print-sign-line {
@@ -388,7 +423,7 @@
 }
 
 .bill-print-sign-caption {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 8px;
   color: #64748b;
 }
@@ -400,9 +435,9 @@
 
 .bill-print-summary-table td {
   border: 1px solid #cbd5e1;
-  height: 22px;
-  padding: 3px 8px;
-  font-size: 10px;
+  height: 19px;
+  padding: 2px 7px;
+  font-size: 9px;
   color: #1e293b;
 }
 
@@ -428,7 +463,7 @@
 .bill-print-total-value {
   border-top: 1px solid #cbd5e1;
   border-right: 1px solid #cbd5e1;
-  padding: 8px 6px;
+  padding: 5px 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -436,7 +471,7 @@
 }
 
 .bill-print-thanks {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.2px;
   color: #0f172a;
   background: #ffffff;
@@ -444,14 +479,14 @@
 
 .bill-print-total-label {
   background: #f8fafc;
-  font-size: 12px;
+  font-size: 10px;
   color: #334155;
 }
 
 .bill-print-total-value {
   border-right: 0;
   background: #ffffff;
-  font-size: 26px;
+  font-size: 18px;
   line-height: 1;
   white-space: nowrap;
   overflow: visible;
@@ -459,7 +494,15 @@
   color: #1e3a8a;
   letter-spacing: 0.1px;
   justify-content: flex-end;
-  padding-right: 10px;
+  padding: 6px 10px;
+}
+
+.bill-print-total-value.bill-print-total-value-md {
+  font-size: 16px;
+}
+
+.bill-print-total-value.bill-print-total-value-sm {
+  font-size: 14px;
 }
 
 @media print {
@@ -482,7 +525,7 @@
     inset: 0;
     display: grid !important;
     grid-template-columns: 1fr 1fr;
-    gap: 3mm;
+    gap: 44mm;
     padding: 3mm;
     align-items: stretch;
     background: #eef2f7;
@@ -495,7 +538,7 @@
     transform: none !important;
     width: 100%;
     min-height: 100%;
-    padding: 6mm 6mm 5mm;
+    padding: 4mm 4mm 3mm;
     border: 1px solid #e2e8f0;
     border-radius: 0;
   }

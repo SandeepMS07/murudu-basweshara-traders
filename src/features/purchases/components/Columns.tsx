@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { stripIndiaCountryCode } from "@/lib/phone-format";
 
 function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const router = useRouter();
@@ -33,6 +34,17 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const [generateOpen, setGenerateOpen] = useState(false);
   const isManual = purchase.source === "manual";
   const previewBillNumber = purchase.id.slice(-6).toUpperCase();
+  const billToPhone = stripIndiaCountryCode(purchase.mob);
+  const previewTotalText = formatCurrencyINR(purchase.final_total, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  const previewTotalValueSizeClass =
+    previewTotalText.length >= 12
+      ? "bill-print-total-value-sm"
+      : previewTotalText.length >= 10
+        ? "bill-print-total-value-md"
+        : "";
 
   const handleDelete = () => {
     if (isManual) return;
@@ -170,12 +182,18 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-auto rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
-            <div className="bill-print-root bill-print-preview bill-print-inline-preview">
-              <section className="bill-print-copy w-full max-w-none">
+            <div className="bill-print-root bill-print-preview bill-print-inline-preview p-2 sm:p-3">
+              <section className="bill-print-copy mx-auto w-full max-w-none">
                 <header className="bill-print-header">
-                  <div className="bill-print-brand">
-                    <div className="bill-print-logo-mark">MB</div>
-                    <div className="bill-print-title">MB Groups</div>
+                  <div className="bill-print-brand-row">
+                    <div className="bill-print-brand">
+                      <div className="bill-print-logo-mark">MB</div>
+                      <div className="bill-print-title">MB Groups</div>
+                    </div>
+                    <div className="bill-print-invoice-box">
+                      <div className="bill-print-invoice-label">ESTIMATION INVOICE</div>
+                      <div className="bill-print-invoice-number">{previewBillNumber}</div>
+                    </div>
                   </div>
                 </header>
 
@@ -187,10 +205,9 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                     <div>Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398</div>
                   </div>
                   <div className="bill-print-info-right">
-                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL NO:</span> <strong className="bill-print-billno-value">{previewBillNumber}</strong></div>
                     <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>DATE:</span> <strong>{purchase.date}</strong></div>
-                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase.mob || "-"}</strong></div>
-                    <div className="bill-print-kv"><span className="bill-print-icon-empty" /> <span className="bill-print-empty-label" /> <strong>{purchase.name || "-"}</strong></div>
+                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase.name || "-"}</strong></div>
+                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>PHONE:</span> <strong>{billToPhone}</strong></div>
                     <div className="bill-print-kv"><span className="bill-print-icon">◉</span><span>PLACE:</span> <strong>{purchase.place || "-"}</strong></div>
                   </div>
                 </section>
@@ -225,7 +242,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                   <table className="bill-print-table bill-print-summary-table">
                     <tbody>
                       <tr><td>AMOUNT</td><td>{formatCurrencyINR(purchase.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                      <tr><td>LESS</td><td>{formatCurrencyINR(purchase.bag_less, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                      <tr><td>BAG LESS</td><td>{formatCurrencyINR(purchase.bag_less, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                       <tr><td>CASH</td><td>{formatCurrencyINR(purchase.cash_paid, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                       <tr><td>EXTRA</td><td>{formatCurrencyINR(purchase.add_amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                     </tbody>
@@ -235,7 +252,11 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                 <footer className="bill-print-total-row">
                   <div className="bill-print-thanks">THANK YOU FOR YOUR BUSINESS!</div>
                   <div className="bill-print-total-label">TOTAL</div>
-                  <div className="bill-print-total-value">{formatCurrencyINR(purchase.final_total, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  <div
+                    className={`bill-print-total-value ${previewTotalValueSizeClass}`.trim()}
+                  >
+                    {previewTotalText}
+                  </div>
                 </footer>
               </section>
             </div>

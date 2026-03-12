@@ -11,7 +11,7 @@ import {
   getFilteredRowModel,
   Row,
 } from "@tanstack/react-table";
-import { CSSProperties, useState } from "react";
+import { CSSProperties, ReactNode, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +43,7 @@ interface DataTableProps<TData, TValue> {
   searchKey?: string;
   searchPlaceholder?: string;
   rowClassName?: (row: Row<TData>) => string | undefined;
+  toolbarRight?: ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -51,6 +52,7 @@ export function DataTable<TData, TValue>({
   searchKey,
   searchPlaceholder = "Search...",
   rowClassName,
+  toolbarRight,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -72,23 +74,26 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {searchKey && (
-        <div className="max-w-sm items-center gap-2">
-          <div className="relative w-full">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? globalFilter}
-              onChange={(event) => {
-                if (searchKey && table.getColumn(searchKey)) {
-                  table.getColumn(searchKey)?.setFilterValue(event.target.value);
-                } else {
-                  setGlobalFilter(event.target.value);
-                }
-              }}
-              className="h-10 border-[#2a2d34] bg-[#14161b] pl-8 text-zinc-200 placeholder:text-zinc-500"
-            />
-          </div>
+      {(searchKey || toolbarRight) && (
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+          {searchKey && (
+            <div className="relative w-full xl:max-w-sm xl:flex-none">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? globalFilter}
+                onChange={(event) => {
+                  if (searchKey && table.getColumn(searchKey)) {
+                    table.getColumn(searchKey)?.setFilterValue(event.target.value);
+                  } else {
+                    setGlobalFilter(event.target.value);
+                  }
+                }}
+                className="h-10 border-[#2a2d34] bg-[#14161b] pl-8 text-zinc-200 placeholder:text-zinc-500"
+              />
+            </div>
+          )}
+          {toolbarRight ? <div className="min-w-0 w-full xl:flex-1">{toolbarRight}</div> : null}
         </div>
       )}
 

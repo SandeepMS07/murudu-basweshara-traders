@@ -6,6 +6,7 @@ import { BillPrintAuto } from "@/features/bills/components/BillPrintAuto";
 import { getPurchaseById } from "@/features/purchases/service/purchase.service";
 import { Bill } from "@/features/bills/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { stripIndiaCountryCode } from "@/lib/phone-format";
 
 export default async function BillPrintPage({
   params,
@@ -57,7 +58,18 @@ export default async function BillPrintPage({
   const summaryCash = purchase ? purchase.cash_paid : 0;
   const summaryExtra = purchase ? purchase.add_amount : 0;
   const summaryTotal = purchase ? purchase.final_total : bill.final_amount;
+  const summaryTotalText = formatCurrencyINR(summaryTotal, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  const totalValueSizeClass =
+    summaryTotalText.length >= 12
+      ? "bill-print-total-value-sm"
+      : summaryTotalText.length >= 10
+        ? "bill-print-total-value-md"
+        : "";
   const billNumber = bill.id.slice(-6).toUpperCase();
+  const billToPhone = stripIndiaCountryCode(purchase?.mob);
   const copies = previewMode ? [1] : [1, 2];
   const rootClassName = `bill-print-root bill-print-preview${
     previewMode ? " bill-print-inline-preview" : ""
@@ -69,9 +81,15 @@ export default async function BillPrintPage({
       {copies.map((copy) => (
         <section className="bill-print-copy" key={copy}>
           <header className="bill-print-header">
-            <div className="bill-print-brand">
-              <div className="bill-print-logo-mark">MB</div>
-              <div className="bill-print-title">MB Groups</div>
+            <div className="bill-print-brand-row">
+              <div className="bill-print-brand">
+                <div className="bill-print-logo-mark">MB</div>
+                <div className="bill-print-title">MB Groups</div>
+              </div>
+              <div className="bill-print-invoice-box">
+                <div className="bill-print-invoice-label">ESTIMATION INVOICE</div>
+                <div className="bill-print-invoice-number">{billNumber}</div>
+              </div>
             </div>
           </header>
 
@@ -83,10 +101,9 @@ export default async function BillPrintPage({
               <div>Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398</div>
             </div>
             <div className="bill-print-info-right">
-              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL NO:</span> <strong className="bill-print-billno-value">{billNumber}</strong></div>
               <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>DATE:</span> <strong>{printDate}</strong></div>
-              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase?.mob || "-"}</strong></div>
-              <div className="bill-print-kv"><span className="bill-print-icon-empty" /> <span className="bill-print-empty-label" /> <strong>{purchase?.name || "-"}</strong></div>
+              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase?.name || "-"}</strong></div>
+              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>PHONE:</span> <strong>{billToPhone}</strong></div>
               <div className="bill-print-kv"><span className="bill-print-icon">◉</span><span>PLACE:</span> <strong>{purchase?.place || "-"}</strong></div>
             </div>
           </section>
@@ -121,7 +138,7 @@ export default async function BillPrintPage({
             <table className="bill-print-table bill-print-summary-table">
               <tbody>
                 <tr><td>AMOUNT</td><td>{formatCurrencyINR(summaryAmount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                <tr><td>LESS</td><td>{formatCurrencyINR(summaryLess, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                <tr><td>BAG LESS</td><td>{formatCurrencyINR(summaryLess, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                 <tr><td>CASH</td><td>{formatCurrencyINR(summaryCash, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
                 <tr><td>EXTRA</td><td>{formatCurrencyINR(summaryExtra, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
               </tbody>
@@ -131,7 +148,9 @@ export default async function BillPrintPage({
           <footer className="bill-print-total-row">
             <div className="bill-print-thanks">THANK YOU FOR YOUR BUSINESS!</div>
             <div className="bill-print-total-label">TOTAL</div>
-            <div className="bill-print-total-value">{formatCurrencyINR(summaryTotal, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+            <div className={`bill-print-total-value ${totalValueSizeClass}`.trim()}>
+              {summaryTotalText}
+            </div>
           </footer>
         </section>
       ))}

@@ -22,46 +22,56 @@ export default async function PurchasesPage() {
   );
   return (
     <AppShell>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Purchases</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">Purchases</h1>
           <p className="text-zinc-500">Manage your purchases records here.</p>
         </div>
         <Link href="/purchases/new">
-          <Button className="border border-[#2a2d34] bg-[#17191f] text-zinc-100 hover:bg-[#1d2026]">
+          <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Purchase
           </Button>
         </Link>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-4">
         <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
-          <CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-zinc-400">Total Purchases</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
+              {formatNumberIN(data.length, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Total Bags</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-[#ff8f6b]">
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
               {formatNumberIN(totals.bags, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>
         <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Total Weight</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-[#ff8f6b]">
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
               {formatNumberIN(totals.weight)} kg
             </p>
           </CardContent>
         </Card>
         <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Total Amount</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-[#ff8f6b]">
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
               {formatCurrencyINR(totals.amount)}
             </p>
           </CardContent>
