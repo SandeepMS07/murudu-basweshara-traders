@@ -19,15 +19,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createSaleAction, updateSaleAction } from "@/app/sales/actions";
 import { saleSchema, Sale } from "@/features/sales/schemas";
-import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { formatCurrencyINR } from "@/lib/number-format";
 import { Company } from "@/features/companies/schemas";
 import { createCompanyAction } from "@/app/companies/actions";
 
 interface SaleFormProps {
   initialData?: Sale;
   buyerCompanies: Company[];
+  issuerCompanies: Company[];
   canCreateBuyer?: boolean;
   initialSlNo?: number;
   initialBillNumber?: string;
@@ -38,6 +46,7 @@ type SaleFormValues = z.input<typeof saleSchema>;
 export function SaleForm({
   initialData,
   buyerCompanies,
+  issuerCompanies,
   canCreateBuyer = false,
   initialSlNo = 1,
   initialBillNumber = "1",
@@ -56,6 +65,7 @@ export function SaleForm({
           sl_no: initialData.sl_no,
           bill_number: initialData.bill_number,
           sale_date: initialData.sale_date,
+          issuer_company_id: initialData.issuer_company_id ?? null,
           lorry_number: initialData.lorry_number,
           party: initialData.party,
           sale_company_id: initialData.sale_company_id ?? null,
@@ -73,6 +83,9 @@ export function SaleForm({
           sl_no: initialSlNo,
           bill_number: initialBillNumber,
           sale_date: new Date().toISOString().split("T")[0],
+          issuer_company_id: issuerCompanies.find((company) => company.is_active)?.id
+            ?? issuerCompanies[0]?.id
+            ?? null,
           lorry_number: "",
           party: "",
           sale_company_id: null,
@@ -94,16 +107,14 @@ export function SaleForm({
     const netWeight = watched.net_weight || 0;
     const rate = watched.rate || 0;
     const flight = watched.flight || 0;
-    const factoryRate = watched.factory_rate || 0;
+    const factoryRate = 0;
     const amount = netWeight * rate - flight;
     const factoryAmount = netWeight * factoryRate;
     const pendingAmount = amount - factoryAmount;
-    const bagAvg = watched.bag_avg ?? (bags > 0 ? netWeight / bags : 0);
     return {
       amount,
       factoryAmount,
       pendingAmount,
-      bagAvg,
     };
   }, [watched]);
 
@@ -120,6 +131,8 @@ export function SaleForm({
     setIsLoading(true);
     try {
       const payload = saleSchema.parse(values);
+      payload.factory_rate = 0;
+      payload.bag_avg = undefined;
       if (payload.sale_company_id && selectedBuyer) {
         payload.party = selectedBuyer.name;
       }
@@ -230,6 +243,39 @@ export function SaleForm({
                     <FormControl>
                       <Input type="date" {...field} className={fieldClassName} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="issuer_company_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Issuer Company</FormLabel>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={(value) => field.onChange(value || null)}
+                    >
+                      <FormControl>
+                        <SelectTrigger className={fieldClassName}>
+                          <SelectValue placeholder="Select issuer company" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="border border-[#343946] bg-[#1f2430] text-zinc-100 ring-0">
+                        {issuerCompanies
+                          .filter((company) => company.is_active)
+                          .map((company) => (
+                            <SelectItem
+                              key={company.id}
+                              value={company.id}
+                              className="text-zinc-100 hover:bg-[#31384a] hover:text-white focus:bg-[#31384a] focus:text-white data-[highlighted]:bg-[#31384a] data-[highlighted]:text-white"
+                            >
+                              {company.display_name || company.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -360,46 +406,9 @@ export function SaleForm({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="factory_rate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Factory Rate</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.0001" className={fieldClassName} value={field.value ?? 0} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bag_avg"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bag Avg (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        className={fieldClassName}
-                        value={field.value ?? ""}
-                        onChange={(event) =>
-                          field.onChange(
-                            event.target.value === "" ? undefined : parseFloat(event.target.value) || 0
-                          )
-                        }
-                        placeholder={formatNumberIN(computed.bagAvg)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 rounded-md border border-[#252932] bg-[#15171c] p-4 text-sm md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 rounded-md border border-[#252932] bg-[#15171c] p-4 text-sm md:grid-cols-3">
               <div>
                 <p className="text-zinc-500">Amount</p>
                 <p className="font-semibold text-zinc-100">{formatCurrencyINR(computed.amount)}</p>
@@ -411,10 +420,6 @@ export function SaleForm({
               <div>
                 <p className="text-zinc-500">Pending</p>
                 <p className="font-semibold text-zinc-100">{formatCurrencyINR(computed.pendingAmount)}</p>
-              </div>
-              <div>
-                <p className="text-zinc-500">Bag Avg</p>
-                <p className="font-semibold text-zinc-100">{formatNumberIN(computed.bagAvg)}</p>
               </div>
             </div>
 

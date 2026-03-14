@@ -3,13 +3,15 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { SaleForm } from "@/features/sales/components/SaleForm";
 import {
   getBuyerCompaniesForSales,
+  getIssuerCompaniesForSales,
   getNextSaleIdentifiers,
 } from "@/features/sales/service/sale.service";
 
 export default async function NewSalePage() {
   const user = await requireAuth();
-  const [buyerCompanies, nextIds] = await Promise.all([
+  const [buyerCompanies, issuerCompanies, nextIds] = await Promise.all([
     getBuyerCompaniesForSales(),
+    getIssuerCompaniesForSales(),
     getNextSaleIdentifiers(),
   ]);
 
@@ -21,6 +23,7 @@ export default async function NewSalePage() {
       </div>
       <SaleForm
         buyerCompanies={buyerCompanies}
+        issuerCompanies={issuerCompanies}
         canCreateBuyer={user.role === "admin"}
         initialSlNo={nextIds.nextSlNo}
         initialBillNumber={nextIds.nextBillNumber}

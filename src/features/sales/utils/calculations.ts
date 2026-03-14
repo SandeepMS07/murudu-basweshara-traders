@@ -22,6 +22,7 @@ export function calculateSale(input: SaleInput, id: string): Sale {
     sl_no: input.sl_no ?? null,
     bill_number: input.bill_number,
     sale_date: input.sale_date,
+    issuer_company_id: input.issuer_company_id ?? null,
     lorry_number: input.lorry_number,
     party: input.party,
     sale_company_id: input.sale_company_id ?? null,

@@ -17,6 +17,7 @@ type SaleRow = {
   sl_no: number | null;
   bill_number: string;
   sale_date: string;
+  issuer_company_id: string | null;
   lorry_number: string | null;
   party: string | null;
   sale_company_id: string | null;
@@ -64,6 +65,7 @@ function toSale(row: SaleRow): Sale {
     sl_no: row.sl_no ?? null,
     bill_number: row.bill_number,
     sale_date: row.sale_date,
+    issuer_company_id: row.issuer_company_id ?? null,
     lorry_number: row.lorry_number ?? "",
     party: row.party ?? "",
     sale_company_id: row.sale_company_id ?? null,
@@ -165,6 +167,29 @@ async function resolvePartyFields(
   };
 }
 
+async function resolveIssuerCompanyId(input: SaleInput): Promise<string | null> {
+  const issuerCompanyId = input.issuer_company_id ?? null;
+  if (!issuerCompanyId) {
+    return null;
+  }
+
+  const { data, error } = await supabaseServer
+    .from("companies")
+    .select("id")
+    .eq("id", issuerCompanyId)
+    .eq("type", "issuer")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to resolve issuer company: ${error.message}`);
+  }
+  if (!data) {
+    throw new Error("Selected issuer company not found");
+  }
+
+  return issuerCompanyId;
+}
+
 export async function getSales(filters?: SalesFilters): Promise<Sale[]> {
   let query = supabaseServer.from("sales").select("*").order("sale_date", { ascending: false });
 
@@ -210,8 +235,9 @@ export async function createSale(input: SaleInput): Promise<Sale> {
   }
 
   const resolved = await resolvePartyFields(input);
+  const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
-    { ...input, ...resolved, source: "manual" },
+    { ...input, ...resolved, issuer_company_id: issuerCompanyId, source: "manual" },
     crypto.randomUUID()
   );
   const payload = {
@@ -244,8 +270,14 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
   }
 
   const resolved = await resolvePartyFields(input);
+  const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
-    { ...input, ...resolved, source: existing.source },
+    {
+      ...input,
+      ...resolved,
+      issuer_company_id: issuerCompanyId,
+      source: existing.source,
+    },
     id
   );
   const payload = {
@@ -316,8 +348,15 @@ export async function upsertSaleByBillNumber(input: SaleInput): Promise<Sale> {
   const id = existing?.id ?? crypto.randomUUID();
   const source = (input.source ?? "import") as "manual" | "import";
   const resolved = await resolvePartyFields(input);
+  const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
-    { ...input, ...resolved, bill_number: billNumber, source },
+    {
+      ...input,
+      ...resolved,
+      issuer_company_id: issuerCompanyId,
+      bill_number: billNumber,
+      source,
+    },
     id
   );
 
@@ -572,6 +611,10 @@ export async function importSalesFromBillWorkbook(
 
 export async function getBuyerCompaniesForSales(): Promise<Company[]> {
   return getCompanies("buyer");
+}
+
+export async function getIssuerCompaniesForSales(): Promise<Company[]> {
+  return getCompanies("issuer");
 }
 
 export async function getNextSaleIdentifiers(): Promise<{

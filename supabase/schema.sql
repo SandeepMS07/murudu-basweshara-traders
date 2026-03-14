@@ -62,6 +62,7 @@ create table if not exists public.sales (
   sl_no integer null,
   bill_number text not null unique,
   sale_date date not null,
+  issuer_company_id text null,
   lorry_number text not null default '',
   party text not null default '',
   payment_terms text not null default '',
@@ -85,6 +86,7 @@ create index if not exists idx_sales_sale_date on public.sales (sale_date desc);
 create index if not exists idx_sales_bill_number on public.sales (bill_number);
 create index if not exists idx_sales_party on public.sales (party);
 create index if not exists idx_sales_sale_company_id on public.sales (sale_company_id);
+create index if not exists idx_sales_issuer_company_id on public.sales (issuer_company_id);
 
 create table if not exists public.companies (
   id text primary key,
@@ -111,6 +113,61 @@ create table if not exists public.company_invoice_counters (
   last_seq bigint not null default 0,
   updated_at timestamptz not null default now()
 );
+
+-- Backward-compatible migration for older installs where the counter table
+-- used `company_id` instead of `issuer_company_id`.
+alter table public.company_invoice_counters
+  add column if not exists issuer_company_id text;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'company_invoice_counters'
+      and column_name = 'company_id'
+  ) then
+    execute '
+      update public.company_invoice_counters
+      set issuer_company_id = company_id
+      where issuer_company_id is null
+    ';
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'company_invoice_counters_pkey'
+      and conrelid = 'public.company_invoice_counters'::regclass
+  ) then
+    alter table public.company_invoice_counters
+      drop constraint company_invoice_counters_pkey;
+  end if;
+end $$;
+
+alter table public.company_invoice_counters
+  alter column issuer_company_id set not null;
+
+alter table public.company_invoice_counters
+  add constraint company_invoice_counters_pkey primary key (issuer_company_id);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'company_invoice_counters_issuer_company_id_fkey'
+      and conrelid = 'public.company_invoice_counters'::regclass
+  ) then
+    alter table public.company_invoice_counters
+      add constraint company_invoice_counters_issuer_company_id_fkey
+      foreign key (issuer_company_id) references public.companies(id) on delete cascade;
+  end if;
+end $$;
 
 create table if not exists public.sales_invoices (
   id text primary key,
@@ -147,6 +204,7 @@ create index if not exists idx_sales_invoice_items_invoice_id on public.sales_in
 create index if not exists idx_sales_invoice_items_sale_id on public.sales_invoice_items (sale_id);
 
 alter table public.sales add column if not exists sale_company_id text null;
+alter table public.sales add column if not exists issuer_company_id text null;
 alter table public.companies add column if not exists invoice_prefix text not null default '';
 
 do $$
@@ -159,6 +217,19 @@ begin
     alter table public.sales
       add constraint sales_sale_company_id_fkey
       foreign key (sale_company_id) references public.companies(id);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'sales_issuer_company_id_fkey'
+  ) then
+    alter table public.sales
+      add constraint sales_issuer_company_id_fkey
+      foreign key (issuer_company_id) references public.companies(id);
   end if;
 end $$;
 
