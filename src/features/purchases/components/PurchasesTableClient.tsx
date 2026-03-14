@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { createPurchaseColumns } from "@/features/purchases/components/Columns";
@@ -27,26 +27,26 @@ const paymentBadgeStyles: Record<PaymentMethod, string> = {
 
 export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
   const [, startTransition] = useTransition();
-  const [paymentMethods, setPaymentMethods] = useState<
+  const [paymentMethodOverrides, setPaymentMethodOverrides] = useState<
     Record<string, PaymentMethod>
   >({});
 
-  useEffect(() => {
-    setPaymentMethods(
+  const paymentMethods = useMemo(
+    () =>
       Object.fromEntries(
         data.map((purchase) => [
           purchase.id,
-          purchase.payment_through ?? "none",
+          paymentMethodOverrides[purchase.id] ?? purchase.payment_through ?? "none",
         ])
-      ) as Record<string, PaymentMethod>
-    );
-  }, [data]);
+      ) as Record<string, PaymentMethod>,
+    [data, paymentMethodOverrides]
+  );
 
   const handlePaymentMethodChange = useCallback(
     (purchaseId: string, method: PaymentMethod) => {
       const previous = paymentMethods[purchaseId] ?? "none";
 
-      setPaymentMethods((current) => ({
+      setPaymentMethodOverrides((current) => ({
         ...current,
         [purchaseId]: method,
       }));
@@ -60,7 +60,7 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
               ? error.message
               : "Failed to save payment method";
           toast.error(message);
-          setPaymentMethods((current) => ({
+          setPaymentMethodOverrides((current) => ({
             ...current,
             [purchaseId]: previous,
           }));
@@ -87,7 +87,7 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
     };
 
     data.forEach((purchase) => {
-      const method = paymentMethods[purchase.id] ?? "none";
+      const method = paymentMethods[purchase.id] ?? purchase.payment_through ?? "none";
       summary[method].count += 1;
       summary[method].amount += purchase.final_total;
     });

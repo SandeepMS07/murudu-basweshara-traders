@@ -9,6 +9,7 @@ export const saleSchema = z.object({
   sale_date: z.string().min(1, "Date is required"),
   lorry_number: z.string().trim().default(""),
   party: z.string().trim().min(1, "Party is required"),
+  sale_company_id: z.string().trim().optional().nullable(),
   payment_terms: z.string().trim().default(""),
   bags: z.number().min(0).default(0),
   net_weight: z.number().min(0).default(0),
@@ -24,6 +25,7 @@ export type SaleInput = z.infer<typeof saleSchema>;
 
 export interface Sale extends Omit<SaleInput, "bag_avg"> {
   id: string;
+  sale_company_id: string | null;
   bag_avg: number;
   amount: number;
   factory_amount: number;
@@ -39,3 +41,5 @@ export type SalesImportSummary = {
   failed: number;
   errors: string[];
 };
+
+export * from "./invoice";

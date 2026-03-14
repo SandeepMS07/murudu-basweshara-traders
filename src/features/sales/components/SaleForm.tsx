@@ -22,16 +22,30 @@ import { Input } from "@/components/ui/input";
 import { createSaleAction, updateSaleAction } from "@/app/sales/actions";
 import { saleSchema, Sale } from "@/features/sales/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { Company } from "@/features/companies/schemas";
+import { createCompanyAction } from "@/app/companies/actions";
 
 interface SaleFormProps {
   initialData?: Sale;
+  buyerCompanies: Company[];
+  canCreateBuyer?: boolean;
+  initialSlNo?: number;
+  initialBillNumber?: string;
 }
 
 type SaleFormValues = z.input<typeof saleSchema>;
 
-export function SaleForm({ initialData }: SaleFormProps) {
+export function SaleForm({
+  initialData,
+  buyerCompanies,
+  canCreateBuyer = false,
+  initialSlNo = 1,
+  initialBillNumber = "1",
+}: SaleFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [buyers, setBuyers] = useState<Company[]>(buyerCompanies);
+  const [buyerSearch, setBuyerSearch] = useState(initialData?.party ?? "");
   const isEditing = Boolean(initialData);
 
   const form = useForm<SaleFormValues>({
@@ -44,6 +58,7 @@ export function SaleForm({ initialData }: SaleFormProps) {
           sale_date: initialData.sale_date,
           lorry_number: initialData.lorry_number,
           party: initialData.party,
+          sale_company_id: initialData.sale_company_id ?? null,
           payment_terms: initialData.payment_terms,
           bags: initialData.bags,
           net_weight: initialData.net_weight,
@@ -55,11 +70,12 @@ export function SaleForm({ initialData }: SaleFormProps) {
           source: initialData.source,
         }
       : {
-          sl_no: null,
-          bill_number: "",
+          sl_no: initialSlNo,
+          bill_number: initialBillNumber,
           sale_date: new Date().toISOString().split("T")[0],
           lorry_number: "",
           party: "",
+          sale_company_id: null,
           payment_terms: "",
           bags: 0,
           net_weight: 0,
@@ -94,10 +110,19 @@ export function SaleForm({ initialData }: SaleFormProps) {
   const fieldClassName =
     "h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100 placeholder:text-zinc-500";
 
+  const selectedBuyerId = form.watch("sale_company_id");
+  const selectedBuyer = useMemo(
+    () => buyers.find((company) => company.id === selectedBuyerId) ?? null,
+    [buyers, selectedBuyerId]
+  );
+
   async function onSubmit(values: SaleFormValues) {
     setIsLoading(true);
     try {
       const payload = saleSchema.parse(values);
+      if (payload.sale_company_id && selectedBuyer) {
+        payload.party = selectedBuyer.name;
+      }
       if (isEditing && initialData?.id) {
         await updateSaleAction(initialData.id, payload);
         toast.success("Sale updated");
@@ -105,13 +130,51 @@ export function SaleForm({ initialData }: SaleFormProps) {
         await createSaleAction(payload);
         toast.success("Sale created");
       }
-      router.push("/sales");
-      router.refresh();
+      router.replace("/sales");
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to save sale");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleAddBuyer() {
+    const name = buyerSearch.trim();
+    if (!name) {
+      toast.error("Enter buyer company name");
+      return;
+    }
+
+    try {
+      const created = await createCompanyAction({
+        type: "buyer",
+        name,
+        display_name: name,
+        is_active: true,
+        is_default: false,
+      });
+      setBuyers((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)));
+      form.setValue("sale_company_id", created.id);
+      form.setValue("party", created.name);
+      setBuyerSearch(created.name);
+      toast.success("Buyer company added");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to add buyer");
+    }
+  }
+
+  function handleBuyerSearchChange(value: string) {
+    setBuyerSearch(value);
+    const normalized = value.trim().toLowerCase();
+    const matched =
+      buyers.find((entry) => entry.name.trim().toLowerCase() === normalized) ?? null;
+    if (matched) {
+      form.setValue("sale_company_id", matched.id);
+      form.setValue("party", matched.name);
+      return;
+    }
+    form.setValue("sale_company_id", null);
+    form.setValue("party", value.trim());
   }
 
   return (
@@ -138,7 +201,7 @@ export function SaleForm({ initialData }: SaleFormProps) {
                         value={field.value ?? ""}
                         onChange={(event) => field.onChange(event.target.value === "" ? null : Number(event.target.value))}
                         className={fieldClassName}
-                        placeholder="Optional"
+                        placeholder="SL No"
                       />
                     </FormControl>
                     <FormMessage />
@@ -173,13 +236,35 @@ export function SaleForm({ initialData }: SaleFormProps) {
               />
               <FormField
                 control={form.control}
-                name="party"
-                render={({ field }) => (
+                name="sale_company_id"
+                render={() => (
                   <FormItem>
-                    <FormLabel>Party</FormLabel>
-                    <FormControl>
-                      <Input {...field} className={fieldClassName} placeholder="Enter party name" />
-                    </FormControl>
+                    <FormLabel>Buyer Company / Party</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input
+                          list="buyer-company-options"
+                          value={buyerSearch}
+                          onChange={(event) => handleBuyerSearchChange(event.target.value)}
+                          className={fieldClassName}
+                          placeholder="Search existing buyer or type new party"
+                        />
+                      </FormControl>
+                      {canCreateBuyer ? (
+                        <Button
+                          type="button"
+                          onClick={handleAddBuyer}
+                          className="cursor-pointer border border-[#2a2d34] bg-[#1b1e24] text-zinc-100 hover:bg-[#23262e]"
+                        >
+                          Add
+                        </Button>
+                      ) : null}
+                    </div>
+                    <datalist id="buyer-company-options">
+                      {buyers.map((company) => (
+                        <option key={company.id} value={company.name} />
+                      ))}
+                    </datalist>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -333,19 +418,19 @@ export function SaleForm({ initialData }: SaleFormProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pb-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+                className="cursor-pointer border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+                className="cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
               </Button>

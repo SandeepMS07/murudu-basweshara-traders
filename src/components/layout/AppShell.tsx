@@ -24,7 +24,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     dashboard: "Dashboard",
     purchases: "Purchases",
     sales: "Sales",
+    companies: "Companies",
     bills: "Bills",
+    invoices: "Invoices",
     new: "New",
     edit: "Edit",
     print: "Print",
@@ -50,6 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       { label: "Create Purchase", href: "/purchases/new", keywords: "new add purchase" },
       { label: "Sales", href: "/sales", keywords: "sales bill list table" },
       { label: "Create Sale", href: "/sales/new", keywords: "new add sale" },
+      { label: "Companies", href: "/companies", keywords: "issuer buyer company" },
     ],
     []
   );

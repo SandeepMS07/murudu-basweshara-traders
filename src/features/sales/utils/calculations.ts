@@ -24,6 +24,7 @@ export function calculateSale(input: SaleInput, id: string): Sale {
     sale_date: input.sale_date,
     lorry_number: input.lorry_number,
     party: input.party,
+    sale_company_id: input.sale_company_id ?? null,
     payment_terms: input.payment_terms,
     bags: round2(bags),
     net_weight: round2(netWeight),

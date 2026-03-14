@@ -1,12 +1,18 @@
 "use server";
 
 import { requireAuth } from "@/features/auth/lib/session";
-import { saleSchema, SaleInput } from "@/features/sales/schemas";
+import {
+  generateSalesInvoiceSchema,
+  saleSchema,
+  SaleInput,
+} from "@/features/sales/schemas";
 import {
   createSale,
+  deleteSale,
   importSalesFromBillWorkbook,
   updateSale,
 } from "@/features/sales/service/sale.service";
+import { generateSalesInvoice } from "@/features/sales/service/sales-invoice.service";
 
 export async function createSaleAction(data: SaleInput) {
   const parsed = saleSchema.parse(data);
@@ -16,6 +22,22 @@ export async function createSaleAction(data: SaleInput) {
 export async function updateSaleAction(id: string, data: SaleInput) {
   const parsed = saleSchema.parse(data);
   return updateSale(id, parsed);
+}
+
+export async function deleteSaleAction(id: string) {
+  if (!id?.trim()) {
+    return { success: false as const, message: "Sale id is required" };
+  }
+
+  try {
+    await deleteSale(id.trim());
+    return { success: true as const };
+  } catch (error: unknown) {
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Failed to delete sale",
+    };
+  }
 }
 
 export async function importSalesFromBillAction(formData: FormData) {
@@ -36,4 +58,13 @@ export async function importSalesFromBillAction(formData: FormData) {
 
   const arrayBuffer = await file.arrayBuffer();
   return importSalesFromBillWorkbook(Buffer.from(arrayBuffer));
+}
+
+export async function generateSalesInvoiceAction(data: {
+  saleIds: string[];
+  issuerCompanyId: string;
+  issuedOn?: string;
+}) {
+  const parsed = generateSalesInvoiceSchema.parse(data);
+  return generateSalesInvoice(parsed);
 }

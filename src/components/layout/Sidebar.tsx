@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Loader2, LogOut, LayoutDashboard, ShoppingCart, HandCoins } from "lucide-react";
+import {
+  Loader2,
+  LogOut,
+  LayoutDashboard,
+  ShoppingCart,
+  HandCoins,
+  Building2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { SessionUser } from "@/features/auth/types";
@@ -21,6 +28,7 @@ const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
   { name: "Sales", href: "/sales", icon: HandCoins },
+  { name: "Companies", href: "/companies", icon: Building2, adminOnly: true },
 ];
 
 type SidebarProps = {
@@ -88,6 +96,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => {
+          if (item.adminOnly && userInfo?.role !== "admin") {
+            return null;
+          }
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
 

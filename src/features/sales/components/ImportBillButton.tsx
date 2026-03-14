@@ -71,7 +71,7 @@ export function ImportBillButton() {
           <DialogHeader>
             <DialogTitle>Import BILL Sheet</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Upload the workbook and we will import only the BILL tab.
+              Upload workbook to import BILL rows and sync buyer companies from COMPANY tab.
             </DialogDescription>
           </DialogHeader>
           <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-[#3a3d44] bg-[#1b1e24] p-4 text-sm text-zinc-300">

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { requireAuth } from "@/features/auth/lib/session";
 import { SaleForm } from "@/features/sales/components/SaleForm";
-import { getSaleById } from "@/features/sales/service/sale.service";
+import { getBuyerCompaniesForSales, getSaleById } from "@/features/sales/service/sale.service";
 
 export default async function EditSalePage({
   params,
@@ -17,6 +17,7 @@ export default async function EditSalePage({
 
   const { id } = await params;
   const sale = await getSaleById(id);
+  const buyerCompanies = await getBuyerCompaniesForSales();
   if (!sale) {
     notFound();
   }
@@ -27,7 +28,11 @@ export default async function EditSalePage({
         <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Edit Sale</h1>
         <p className="text-zinc-500">Modify an existing sales record.</p>
       </div>
-      <SaleForm initialData={sale} />
+      <SaleForm
+        initialData={sale}
+        buyerCompanies={buyerCompanies}
+        canCreateBuyer={user.role === "admin"}
+      />
     </AppShell>
   );
 }

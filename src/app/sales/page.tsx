@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/features/auth/lib/session";
 import { getSales } from "@/features/sales/service/sale.service";
 import { SalesTableClient } from "@/features/sales/components/SalesTableClient";
-import { ImportBillButton } from "@/features/sales/components/ImportBillButton";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { getCompanies } from "@/features/companies/service/company.service";
 
 export default async function SalesPage() {
-  const user = await requireAuth();
+  await requireAuth();
   const sales = await getSales();
+  const buyerCompanies = await getCompanies("buyer");
 
   const totals = sales.reduce(
     (acc, sale) => {
@@ -32,7 +33,6 @@ export default async function SalesPage() {
           <p className="text-zinc-500">Manage sales from BILL sheet and manual records.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          {user.role === "admin" ? <ImportBillButton /> : null}
           <Link href="/sales/new" className="w-full sm:w-auto">
             <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
@@ -85,7 +85,10 @@ export default async function SalesPage() {
         </Card>
       </div>
 
-      <SalesTableClient data={sales} />
+      <SalesTableClient
+        data={sales}
+        buyerCompanies={buyerCompanies}
+      />
     </AppShell>
   );
 }
