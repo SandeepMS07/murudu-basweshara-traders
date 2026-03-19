@@ -10,11 +10,13 @@ import { Company } from "@/features/companies/schemas";
 interface SalesTableClientProps {
   data: Sale[];
   buyerCompanies: Company[];
+  issuerCompanies: Company[];
 }
 
 export function SalesTableClient({
   data,
   buyerCompanies,
+  issuerCompanies,
 }: SalesTableClientProps) {
   const [selectedBuyerId, setSelectedBuyerId] = useState("");
 
@@ -23,7 +25,7 @@ export function SalesTableClient({
     return data.filter((sale) => sale.sale_company_id === selectedBuyerId);
   }, [data, selectedBuyerId]);
 
-  const columns = useMemo(() => createSaleColumns(), []);
+  const columns = useMemo(() => createSaleColumns(issuerCompanies), [issuerCompanies]);
 
   const partyRowClass = useCallback((party: string) => {
     const normalized = (party || "unknown").trim().toLowerCase();

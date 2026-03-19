@@ -303,15 +303,23 @@ export function createPurchaseColumns(
   const { paymentMethodById, onPaymentMethodChange } = options;
 
   return [
-  {
-    id: "sl_no",
-    header: "SL NO",
-    cell: ({ row }) => row.index + 1,
-  },
-  {
-    accessorKey: "name",
-    header: "NAME",
-  },
+    {
+      id: "sl_no",
+      header: "SL NO",
+      cell: ({ row, table }) => {
+        const { pageIndex, pageSize } = table.getState().pagination;
+        const indexInPage = table
+          .getPaginationRowModel()
+          .rows.findIndex((currentRow) => currentRow.id === row.id);
+
+        if (indexInPage < 0) return row.index + 1;
+        return pageIndex * pageSize + indexInPage + 1;
+      },
+    },
+    {
+      accessorKey: "name",
+      header: "NAME",
+    },
     {
       accessorKey: "date",
       header: "DATE",

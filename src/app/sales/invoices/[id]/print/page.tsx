@@ -13,6 +13,9 @@ type SnapshotShape = {
     address?: string;
     phone?: string;
     email?: string;
+    gstin?: string;
+    state_name?: string;
+    state_code?: string;
   };
   buyer_company?: {
     name?: string;
@@ -20,6 +23,9 @@ type SnapshotShape = {
     address?: string;
     phone?: string;
     email?: string;
+    gstin?: string;
+    state_name?: string;
+    state_code?: string;
   };
   items?: Array<{
     sale_id?: string;
@@ -28,6 +34,7 @@ type SnapshotShape = {
     net_weight?: number;
     rate?: number;
     amount?: number;
+    lorry_number?: string;
   }>;
   totals?: {
     subtotal?: number;
@@ -137,12 +144,18 @@ export default async function SalesInvoicePrintPage({
     printDateCompact = invoice.issued_on;
   }
 
+  const lorryNumber = snapshot.items?.[0]?.lorry_number || "-";
+
   const copies = [1];
-  const rootClassName = `bill-print-root bill-print-preview sales-invoice-print-root${
+  const rootClassName = `bill-print-root sales-invoice-print-root${
     previewMode ? " bill-print-inline-preview" : ""
   }`;
   const totalInWords = numberToWordsIN(total);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.net_weight ?? 0), 0);
+  const minimumLineItems = 12;
+  const emptyLineItems = Math.max(0, minimumLineItems - items.length);
+  const issuerState = issuer.state_name ? `${issuer.state_name}${issuer.state_code ? `, Code: ${issuer.state_code}` : ""}` : "Karnataka, Code: 29";
+  const buyerState = buyer.state_name ? `${buyer.state_name}${buyer.state_code ? `, Code: ${buyer.state_code}` : ""}` : "Karnataka, Code: 29";
 
   return (
     <main className={rootClassName}>
@@ -151,67 +164,114 @@ export default async function SalesInvoicePrintPage({
         <section className="bill-print-copy bill-sales-invoice-copy" key={copy}>
           <div className="sales-invoice-title">INVOICE</div>
 
-          <section className="sales-invoice-top">
-            <div className="sales-invoice-seller">
-              <div className="sales-invoice-company-name">
-                {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}
-              </div>
-              <div>{issuer.address || "-"}</div>
-              <div>Email: {issuer.email || "-"}</div>
-              <div>Phone: {issuer.phone || "-"}</div>
+          <table className="sales-invoice-head">
+            <tbody>
+              <tr>
+                <td className="sales-invoice-head-left">
+                  <div className="sales-invoice-company-name">
+                    {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}
+                  </div>
+                  <div>{issuer.address || "-"}</div>
+                  <div>Email: {issuer.email || "-"}</div>
+                  <div>Phone: {issuer.phone || "-"}</div>
+                  <div>GSTIN/UIN: {issuer.gstin || "-"}</div>
+                  <div>State Name: {issuerState}</div>
 
-              <div className="sales-invoice-subhead">Consignee (Ship to)</div>
-              <div className="sales-invoice-party-name">
-                {(buyer.display_name || buyer.name || "-").toUpperCase()}
-              </div>
-              <div>{buyer.address || "-"}</div>
+                  <div className="sales-invoice-subhead">Consignee (Ship to)</div>
+                  <div className="sales-invoice-party-name">
+                    {(buyer.display_name || buyer.name || "-").toUpperCase()}
+                  </div>
+                  <div>{buyer.address || "-"}</div>
+                  <div>GSTIN/UIN: {buyer.gstin || "-"}</div>
+                  <div>State Name: {buyerState}</div>
 
-              <div className="sales-invoice-subhead">Buyer (Bill to)</div>
-              <div className="sales-invoice-party-name">
-                {(buyer.display_name || buyer.name || "-").toUpperCase()}
-              </div>
-              <div>{buyer.address || "-"}</div>
-            </div>
-
-            <div className="sales-invoice-meta">
-              <div className="sales-invoice-meta-row">
-                <div className="sales-invoice-meta-label">Invoice No.</div>
-                <div className="sales-invoice-meta-value sales-invoice-meta-strong">{invoice.invoice_no}</div>
-                <div className="sales-invoice-meta-label">Dated</div>
-                <div className="sales-invoice-meta-value sales-invoice-meta-strong">{printDateCompact}</div>
-              </div>
-              <div className="sales-invoice-meta-row">
-                <div className="sales-invoice-meta-label">Delivery Note</div>
-                <div className="sales-invoice-meta-value">-</div>
-                <div className="sales-invoice-meta-label">Mode/Terms of Payment</div>
-                <div className="sales-invoice-meta-value">-</div>
-              </div>
-              <div className="sales-invoice-meta-row">
-                <div className="sales-invoice-meta-label">Reference No. & Date</div>
-                <div className="sales-invoice-meta-value">-</div>
-                <div className="sales-invoice-meta-label">Other References</div>
-                <div className="sales-invoice-meta-value">-</div>
-              </div>
-              <div className="sales-invoice-meta-row">
-                <div className="sales-invoice-meta-label">Dispatch Doc No.</div>
-                <div className="sales-invoice-meta-value">-</div>
-                <div className="sales-invoice-meta-label">Delivery Note Date</div>
-                <div className="sales-invoice-meta-value">{printDate}</div>
-              </div>
-              <div className="sales-invoice-meta-row">
-                <div className="sales-invoice-meta-label">Dispatched through</div>
-                <div className="sales-invoice-meta-value sales-invoice-meta-strong">TRUCK</div>
-                <div className="sales-invoice-meta-label">Destination</div>
-                <div className="sales-invoice-meta-value sales-invoice-meta-strong">{buyer.address || "-"}</div>
-              </div>
-              <div className="sales-invoice-meta-row">
-                <div className="sales-invoice-meta-label">Vessel/Flight No.</div>
-                <div className="sales-invoice-meta-value">-</div>
-                <div className="sales-invoice-meta-label">Place of receipt by shipper</div>
-                <div className="sales-invoice-meta-value">-</div>
-              </div>
-            </div>
-          </section>
+                  <div className="sales-invoice-subhead">Buyer (Bill to)</div>
+                  <div className="sales-invoice-party-name">
+                    {(buyer.display_name || buyer.name || "-").toUpperCase()}
+                  </div>
+                  <div>{buyer.address || "-"}</div>
+                  <div>GSTIN/UIN: {buyer.gstin || "-"}</div>
+                  <div>State Name: {buyerState}</div>
+                </td>
+                <td className="sales-invoice-head-right">
+                  <table className="sales-invoice-meta-table">
+                    <tbody>
+                      <tr>
+                        <td>
+                          <div>Invoice No.</div>
+                          <div className="sales-invoice-strong">{invoice.invoice_no}</div>
+                        </td>
+                        <td>
+                          <div>Dated</div>
+                          <div className="sales-invoice-strong">{printDateCompact}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div>Delivery Note</div>
+                        </td>
+                        <td>
+                          <div>Mode/Terms of Payment</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div>Reference No. & Date.</div>
+                        </td>
+                        <td>
+                          <div>Other References</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div>Buyer's Order No.</div>
+                        </td>
+                        <td>
+                          <div>Dated</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div>Dispatch Doc No.</div>
+                        </td>
+                        <td>
+                          <div>Delivery Note Date</div>
+                          <div>{printDate}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div>Dispatched through</div>
+                          <div className="sales-invoice-strong">TRUCK</div>
+                        </td>
+                        <td>
+                          <div>Destination</div>
+                          <div className="sales-invoice-strong">{buyer.address?.split(',')?.[0] || "NAGAMANGALA"}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div>Bill of Lading/LR-RR No.</div>
+                        </td>
+                        <td>
+                          <div>Motor Vehicle No.</div>
+                          <div className="sales-invoice-strong">{lorryNumber}</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan={2}>
+                          <div>Terms of Delivery</div>
+                          <br />
+                          <br />
+                          <br />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           <table className="sales-invoice-items">
             <thead>
@@ -219,6 +279,7 @@ export default async function SalesInvoicePrintPage({
                 <th>Sl No.</th>
                 <th>No. & Kind of Pkgs.</th>
                 <th>Description of Goods</th>
+                <th>HSN/SAC</th>
                 <th>Quantity</th>
                 <th>Rate</th>
                 <th>per</th>
@@ -227,56 +288,71 @@ export default async function SalesInvoicePrintPage({
             </thead>
             <tbody>
               {items.length > 0 ? (
-                items.map((item, index) => (
-                  <tr key={`${item.sale_id}-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>
-                      {formatNumberIN(item.bags, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}{" "}
-                      BAGS
-                    </td>
-                    <td>{(item.description || `Sale ${index + 1}`).toUpperCase()}</td>
-                    <td className="sales-invoice-num">
-                      {formatNumberIN(item.net_weight, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      KG
-                    </td>
-                    <td className="sales-invoice-num">
-                      {formatNumberIN(item.rate, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td>KG</td>
-                    <td className="sales-invoice-num">
-                      {formatNumberIN(item.amount, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                  </tr>
-                ))
+                <>
+                  {items.map((item, index) => (
+                    <tr key={`${item.sale_id}-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>
+                        {formatNumberIN(item.bags, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}{" "}
+                        BAGS
+                      </td>
+                      <td>{(item.description || `Sale ${index + 1}`).toUpperCase()}</td>
+                      <td className="sales-invoice-num">10051000</td>
+                      <td className="sales-invoice-num">
+                        {formatNumberIN(item.net_weight, {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        })}{" "}
+                        KG
+                      </td>
+                      <td className="sales-invoice-num">
+                        {formatNumberIN(item.rate, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td>KG</td>
+                      <td className="sales-invoice-num">
+                        {formatNumberIN(item.amount, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                  {Array.from({ length: emptyLineItems }).map((_, index) => (
+                    <tr key={`empty-line-${index}`} className="sales-invoice-empty-row">
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                    </tr>
+                  ))}
+                </>
               ) : (
                 <tr>
-                  <td colSpan={7}>No invoice items.</td>
+                  <td colSpan={8}>No invoice items.</td>
                 </tr>
               )}
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={2}></td>
-                <td className="sales-invoice-num sales-invoice-foot-label">Total</td>
+                <td colSpan={4} className="sales-invoice-num sales-invoice-foot-label" style={{ textAlign: "right", paddingRight: "12px" }}>Total</td>
                 <td className="sales-invoice-num">
                   {formatNumberIN(totalQuantity, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
                   })}{" "}
                   KG
                 </td>
+                <td></td>
                 <td></td>
                 <td className="sales-invoice-num">
                   {formatNumberIN(total, {
@@ -288,19 +364,74 @@ export default async function SalesInvoicePrintPage({
             </tfoot>
           </table>
 
-          <section className="sales-invoice-bottom">
-            <div className="sales-invoice-amount-words">
-              <div>Amount Chargeable (in words)</div>
-              <strong>INR {totalInWords} Only</strong>
-            </div>
-            <div className="sales-invoice-signbox">
-              <div className="sales-invoice-sign-company">
-                for {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}
-              </div>
-              <div className="sales-invoice-sign-label">Authorised Signatory</div>
-            </div>
-          </section>
-          <div className="sales-invoice-footer-note">This is a Computer Generated Invoice</div>
+          <table className="sales-invoice-summary">
+            <tbody>
+              <tr>
+                <td className="sales-invoice-amount-words">
+                  <div>Amount Chargeable (in words)</div>
+                  <strong>INR {totalInWords} Only</strong>
+                </td>
+                <td className="sales-invoice-summary-right">E. &amp; O.E</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table className="sales-invoice-tax">
+            <thead>
+              <tr>
+                <th>HSN/SAC</th>
+                <th className="sales-invoice-num">Taxable Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>10051000</td>
+                <td className="sales-invoice-num">
+                  {formatNumberIN(total, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+              <tr>
+                <td className="sales-invoice-num sales-invoice-foot-label">Total</td>
+                <td className="sales-invoice-num">
+                  {formatNumberIN(total, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table className="sales-invoice-footer">
+            <tbody>
+              <tr>
+                <td className="sales-invoice-footer-left">
+                  <div>Tax Amount (in words) : NIL</div>
+                  <div className="sales-invoice-declaration">
+                    <div>Declaration</div>
+                    <div>
+                      We declare that this invoice shows the actual price of the goods described and that all
+                      particulars are true and correct.
+                    </div>
+                  </div>
+                </td>
+                <td className="sales-invoice-footer-right">
+                  <div className="sales-invoice-bank-title">Company's Bank Details</div>
+                  <div className="sales-invoice-bank-grid">
+                    <div>Bank Name</div><div>: <strong>ICICI BANK</strong></div>
+                    <div>A/c No.</div><div>: <strong>378205000703</strong></div>
+                    <div>Branch &amp; IFS Code</div><div>: <strong>HONNALI &amp; ICIC0003782</strong></div>
+                  </div>
+                  <div className="sales-invoice-sign-company">
+                    for {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}
+                  </div>
+                  <div className="sales-invoice-sign-label">Authorised Signatory</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="sales-invoice-footer-lines">
+            <div className="sales-invoice-jurisdiction">SUBJECT TO HONNALLI JURISDICTION</div>
+            <div className="sales-invoice-footer-note">This is a Computer Generated Invoice</div>
+          </div>
         </section>
       ))}
     </main>

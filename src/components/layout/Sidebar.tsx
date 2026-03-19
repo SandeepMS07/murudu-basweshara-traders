@@ -28,7 +28,7 @@ const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
   { name: "Sales", href: "/sales", icon: HandCoins },
-  { name: "Companies", href: "/companies", icon: Building2, adminOnly: true },
+  { name: "Companies", href: "/companies", icon: Building2 },
 ];
 
 type SidebarProps = {
@@ -96,9 +96,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => {
-          if (item.adminOnly && userInfo?.role !== "admin") {
-            return null;
-          }
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
 
@@ -108,7 +105,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "border border-[#ff6a3d]/40 bg-[#ff6a3d]/14 text-[#ff8f6b]"
                   : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100"

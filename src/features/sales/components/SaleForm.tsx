@@ -43,6 +43,12 @@ interface SaleFormProps {
 
 type SaleFormValues = z.input<typeof saleSchema>;
 
+function parseNumberOrUndefined(value: string): number | undefined {
+  if (value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export function SaleForm({
   initialData,
   buyerCompanies,
@@ -56,6 +62,13 @@ export function SaleForm({
   const [buyers, setBuyers] = useState<Company[]>(buyerCompanies);
   const [buyerSearch, setBuyerSearch] = useState(initialData?.party ?? "");
   const isEditing = Boolean(initialData);
+  const issuerOptions = useMemo(
+    () =>
+      [...issuerCompanies].sort((a, b) =>
+        (a.display_name || a.name).localeCompare(b.display_name || b.name)
+      ),
+    [issuerCompanies]
+  );
 
   const form = useForm<SaleFormValues>({
     resolver: zodResolver(saleSchema),
@@ -83,18 +96,18 @@ export function SaleForm({
           sl_no: initialSlNo,
           bill_number: initialBillNumber,
           sale_date: new Date().toISOString().split("T")[0],
-          issuer_company_id: issuerCompanies.find((company) => company.is_active)?.id
-            ?? issuerCompanies[0]?.id
+          issuer_company_id: issuerOptions.find((company) => company.is_active)?.id
+            ?? issuerOptions[0]?.id
             ?? null,
           lorry_number: "",
           party: "",
           sale_company_id: null,
           payment_terms: "",
-          bags: 0,
-          net_weight: 0,
-          factory_weight: 0,
-          rate: 0,
-          flight: 0,
+          bags: undefined,
+          net_weight: undefined,
+          factory_weight: undefined,
+          rate: undefined,
+          flight: undefined,
           bag_avg: undefined,
           factory_rate: 0,
           source: "manual",
@@ -258,22 +271,21 @@ export function SaleForm({
                       onValueChange={(value) => field.onChange(value || null)}
                     >
                       <FormControl>
-                        <SelectTrigger className={fieldClassName}>
+                        <SelectTrigger className={`${fieldClassName} !h-10 w-full`}>
                           <SelectValue placeholder="Select issuer company" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="border border-[#343946] bg-[#1f2430] text-zinc-100 ring-0">
-                        {issuerCompanies
-                          .filter((company) => company.is_active)
-                          .map((company) => (
-                            <SelectItem
-                              key={company.id}
-                              value={company.id}
-                              className="text-zinc-100 hover:bg-[#31384a] hover:text-white focus:bg-[#31384a] focus:text-white data-[highlighted]:bg-[#31384a] data-[highlighted]:text-white"
-                            >
-                              {company.display_name || company.name}
-                            </SelectItem>
-                          ))}
+                        {issuerOptions.map((company) => (
+                          <SelectItem
+                            key={company.id}
+                            value={company.id}
+                            className="text-zinc-100 hover:bg-[#31384a] hover:text-white focus:bg-[#31384a] focus:text-white data-[highlighted]:bg-[#31384a] data-[highlighted]:text-white"
+                          >
+                            {company.display_name || company.name}
+                            {!company.is_active ? " (Inactive)" : ""}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -300,7 +312,7 @@ export function SaleForm({
                         <Button
                           type="button"
                           onClick={handleAddBuyer}
-                          className="cursor-pointer border border-[#2a2d34] bg-[#1b1e24] text-zinc-100 hover:bg-[#23262e]"
+                          className="h-10 shrink-0 cursor-pointer border border-[#2a2d34] bg-[#1b1e24] px-4 text-zinc-100 hover:bg-[#23262e]"
                         >
                           Add
                         </Button>
@@ -348,7 +360,14 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Bags</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" className={fieldClassName} value={field.value ?? 0} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className={fieldClassName}
+                        placeholder="Enter bags"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(parseNumberOrUndefined(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -361,7 +380,14 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Net Weight</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" className={fieldClassName} value={field.value ?? 0} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className={fieldClassName}
+                        placeholder="Enter net weight"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(parseNumberOrUndefined(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -374,7 +400,14 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Factory Weight</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" className={fieldClassName} value={field.value ?? 0} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className={fieldClassName}
+                        placeholder="Enter factory weight"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(parseNumberOrUndefined(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -387,7 +420,14 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Rate</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" className={fieldClassName} value={field.value ?? 0} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className={fieldClassName}
+                        placeholder="Enter rate"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(parseNumberOrUndefined(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -400,7 +440,14 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Flight</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" className={fieldClassName} value={field.value ?? 0} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className={fieldClassName}
+                        placeholder="Enter flight"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(parseNumberOrUndefined(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -88,6 +88,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       if (!profileRef.current) return;
       if (!profileRef.current.contains(event.target as Node)) {

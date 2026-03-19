@@ -28,6 +28,7 @@ type PurchaseRow = {
   amount: number | string;
   final_total: number | string;
   bag_avg: number | string;
+  created_at?: string | null;
 };
 
 function n(value: number | string | null | undefined): number {
@@ -68,13 +69,31 @@ export async function getPurchases(): Promise<Purchase[]> {
   const { data, error } = await supabaseServer
     .from("purchases")
     .select("*")
+    .order("created_at", { ascending: false })
     .order("date", { ascending: false });
 
   if (error) {
     throw new Error(`Failed to load purchases: ${error.message}`);
   }
 
-  return (data as PurchaseRow[]).map(toPurchase);
+  const rows = [...(data as PurchaseRow[])].sort((a, b) => {
+    const aCreated = Date.parse(String(a.created_at ?? ""));
+    const bCreated = Date.parse(String(b.created_at ?? ""));
+    if (Number.isFinite(aCreated) && Number.isFinite(bCreated) && aCreated !== bCreated) {
+      return bCreated - aCreated;
+    }
+    if (Number.isFinite(aCreated) && !Number.isFinite(bCreated)) return -1;
+    if (!Number.isFinite(aCreated) && Number.isFinite(bCreated)) return 1;
+
+    const aDate = Date.parse(String(a.date ?? ""));
+    const bDate = Date.parse(String(b.date ?? ""));
+    if (Number.isFinite(aDate) && Number.isFinite(bDate) && aDate !== bDate) {
+      return bDate - aDate;
+    }
+    return String(b.id).localeCompare(String(a.id));
+  });
+
+  return rows.map(toPurchase);
 }
 
 export async function getPurchaseById(id: string): Promise<Purchase | null> {

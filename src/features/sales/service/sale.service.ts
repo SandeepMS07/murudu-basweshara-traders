@@ -191,7 +191,12 @@ async function resolveIssuerCompanyId(input: SaleInput): Promise<string | null> 
 }
 
 export async function getSales(filters?: SalesFilters): Promise<Sale[]> {
-  let query = supabaseServer.from("sales").select("*").order("sale_date", { ascending: false });
+  let query = supabaseServer
+    .from("sales")
+    .select("*")
+    .order("sl_no", { ascending: true, nullsFirst: false })
+    .order("sale_date", { ascending: true })
+    .order("bill_number", { ascending: true });
 
   if (filters?.buyerCompanyId) {
     query = query.eq("sale_company_id", filters.buyerCompanyId);

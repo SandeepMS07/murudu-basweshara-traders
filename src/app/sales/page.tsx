@@ -14,6 +14,7 @@ export default async function SalesPage() {
   await requireAuth();
   const sales = await getSales();
   const buyerCompanies = await getCompanies("buyer");
+  const issuerCompanies = (await getCompanies("issuer")).filter((company) => company.is_active);
 
   const totals = sales.reduce(
     (acc, sale) => {
@@ -88,6 +89,7 @@ export default async function SalesPage() {
       <SalesTableClient
         data={sales}
         buyerCompanies={buyerCompanies}
+        issuerCompanies={issuerCompanies}
       />
     </AppShell>
   );
