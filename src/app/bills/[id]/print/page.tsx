@@ -25,6 +25,7 @@ export default async function BillPrintPage({
   if (!bill && previewMode && purchase) {
     bill = {
       id,
+      bill_no: 0,
       bill_date: purchase.date,
       net_weight: purchase.net_weight,
       rate: purchase.rate,
@@ -68,7 +69,12 @@ export default async function BillPrintPage({
       : summaryTotalText.length >= 10
         ? "bill-print-total-value-md"
         : "";
-  const billNumber = bill.id.slice(-6).toUpperCase();
+  const billNumber =
+    purchase?.bill_no && purchase.bill_no > 0
+      ? String(purchase.bill_no)
+      : bill.bill_no > 0
+        ? String(bill.bill_no)
+        : "AUTO";
   const billToPhone = stripIndiaCountryCode(purchase?.mob);
   const copies = previewMode ? [1] : [1, 2];
   const rootClassName = `bill-print-root bill-print-preview${

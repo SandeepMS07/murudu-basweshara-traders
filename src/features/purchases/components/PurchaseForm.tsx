@@ -38,6 +38,7 @@ import { formatCurrencyINR } from "@/lib/number-format";
 
 interface PurchaseFormProps {
   initialData?: Purchase;
+  nextBillNo?: number;
 }
 type PurchaseFormValues = z.input<typeof purchaseSchema>;
 const BAG_LESS_PER_BAG = 6;
@@ -76,7 +77,7 @@ function splitMobileNumber(input: string | undefined): {
   return { countryCode: matchedCountry.code, mobile: mobilePart };
 }
 
-export function PurchaseForm({ initialData }: PurchaseFormProps) {
+export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!initialData;
@@ -159,12 +160,13 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
       if (isEditing && initialData?.id) {
         await updatePurchaseAction(initialData.id, payload);
         toast.success("Purchase Updated");
+        router.replace("/purchases");
       } else {
         await createPurchaseAction(payload);
         toast.success("Purchase Created");
+        router.replace("/purchases");
       }
-      router.push("/purchases");
-      router.refresh();
+      return;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to save purchase";
@@ -191,7 +193,7 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   Party Information
                 </h3>
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
               <FormField
                 control={form.control}
                 name="date"
@@ -210,6 +212,15 @@ export function PurchaseForm({ initialData }: PurchaseFormProps) {
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">Bill No</label>
+                <Input
+                  value={isEditing ? "Generated after bill creation" : String(nextBillNo ?? "AUTO")}
+                  readOnly
+                  disabled
+                  className={`${fieldClassName} cursor-not-allowed opacity-80`}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="name"

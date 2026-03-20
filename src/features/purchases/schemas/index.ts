@@ -39,6 +39,7 @@ export type PurchaseInput = z.infer<typeof purchaseSchema>;
 
 export interface Purchase extends PurchaseInput {
   id: string; // Enforced after creation
+  bill_no: number;
   less_weight: number;
   net_weight: number;
   amount: number;

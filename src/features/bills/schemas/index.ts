@@ -14,6 +14,7 @@ export type BillInput = z.infer<typeof billSchema>;
 
 export interface Bill extends BillInput {
   id: string;
+  bill_no: number;
   amount: number;
   final_amount: number;
   due_date: string;

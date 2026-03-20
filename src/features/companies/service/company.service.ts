@@ -1,6 +1,12 @@
 import { requireAuth } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
-import { Company, CompanyInput, companyTypeEnum } from "@/features/companies/schemas";
+import {
+  Company,
+  CompanyInput,
+  CompanyPayment,
+  CompanyPaymentInput,
+  companyTypeEnum,
+} from "@/features/companies/schemas";
 
 type CompanyRow = {
   id: string;
@@ -12,9 +18,22 @@ type CompanyRow = {
   phone: string | null;
   email: string | null;
   gstin: string | null;
+  bank_name: string | null;
+  bank_account_no: string | null;
+  bank_branch_ifsc: string | null;
   invoice_prefix: string | null;
   is_active: boolean;
   is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type CompanyPaymentRow = {
+  id: string;
+  company_id: string;
+  paid_on: string;
+  amount: number | string;
+  note: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -30,9 +49,24 @@ function toCompany(row: CompanyRow): Company {
     phone: row.phone ?? "",
     email: row.email ?? "",
     gstin: row.gstin ?? "",
+    bank_name: row.bank_name ?? "",
+    bank_account_no: row.bank_account_no ?? "",
+    bank_branch_ifsc: row.bank_branch_ifsc ?? "",
     invoice_prefix: row.invoice_prefix ?? "",
     is_active: row.is_active,
     is_default: row.is_default,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function toCompanyPayment(row: CompanyPaymentRow): CompanyPayment {
+  return {
+    id: row.id,
+    company_id: row.company_id,
+    paid_on: row.paid_on,
+    amount: typeof row.amount === "number" ? row.amount : Number(row.amount || 0),
+    note: row.note ?? "",
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -105,6 +139,9 @@ export async function createCompany(input: CompanyInput): Promise<Company> {
     phone: input.phone || "",
     email: input.email || "",
     gstin: input.gstin || "",
+    bank_name: input.bank_name || "",
+    bank_account_no: input.bank_account_no || "",
+    bank_branch_ifsc: input.bank_branch_ifsc || "",
     invoice_prefix: (input.invoice_prefix || "").trim().toUpperCase(),
     is_active: input.is_active ?? true,
     is_default: input.is_default ?? false,
@@ -146,6 +183,9 @@ export async function updateCompany(id: string, input: CompanyInput): Promise<Co
     phone: input.phone || "",
     email: input.email || "",
     gstin: input.gstin || "",
+    bank_name: input.bank_name || "",
+    bank_account_no: input.bank_account_no || "",
+    bank_branch_ifsc: input.bank_branch_ifsc || "",
     invoice_prefix: (input.invoice_prefix || "").trim().toUpperCase(),
     is_active: input.is_active ?? true,
     is_default: input.is_default ?? false,
@@ -279,4 +319,56 @@ export async function upsertBuyerCompanyByName(
   }
 
   return toCompany(insertResult.data as CompanyRow);
+}
+
+export async function getCompanyPayments(companyId?: string): Promise<CompanyPayment[]> {
+  let query = supabaseServer
+    .from("company_payments")
+    .select("*")
+    .order("paid_on", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (companyId) {
+    query = query.eq("company_id", companyId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`Failed to load company payments: ${error.message}`);
+  }
+
+  return (data as CompanyPaymentRow[]).map(toCompanyPayment);
+}
+
+export async function createCompanyPayment(input: CompanyPaymentInput): Promise<CompanyPayment> {
+  await assertAdminAccess();
+
+  const payload = {
+    id: input.id ?? crypto.randomUUID(),
+    company_id: input.company_id,
+    paid_on: input.paid_on,
+    amount: input.amount,
+    note: input.note || "",
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseServer
+    .from("company_payments")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create company payment: ${error.message}`);
+  }
+
+  return toCompanyPayment(data as CompanyPaymentRow);
+}
+
+export async function deleteCompanyPayment(id: string): Promise<void> {
+  await assertAdminAccess();
+  const { error } = await supabaseServer.from("company_payments").delete().eq("id", id);
+  if (error) {
+    throw new Error(`Failed to delete company payment: ${error.message}`);
+  }
 }

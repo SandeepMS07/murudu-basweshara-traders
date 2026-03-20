@@ -3,7 +3,16 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronRight, Menu, Search, UserCircle2, X, ArrowLeft } from "lucide-react";
+import {
+  ChevronRight,
+  Menu,
+  Search,
+  UserCircle2,
+  X,
+  ArrowLeft,
+  Building2,
+  LogOut,
+} from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { SessionUser } from "@/features/auth/types";
 
@@ -13,6 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const profileRef = useRef<HTMLDivElement | null>(null);
@@ -115,6 +125,57 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setProfileOpen(false);
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const renderProfilePanel = () => (
+    <div className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-xl border border-[#2a2d34] bg-[#181a1f] shadow-[0_16px_36px_rgba(0,0,0,0.5)]">
+      <div className="flex items-center gap-3 border-b border-[#252932] px-3 py-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ff6a3d] text-sm font-semibold text-white">
+          {(userInfo?.email?.charAt(0) || "U").toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-zinc-100">
+            {userInfo?.email ?? "Loading..."}
+          </p>
+          <p className="text-xs text-zinc-400">Role: {userInfo?.role ?? "-"}</p>
+        </div>
+      </div>
+
+      <div className="space-y-1 p-2">
+        <button
+          type="button"
+          onClick={() => {
+            setProfileOpen(false);
+            router.push("/our-companies");
+          }}
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-zinc-200 transition hover:bg-[#23262e] hover:text-zinc-100"
+        >
+          <Building2 className="h-4 w-4" />
+          Our Companies
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-zinc-200 transition hover:bg-[#23262e] hover:text-zinc-100 disabled:opacity-60"
+        >
+          <LogOut className="h-4 w-4" />
+          {isLoggingOut ? "Logging out..." : "Logout"}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-screen overflow-hidden bg-[#0b0b0d] text-zinc-100 selection:bg-zinc-700/50">
       <div className="flex h-full min-h-0 flex-col px-2 py-2 lg:px-6 lg:py-6">
@@ -187,15 +248,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       >
                         <UserCircle2 className="h-5 w-5" />
                       </button>
-                      {profileOpen ? (
-                        <div className="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-[#2a2d34] bg-[#181a1f] p-3 shadow-[0_16px_36px_rgba(0,0,0,0.5)]">
-                          <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Signed in as</p>
-                          <p className="truncate text-sm font-semibold text-zinc-100">
-                            {userInfo?.email ?? "Loading..."}
-                          </p>
-                          <p className="mt-1 text-xs text-zinc-400">Role: {userInfo?.role ?? "-"}</p>
-                        </div>
-                      ) : null}
+                      {profileOpen ? renderProfilePanel() : null}
                     </div>
                   </div>
 
@@ -282,15 +335,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       >
                         <UserCircle2 className="h-5 w-5" />
                       </button>
-                      {profileOpen ? (
-                        <div className="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-[#2a2d34] bg-[#181a1f] p-3 shadow-[0_16px_36px_rgba(0,0,0,0.5)]">
-                          <p className="text-xs uppercase tracking-[0.15em] text-zinc-500">Signed in as</p>
-                          <p className="truncate text-sm font-semibold text-zinc-100">
-                            {userInfo?.email ?? "Loading..."}
-                          </p>
-                          <p className="mt-1 text-xs text-zinc-400">Role: {userInfo?.role ?? "-"}</p>
-                        </div>
-                      ) : null}
+                      {profileOpen ? renderProfilePanel() : null}
                     </div>
                   </div>
                 </div>

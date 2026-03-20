@@ -181,7 +181,7 @@ export function BillForm({ initialData }: BillFormProps) {
               <div className="bill-print-invoice">
                 <div className="bill-print-invoice-label">ESTIMATION INVOICE</div>
                 <div className="bill-print-invoice-number">
-                  {initialData?.id?.slice(-4).toUpperCase() || "----"}
+                  {initialData?.bill_no ? String(initialData.bill_no) : "AUTO"}
                 </div>
               </div>
             </header>

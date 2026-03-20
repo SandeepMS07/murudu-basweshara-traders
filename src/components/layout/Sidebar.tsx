@@ -27,8 +27,15 @@ import {
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
-  { name: "Sales", href: "/sales", icon: HandCoins },
-  { name: "Companies", href: "/companies", icon: Building2 },
+  {
+    name: "Sales",
+    href: "/sales",
+    icon: HandCoins,
+    children: [
+      { name: "Overview", href: "/sales", icon: HandCoins },
+      { name: "Companies", href: "/companies", icon: Building2 },
+    ],
+  },
 ];
 
 type SidebarProps = {
@@ -96,24 +103,53 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive =
+            pathname.startsWith(item.href) ||
+            item.children?.some((child) => pathname.startsWith(child.href));
           const Icon = item.icon;
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "border border-[#ff6a3d]/40 bg-[#ff6a3d]/14 text-[#ff8f6b]"
-                  : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100"
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              {item.name}
-            </Link>
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                className={cn(
+                  "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "border border-[#ff6a3d]/40 bg-[#ff6a3d]/14 text-[#ff8f6b]"
+                    : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100"
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {item.name}
+              </Link>
+
+              {item.children ? (
+                <div className="relative ml-8 mt-1 border-l border-[#2a2d34] pl-3">
+                  {item.children.map((child) => {
+                    const childActive = pathname.startsWith(child.href);
+                    const ChildIcon = child.icon;
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "group relative mt-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                          "before:absolute before:-left-3 before:top-1/2 before:h-px before:w-2 before:bg-[#2a2d34]",
+                          childActive
+                            ? "text-[#ff8f6b]"
+                            : "text-zinc-500 hover:bg-[#181a1f] hover:text-zinc-100"
+                        )}
+                      >
+                        <ChildIcon className="h-4 w-4 shrink-0" />
+                        {child.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           );
         })}
       </nav>

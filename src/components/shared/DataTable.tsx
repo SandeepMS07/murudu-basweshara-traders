@@ -11,7 +11,7 @@ import {
   getFilteredRowModel,
   Row,
 } from "@tanstack/react-table";
-import { CSSProperties, ReactNode, useState } from "react";
+import { CSSProperties, ReactNode, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +42,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
+  searchPredicate?: (row: TData, query: string) => boolean;
   rowClassName?: (row: Row<TData>) => string | undefined;
   toolbarRight?: ReactNode;
 }
@@ -51,14 +52,22 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   searchPlaceholder = "Search...",
+  searchPredicate,
   rowClassName,
   toolbarRight,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredByPredicate = useMemo(() => {
+    if (!searchPredicate || !normalizedQuery) return data;
+    return data.filter((row) => searchPredicate(row, normalizedQuery));
+  }, [data, normalizedQuery, searchPredicate]);
 
   const table = useReactTable({
-    data,
+    data: filteredByPredicate,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -81,8 +90,16 @@ export function DataTable<TData, TValue>({
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
               <Input
                 placeholder={searchPlaceholder}
-                value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? globalFilter}
+                value={
+                  searchPredicate
+                    ? searchQuery
+                    : (table.getColumn(searchKey)?.getFilterValue() as string) ?? globalFilter
+                }
                 onChange={(event) => {
+                  if (searchPredicate) {
+                    setSearchQuery(event.target.value);
+                    return;
+                  }
                   if (searchKey && table.getColumn(searchKey)) {
                     table.getColumn(searchKey)?.setFilterValue(event.target.value);
                   } else {

@@ -14,6 +14,9 @@ type SnapshotShape = {
     phone?: string;
     email?: string;
     gstin?: string;
+    bank_name?: string;
+    bank_account_no?: string;
+    bank_branch_ifsc?: string;
     state_name?: string;
     state_code?: string;
   };
@@ -224,7 +227,7 @@ export default async function SalesInvoicePrintPage({
                       </tr>
                       <tr>
                         <td>
-                          <div>Buyer's Order No.</div>
+                          <div>Buyer&apos;s Order No.</div>
                         </td>
                         <td>
                           <div>Dated</div>
@@ -413,11 +416,11 @@ export default async function SalesInvoicePrintPage({
                   </div>
                 </td>
                 <td className="sales-invoice-footer-right">
-                  <div className="sales-invoice-bank-title">Company's Bank Details</div>
+                  <div className="sales-invoice-bank-title">Company&apos;s Bank Details</div>
                   <div className="sales-invoice-bank-grid">
-                    <div>Bank Name</div><div>: <strong>ICICI BANK</strong></div>
-                    <div>A/c No.</div><div>: <strong>378205000703</strong></div>
-                    <div>Branch &amp; IFS Code</div><div>: <strong>HONNALI &amp; ICIC0003782</strong></div>
+                    <div>Bank Name</div><div>: <strong>{issuer.bank_name || "-"}</strong></div>
+                    <div>A/c No.</div><div>: <strong>{issuer.bank_account_no || "-"}</strong></div>
+                    <div>Branch &amp; IFS Code</div><div>: <strong>{issuer.bank_branch_ifsc || "-"}</strong></div>
                   </div>
                   <div className="sales-invoice-sign-company">
                     for {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}

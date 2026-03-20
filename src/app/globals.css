@@ -155,7 +155,7 @@ a[aria-disabled="true"] {
   gap: 112px;
   padding: 16px;
   align-items: start;
-  background: #eef2f7;
+  background: #ffffff;
   color: #1f2937;
   font-family: "Inter", "Segoe UI", "Avenir Next", sans-serif;
   min-height: 100vh;
@@ -374,6 +374,9 @@ a[aria-disabled="true"] {
   width: 32%;
   font-variant-numeric: tabular-nums;
   background: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  color: #000000;
 }
 
 .bill-print-key-row td:last-child {
@@ -468,6 +471,9 @@ a[aria-disabled="true"] {
 .bill-print-summary-table td:last-child {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 800;
+  color: #000000;
 }
 
 .bill-print-total-row {
@@ -508,7 +514,8 @@ a[aria-disabled="true"] {
   white-space: nowrap;
   overflow: visible;
   font-variant-numeric: tabular-nums;
-  color: #1e3a8a;
+  color: #000000;
+  font-weight: 900;
   letter-spacing: 0.1px;
   justify-content: flex-end;
   padding: 6px 10px;
@@ -914,7 +921,7 @@ a[aria-disabled="true"] {
     gap: 44mm;
     padding: 3mm;
     align-items: stretch;
-    background: #eef2f7;
+    background: #ffffff;
     color: #000;
   }
 

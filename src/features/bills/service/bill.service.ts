@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 type BillRow = {
   id: string;
+  bill_no: number | string | null;
   bill_date: string;
   net_weight: number | string;
   rate: number | string;
@@ -28,6 +29,7 @@ function n(value: number | string | null | undefined): number {
 function toBill(row: BillRow): Bill {
   return {
     id: row.id,
+    bill_no: Math.trunc(n(row.bill_no)),
     bill_date: row.bill_date,
     net_weight: n(row.net_weight),
     rate: n(row.rate),
@@ -51,6 +53,23 @@ export async function getBills(): Promise<Bill[]> {
   }
 
   return (data as BillRow[]).map(toBill);
+}
+
+export async function getNextBillNoPreview(): Promise<number> {
+  await requireAuth();
+  const { data, error } = await supabaseServer
+    .from("bills")
+    .select("bill_no")
+    .order("bill_no", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load next bill number: ${error.message}`);
+  }
+
+  const maxBillNo = Math.trunc(n((data as { bill_no?: number | string | null } | null)?.bill_no));
+  return Math.max(maxBillNo + 1, 1);
 }
 
 export async function getBillById(id: string): Promise<Bill | null> {
@@ -82,6 +101,7 @@ export async function createBill(input: BillInput): Promise<Bill> {
     amount: calculated.amount,
     final_amount: calculated.final_amount,
     due_date: calculated.due_date,
+    updated_at: new Date().toISOString(),
   };
 
   const { data, error } = await supabaseServer
@@ -111,6 +131,7 @@ export async function upsertBillById(id: string, input: BillInput): Promise<Bill
     amount: calculated.amount,
     final_amount: calculated.final_amount,
     due_date: calculated.due_date,
+    updated_at: new Date().toISOString(),
   };
 
   const { data, error } = await supabaseServer

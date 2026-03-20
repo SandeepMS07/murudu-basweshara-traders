@@ -9,6 +9,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 type PurchaseRow = {
   id: string;
+  bill_no: number | string | null;
   date: string;
   name: string | null;
   place: string | null;
@@ -43,6 +44,7 @@ function n(value: number | string | null | undefined): number {
 function toPurchase(row: PurchaseRow): Purchase {
   return {
     id: row.id,
+    bill_no: Math.trunc(n(row.bill_no)),
     date: row.date,
     name: row.name ?? "",
     place: row.place ?? "",
@@ -65,35 +67,36 @@ function toPurchase(row: PurchaseRow): Purchase {
   };
 }
 
+export async function getNextPurchaseBillNoPreview(): Promise<number> {
+  await requireAuth();
+  const { data, error } = await supabaseServer
+    .from("purchases")
+    .select("bill_no")
+    .order("bill_no", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load next purchase bill number: ${error.message}`);
+  }
+
+  const maxBillNo = Math.trunc(
+    n((data as { bill_no?: number | string | null } | null)?.bill_no)
+  );
+  return Math.max(maxBillNo + 1, 1);
+}
+
 export async function getPurchases(): Promise<Purchase[]> {
   const { data, error } = await supabaseServer
     .from("purchases")
     .select("*")
-    .order("created_at", { ascending: false })
-    .order("date", { ascending: false });
+    .order("bill_no", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
 
   if (error) {
     throw new Error(`Failed to load purchases: ${error.message}`);
   }
-
-  const rows = [...(data as PurchaseRow[])].sort((a, b) => {
-    const aCreated = Date.parse(String(a.created_at ?? ""));
-    const bCreated = Date.parse(String(b.created_at ?? ""));
-    if (Number.isFinite(aCreated) && Number.isFinite(bCreated) && aCreated !== bCreated) {
-      return bCreated - aCreated;
-    }
-    if (Number.isFinite(aCreated) && !Number.isFinite(bCreated)) return -1;
-    if (!Number.isFinite(aCreated) && Number.isFinite(bCreated)) return 1;
-
-    const aDate = Date.parse(String(a.date ?? ""));
-    const bDate = Date.parse(String(b.date ?? ""));
-    if (Number.isFinite(aDate) && Number.isFinite(bDate) && aDate !== bDate) {
-      return bDate - aDate;
-    }
-    return String(b.id).localeCompare(String(a.id));
-  });
-
-  return rows.map(toPurchase);
+  return (data as PurchaseRow[]).map(toPurchase);
 }
 
 export async function getPurchaseById(id: string): Promise<Purchase | null> {

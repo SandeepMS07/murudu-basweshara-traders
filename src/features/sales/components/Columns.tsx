@@ -1,17 +1,20 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { Edit, FileText, Trash2 } from "lucide-react";
+import { Edit, FileText, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
+import { addDays, format, isValid, parseISO } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { Sale } from "@/features/sales/schemas";
-import { deleteSaleAction, generateSalesInvoiceAction } from "@/app/sales/actions";
+import {
+  deleteSaleAction,
+  generateSalesInvoiceAction,
+} from "@/app/sales/actions";
 import {
   Dialog,
   DialogContent,
@@ -35,9 +38,14 @@ function SaleActionsCell({
   const [generateOpen, setGenerateOpen] = useState(false);
   const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [issuedOn, setIssuedOn] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [issuedOn, setIssuedOn] = useState(() =>
+    format(new Date(), "yyyy-MM-dd"),
+  );
   const defaultIssuerId = useMemo(() => {
-    if (sale.issuer_company_id && issuerCompanies.some((company) => company.id === sale.issuer_company_id)) {
+    if (
+      sale.issuer_company_id &&
+      issuerCompanies.some((company) => company.id === sale.issuer_company_id)
+    ) {
       return sale.issuer_company_id;
     }
     return issuerCompanies[0]?.id ?? "";
@@ -60,7 +68,8 @@ function SaleActionsCell({
         setConfirmOpen(false);
         router.refresh();
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Failed to delete sale";
+        const message =
+          error instanceof Error ? error.message : "Failed to delete sale";
         toast.error(message);
       }
     });
@@ -85,7 +94,8 @@ function SaleActionsCell({
         });
         setPreviewInvoiceId(invoice.id);
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Failed to generate bill";
+        const message =
+          error instanceof Error ? error.message : "Failed to generate bill";
         toast.error(message);
       }
     });
@@ -115,7 +125,12 @@ function SaleActionsCell({
     <>
       <div className="flex justify-end gap-1 pr-2">
         <Link href={`/sales/${sale.id}/edit`}>
-          <Button variant="ghost" size="icon" title="Edit sale" className="cursor-pointer">
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Edit sale"
+            className="cursor-pointer"
+          >
             <Edit className="h-4 w-4" />
           </Button>
         </Link>
@@ -151,7 +166,8 @@ function SaleActionsCell({
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Delete Sale</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Are you sure you want to delete this sale? This action cannot be undone.
+              Are you sure you want to delete this sale? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
@@ -188,7 +204,7 @@ function SaleActionsCell({
       >
         <DialogContent
           showCloseButton={false}
-          className="max-h-[90vh] overflow-hidden border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-6xl"
+          className="flex h-[95vh] max-h-[95vh] min-w-[48vw] w-auto max-w-[98vw] flex-col overflow-hidden border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-[98vw]"
         >
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Generate Bill</DialogTitle>
@@ -199,21 +215,36 @@ function SaleActionsCell({
 
           {/* Inputs removed as requested */}
 
-          <div className="relative flex h-[60vh] min-h-[380px] w-full items-center justify-center overflow-hidden rounded-md border border-[#2a2d34] bg-[#1b1e24] p-4 text-center">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-[#2a2d34] bg-white p-2 text-center">
             {previewInvoiceId ? (
-              <div 
-                className="absolute origin-top flex items-center justify-center"
-                style={{ transform: "scale(min(calc(60vh / 1122), calc((100vw - 120px) / 800)))", top: "12px", width: "210mm", height: "100%" }}
-              >
-                <iframe
-                  title={`Sales Bill Preview ${sale.id}`}
-                  src={`/sales/invoices/${previewInvoiceId}/print?preview=1`}
-                  style={{ width: "210mm", height: "100%", minHeight: "297mm", border: "0", background: "white", flexShrink: 0 }}
-                />
+              <div className="relative flex h-full w-full items-center justify-center overflow-hidden ">
+                <div
+                  className="min-w-[45vw] h-full p-2"
+                  style={{
+                    transform:
+                      "translate(-50%, -50%) scale(min(calc(100cqw / 794), calc(100cqh / 1123)))",
+                    transformOrigin: "center center",
+                  }}
+                >
+                  <iframe
+                    title={`Sales Bill Preview ${sale.id}`}
+                    src={`/sales/invoices/${previewInvoiceId}/print?preview=1`}
+                    // className="block border-0 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  />
+                </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center text-sm text-zinc-400">
-                {isPending ? "Generating invoice preview..." : "Preparing preview..."}
+              <div className="flex flex-col items-center justify-center gap-3 text-sm text-zinc-800">
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-700" />
+                <div className="font-medium">
+                  {isPending
+                    ? "Generating invoice preview..."
+                    : "Preparing preview..."}
+                </div>
               </div>
             )}
           </div>
@@ -244,13 +275,22 @@ function SaleActionsCell({
   );
 }
 
-export function createSaleColumns(issuerCompanies: Company[]): ColumnDef<Sale>[] {
+export function createSaleColumns(
+  issuerCompanies: Company[],
+): ColumnDef<Sale>[] {
+  const parseTermDays = (terms: string | null | undefined) => {
+    const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return parsed;
+  };
+
+  const getDueDate = (sale: Sale) => {
+    const saleDate = parseISO(sale.sale_date);
+    if (!isValid(saleDate)) return null;
+    return addDays(saleDate, parseTermDays(sale.payment_terms));
+  };
+
   return [
-    {
-      accessorKey: "sl_no",
-      header: "SL NO",
-      cell: ({ row }) => row.original.sl_no ?? "-",
-    },
     {
       accessorKey: "bill_number",
       header: "BILL NUM",
@@ -312,10 +352,27 @@ export function createSaleColumns(issuerCompanies: Company[]): ColumnDef<Sale>[]
       cell: ({ row }) => row.original.payment_terms || "-",
     },
     {
+      accessorKey: "pending_amount",
+      header: "PENDING",
+      cell: ({ row }) => formatCurrencyINR(row.original.pending_amount),
+    },
+    {
+      id: "due_date",
+      header: "DUE DATE",
+      cell: ({ row }) => {
+        const dueDate = getDueDate(row.original);
+        if (!dueDate) return "-";
+        return format(dueDate, "yyyy-MM-dd");
+      },
+    },
+    {
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
-        <SaleActionsCell sale={row.original} issuerCompanies={issuerCompanies} />
+        <SaleActionsCell
+          sale={row.original}
+          issuerCompanies={issuerCompanies}
+        />
       ),
       meta: {
         sticky: true,

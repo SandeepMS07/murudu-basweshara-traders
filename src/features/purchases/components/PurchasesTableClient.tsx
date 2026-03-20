@@ -100,7 +100,17 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
       columns={columns}
       data={data}
       searchKey="name"
-      searchPlaceholder="Filter by name..."
+      searchPlaceholder="Filter by name or phone..."
+      searchPredicate={(purchase, query) => {
+        const normalizedName = (purchase.name || "").toLowerCase();
+        const normalizedPhone = (purchase.mob || "").replace(/\D/g, "");
+        const queryDigits = query.replace(/\D/g, "");
+
+        return (
+          normalizedName.includes(query) ||
+          (!!queryDigits && normalizedPhone.includes(queryDigits))
+        );
+      }}
       toolbarRight={
         <div className="w-full p-0 xl:ml-auto xl:flex xl:justify-end">
           <div className="flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible xl:pb-0">

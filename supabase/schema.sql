@@ -12,6 +12,7 @@ create table if not exists public.users (
 
 create table if not exists public.purchases (
   id text primary key,
+  bill_no bigint,
   date date not null,
   name text not null default '',
   place text not null default '',
@@ -35,6 +36,38 @@ create table if not exists public.purchases (
   updated_at timestamptz not null default now()
 );
 
+create sequence if not exists public.purchases_bill_no_seq start with 1 increment by 1;
+
+alter table public.purchases
+  add column if not exists bill_no bigint;
+
+alter table public.purchases
+  alter column bill_no set default nextval('public.purchases_bill_no_seq');
+
+with ranked_purchases as (
+  select id, row_number() over (order by created_at asc, id asc) as rn
+  from public.purchases
+  where bill_no is null
+)
+update public.purchases p
+set bill_no = r.rn
+from ranked_purchases r
+where p.id = r.id;
+
+do $$
+declare
+  max_purchase_bill_no bigint;
+begin
+  select coalesce(max(bill_no), 0) into max_purchase_bill_no from public.purchases;
+  if max_purchase_bill_no = 0 then
+    perform setval('public.purchases_bill_no_seq', 1, false);
+  else
+    perform setval('public.purchases_bill_no_seq', max_purchase_bill_no, true);
+  end if;
+end $$;
+
+create unique index if not exists idx_purchases_bill_no_unique on public.purchases (bill_no);
+
 alter table public.purchases add column if not exists name text not null default '';
 alter table public.purchases add column if not exists place text not null default '';
 alter table public.purchases add column if not exists mob text not null default '';
@@ -44,6 +77,7 @@ alter table public.purchases add column if not exists payment_through text not n
 
 create table if not exists public.bills (
   id text primary key,
+  bill_no bigint,
   bill_date date not null,
   net_weight numeric(12,2) not null default 0,
   rate numeric(12,2) not null default 0,
@@ -56,6 +90,38 @@ create table if not exists public.bills (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create sequence if not exists public.bills_bill_no_seq start with 1 increment by 1;
+
+alter table public.bills
+  add column if not exists bill_no bigint;
+
+alter table public.bills
+  alter column bill_no set default nextval('public.bills_bill_no_seq');
+
+with ranked_bills as (
+  select id, row_number() over (order by created_at asc, id asc) as rn
+  from public.bills
+  where bill_no is null
+)
+update public.bills b
+set bill_no = r.rn
+from ranked_bills r
+where b.id = r.id;
+
+do $$
+declare
+  max_bill_no bigint;
+begin
+  select coalesce(max(bill_no), 0) into max_bill_no from public.bills;
+  if max_bill_no = 0 then
+    perform setval('public.bills_bill_no_seq', 1, false);
+  else
+    perform setval('public.bills_bill_no_seq', max_bill_no, true);
+  end if;
+end $$;
+
+create unique index if not exists idx_bills_bill_no_unique on public.bills (bill_no);
 
 create table if not exists public.sales (
   id text primary key,
@@ -98,6 +164,9 @@ create table if not exists public.companies (
   phone text not null default '',
   email text not null default '',
   gstin text not null default '',
+  bank_name text not null default '',
+  bank_account_no text not null default '',
+  bank_branch_ifsc text not null default '',
   invoice_prefix text not null default '',
   is_active boolean not null default true,
   is_default boolean not null default false,
@@ -113,6 +182,19 @@ create table if not exists public.company_invoice_counters (
   last_seq bigint not null default 0,
   updated_at timestamptz not null default now()
 );
+
+create table if not exists public.company_payments (
+  id text primary key,
+  company_id text not null references public.companies(id) on delete cascade,
+  paid_on date not null,
+  amount numeric(14,2) not null default 0,
+  note text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_company_payments_company_id on public.company_payments (company_id);
+create index if not exists idx_company_payments_paid_on on public.company_payments (paid_on desc);
 
 -- Backward-compatible migration for older installs where the counter table
 -- used `company_id` instead of `issuer_company_id`.
@@ -206,6 +288,21 @@ create index if not exists idx_sales_invoice_items_sale_id on public.sales_invoi
 alter table public.sales add column if not exists sale_company_id text null;
 alter table public.sales add column if not exists issuer_company_id text null;
 alter table public.companies add column if not exists invoice_prefix text not null default '';
+alter table public.companies add column if not exists bank_name text not null default '';
+alter table public.companies add column if not exists bank_account_no text not null default '';
+alter table public.companies add column if not exists bank_branch_ifsc text not null default '';
+
+update public.companies
+set
+  bank_name = 'ICICI BANK',
+  bank_account_no = '378205000703',
+  bank_branch_ifsc = 'HONNALI & ICIC0003782',
+  updated_at = now()
+where type = 'issuer'
+  and upper(name) = 'SRI MURUDA BASAVESHWARA TRADERS'
+  and coalesce(bank_name, '') = ''
+  and coalesce(bank_account_no, '') = ''
+  and coalesce(bank_branch_ifsc, '') = '';
 
 do $$
 begin

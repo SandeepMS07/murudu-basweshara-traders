@@ -101,6 +101,9 @@ function companySnapshot(company: Company) {
     phone: company.phone,
     email: company.email,
     gstin: company.gstin,
+    bank_name: company.bank_name,
+    bank_account_no: company.bank_account_no,
+    bank_branch_ifsc: company.bank_branch_ifsc,
     invoice_prefix: company.invoice_prefix,
   };
 }

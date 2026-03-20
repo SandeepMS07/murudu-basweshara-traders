@@ -8,23 +8,39 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { getSales } from "@/features/sales/service/sale.service";
 import { SalesTableClient } from "@/features/sales/components/SalesTableClient";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
-import { getCompanies } from "@/features/companies/service/company.service";
+import { getCompanies, getCompanyPayments } from "@/features/companies/service/company.service";
 
 export default async function SalesPage() {
   await requireAuth();
-  const sales = await getSales();
-  const buyerCompanies = await getCompanies("buyer");
-  const issuerCompanies = (await getCompanies("issuer")).filter((company) => company.is_active);
+  const [sales, buyerCompanies, issuerCompanies, companyPayments] = await Promise.all([
+    getSales(),
+    getCompanies("buyer"),
+    getCompanies("issuer"),
+    getCompanyPayments(),
+  ]);
+  const activeIssuerCompanies = issuerCompanies.filter((company) => company.is_active);
 
-  const totals = sales.reduce(
-    (acc, sale) => {
-      acc.netWeight += sale.net_weight;
-      acc.amount += sale.amount;
-      acc.pending += sale.pending_amount;
-      return acc;
-    },
-    { netWeight: 0, amount: 0, pending: 0 }
-  );
+  let totalNetWeight = 0;
+  let totalAmount = 0;
+  let basePending = 0;
+  let totalReceived = 0;
+
+  for (const sale of sales) {
+    totalNetWeight += sale.net_weight;
+    totalAmount += sale.amount;
+    basePending += sale.pending_amount;
+  }
+
+  for (const payment of companyPayments) {
+    totalReceived += payment.amount;
+  }
+
+  const totals = {
+    netWeight: totalNetWeight,
+    amount: totalAmount,
+    received: totalReceived,
+    pending: Math.max(basePending - totalReceived, 0),
+  };
 
   return (
     <AppShell>
@@ -43,7 +59,7 @@ export default async function SalesPage() {
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-5">
         <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Total Sales</CardTitle>
@@ -84,12 +100,22 @@ export default async function SalesPage() {
             </p>
           </CardContent>
         </Card>
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-zinc-400">Total Received</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
+              {formatCurrencyINR(totals.received)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <SalesTableClient
         data={sales}
         buyerCompanies={buyerCompanies}
-        issuerCompanies={issuerCompanies}
+        issuerCompanies={activeIssuerCompanies}
       />
     </AppShell>
   );

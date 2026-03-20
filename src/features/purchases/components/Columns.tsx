@@ -1,10 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  PaymentMethod,
-  Purchase,
-} from "@/features/purchases/schemas";
+import { PaymentMethod, Purchase } from "@/features/purchases/schemas";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, ReceiptText, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -32,8 +29,8 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
+  const previewBillNumber = String(purchase.bill_no || "-");
   const isManual = purchase.source === "manual";
-  const previewBillNumber = purchase.id.slice(-6).toUpperCase();
   const billToPhone = stripIndiaCountryCode(purchase.mob);
   const previewTotalText = formatCurrencyINR(purchase.final_total, {
     minimumFractionDigits: 0,
@@ -112,7 +109,11 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
             disabled={isManual || isPending}
             title={isManual ? "Manual entries are read-only" : "Edit"}
           >
-            {isManual ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+            {isManual ? (
+              <Eye className="h-4 w-4" />
+            ) : (
+              <Edit className="h-4 w-4" />
+            )}
           </Button>
         </Link>
         <Button
@@ -143,8 +144,8 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Delete Purchase</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Are you sure you want to delete this purchase? This action cannot be
-              undone.
+              Are you sure you want to delete this purchase? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
@@ -173,7 +174,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
         <DialogContent
           showCloseButton={false}
-          className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-5xl"
+          className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-xl"
         >
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Generate Bill</DialogTitle>
@@ -183,7 +184,10 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
           </DialogHeader>
           <div className="overflow-auto rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
             <div className="bill-print-root bill-print-preview bill-print-inline-preview p-2 sm:p-3">
-              <section className="bill-print-copy mx-auto w-full max-w-none">
+              <section
+                className="bill-print-copy mx-auto"
+                style={{ width: "480px", height: "600px", maxWidth: "100%" }}
+              >
                 <header className="bill-print-header">
                   <div className="bill-print-brand-row">
                     <div className="bill-print-brand">
@@ -191,8 +195,12 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                       <div className="bill-print-title">MB Groups</div>
                     </div>
                     <div className="bill-print-invoice-box">
-                      <div className="bill-print-invoice-label">ESTIMATION INVOICE</div>
-                      <div className="bill-print-invoice-number">{previewBillNumber}</div>
+                      <div className="bill-print-invoice-label">
+                        ESTIMATION INVOICE
+                      </div>
+                      <div className="bill-print-invoice-number">
+                        {previewBillNumber}
+                      </div>
                     </div>
                   </div>
                 </header>
@@ -202,24 +210,83 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                     <div className="bill-print-yard">APMC Yard</div>
                     <div>Honnali</div>
                     <div>Harish Putta :- 9019800731</div>
-                    <div>Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398</div>
+                    <div>
+                      Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398
+                    </div>
                   </div>
                   <div className="bill-print-info-right">
-                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>DATE:</span> <strong>{purchase.date}</strong></div>
-                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase.name || "-"}</strong></div>
-                    <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>PHONE:</span> <strong>{billToPhone}</strong></div>
-                    <div className="bill-print-kv"><span className="bill-print-icon">◉</span><span>PLACE:</span> <strong>{purchase.place || "-"}</strong></div>
+                    <div className="bill-print-kv">
+                      <span className="bill-print-icon">◼</span>
+                      <span>DATE:</span> <strong>{purchase.date}</strong>
+                    </div>
+                    <div className="bill-print-kv">
+                      <span className="bill-print-icon">◼</span>
+                      <span>BILL TO:</span>{" "}
+                      <strong>{purchase.name || "-"}</strong>
+                    </div>
+                    <div className="bill-print-kv">
+                      <span className="bill-print-icon">◼</span>
+                      <span>PHONE:</span> <strong>{billToPhone}</strong>
+                    </div>
+                    <div className="bill-print-kv">
+                      <span className="bill-print-icon">◉</span>
+                      <span>PLACE:</span>{" "}
+                      <strong>{purchase.place || "-"}</strong>
+                    </div>
                   </div>
                 </section>
 
                 <table className="bill-print-table bill-print-main-table">
                   <tbody>
-                    <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-                    <tr><td>WEIGHT</td><td>{formatNumberIN(purchase.weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                    <tr><td>LESS</td><td>{formatNumberIN(purchase.less_weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                    <tr><td>NET WEIGHT</td><td>{formatNumberIN(purchase.net_weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                    <tr><td>RATE</td><td>{formatCurrencyINR(purchase.rate, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                    <tr className="bill-print-key-row"><td>AMOUNT</td><td>{formatCurrencyINR(purchase.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                    <tr>
+                      <th>DESCRIPTION</th>
+                      <th>AMOUNT</th>
+                    </tr>
+                    <tr>
+                      <td>WEIGHT</td>
+                      <td>
+                        {formatNumberIN(purchase.weight, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>LESS</td>
+                      <td>
+                        {formatNumberIN(purchase.less_weight, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>NET WEIGHT</td>
+                      <td>
+                        {formatNumberIN(purchase.net_weight, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>RATE</td>
+                      <td>
+                        {formatCurrencyINR(purchase.rate, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </td>
+                    </tr>
+                    <tr className="bill-print-key-row">
+                      <td>AMOUNT</td>
+                      <td>
+                        {formatCurrencyINR(purchase.amount, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
 
@@ -227,30 +294,69 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                   <div className="bill-print-note-left">
                     Make all checks payable to MB GROUPS.
                     <br />
-                    Send this bill nd bank passbook to whastapp 9019800731/7795953398
-                    <span className="bill-print-note-icons">●  🏦</span>
+                    Send this bill nd bank passbook to whastapp
+                    9019800731/7795953398
+                    <span className="bill-print-note-icons">● 🏦</span>
                   </div>
                   <div className="bill-print-note-right" />
                 </section>
 
                 <section className="bill-print-sign-row">
                   <div className="bill-print-sign">
-                    <div className="bill-print-sign-title">Farmer Signature</div>
+                    <div className="bill-print-sign-title">
+                      Farmer Signature
+                    </div>
                     <div className="bill-print-sign-line" />
-                    <div className="bill-print-sign-caption">Farmer Signature</div>
+                    <div className="bill-print-sign-caption">
+                      Farmer Signature
+                    </div>
                   </div>
                   <table className="bill-print-table bill-print-summary-table">
                     <tbody>
-                      <tr><td>AMOUNT</td><td>{formatCurrencyINR(purchase.amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                      <tr><td>BAG LESS</td><td>{formatCurrencyINR(purchase.bag_less, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                      <tr><td>CASH</td><td>{formatCurrencyINR(purchase.cash_paid, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                      <tr><td>EXTRA</td><td>{formatCurrencyINR(purchase.add_amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                      <tr>
+                        <td>AMOUNT</td>
+                        <td>
+                          {formatCurrencyINR(purchase.amount, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>BAG LESS</td>
+                        <td>
+                          {formatCurrencyINR(purchase.bag_less, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>CASH</td>
+                        <td>
+                          {formatCurrencyINR(purchase.cash_paid, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>EXTRA</td>
+                        <td>
+                          {formatCurrencyINR(purchase.add_amount, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </section>
 
                 <footer className="bill-print-total-row">
-                  <div className="bill-print-thanks">THANK YOU FOR YOUR BUSINESS!</div>
+                  <div className="bill-print-thanks">
+                    THANK YOU FOR YOUR BUSINESS!
+                  </div>
                   <div className="bill-print-total-label">TOTAL</div>
                   <div
                     className={`bill-print-total-value ${previewTotalValueSizeClass}`.trim()}
@@ -298,23 +404,15 @@ const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [
 ];
 
 export function createPurchaseColumns(
-  options: PurchaseColumnOptions
+  options: PurchaseColumnOptions,
 ): ColumnDef<Purchase>[] {
   const { paymentMethodById, onPaymentMethodChange } = options;
 
   return [
     {
-      id: "sl_no",
-      header: "SL NO",
-      cell: ({ row, table }) => {
-        const { pageIndex, pageSize } = table.getState().pagination;
-        const indexInPage = table
-          .getPaginationRowModel()
-          .rows.findIndex((currentRow) => currentRow.id === row.id);
-
-        if (indexInPage < 0) return row.index + 1;
-        return pageIndex * pageSize + indexInPage + 1;
-      },
+      id: "bill_no",
+      header: "BILL NO",
+      cell: ({ row }) => row.original.bill_no || "-",
     },
     {
       accessorKey: "name",
@@ -424,10 +522,10 @@ export function createPurchaseColumns(
             onChange={(event) =>
               onPaymentMethodChange(
                 purchaseId,
-                event.target.value as PaymentMethod
+                event.target.value as PaymentMethod,
               )
             }
-            className="w-full rounded border border-[#2a2d34] bg-[#17191f] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-300"
+            className="w-full cursor-pointer rounded border border-[#2a2d34] bg-[#17191f] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-300"
           >
             {paymentSelectOptions.map((option) => (
               <option key={option.value} value={option.value}>

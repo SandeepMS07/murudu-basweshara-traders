@@ -12,6 +12,7 @@ export function calculateBill(input: BillInput, id: string): Bill {
   return {
     ...input,
     id,
+    bill_no: 0,
     amount,
     final_amount,
     due_date,
