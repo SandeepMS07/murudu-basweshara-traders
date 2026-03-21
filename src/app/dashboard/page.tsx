@@ -14,6 +14,12 @@ export default async function DashboardPage() {
   const totalPurchasesAmount = purchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
   const totalSalesAmount = sales.reduce((acc, s) => acc + (s.amount || 0), 0);
   const totalSalesPending = sales.reduce((acc, s) => acc + (s.pending_amount || 0), 0);
+  const totalPurchasedBags = purchases.reduce((acc, p) => acc + Number(p.bags || 0), 0);
+  const totalSoldBags = sales.reduce((acc, s) => acc + Number(s.bags || 0), 0);
+  const stockBags = totalPurchasedBags - totalSoldBags;
+  const totalPurchasedNetWeight = purchases.reduce((acc, p) => acc + Number(p.net_weight || 0), 0);
+  const totalSoldNetWeight = sales.reduce((acc, s) => acc + Number(s.net_weight || 0), 0);
+  const stockWeight = totalPurchasedNetWeight - totalSoldNetWeight;
   const rtgsAmount = purchases
     .filter((p) => p.payment_through === "RTGS")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
@@ -49,7 +55,7 @@ export default async function DashboardPage() {
           <p className="text-zinc-500">Welcome back, {user.email} ({user.role})</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-zinc-400">Total Purchases</CardTitle>
@@ -83,6 +89,33 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalSalesAmount)}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Stock Bags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatNumberIN(stockBags, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Stock Weight</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatNumberIN(stockWeight, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                kg
+              </div>
             </CardContent>
           </Card>
 
