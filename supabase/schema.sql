@@ -212,6 +212,29 @@ create table if not exists public.company_payment_allocations (
 create index if not exists idx_company_payment_allocations_sale_id on public.company_payment_allocations (sale_id);
 create index if not exists idx_company_payment_allocations_payment_id on public.company_payment_allocations (payment_id);
 
+create table if not exists public.expense_employees (
+  id text primary key,
+  name text not null unique,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.expenses (
+  id text primary key,
+  category text not null check (category in ('salary', 'vehicle', 'hamali', 'other')),
+  expense_date date not null,
+  employee_id text null references public.expense_employees(id) on delete set null,
+  reason text not null default '',
+  amount numeric(14,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_expenses_category on public.expenses (category);
+create index if not exists idx_expenses_expense_date on public.expenses (expense_date desc);
+create index if not exists idx_expenses_employee_id on public.expenses (employee_id);
+
 -- Backward-compatible migration for older installs where the counter table
 -- used `company_id` instead of `issuer_company_id`.
 alter table public.company_invoice_counters

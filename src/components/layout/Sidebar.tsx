@@ -10,6 +10,14 @@ import {
   ShoppingCart,
   HandCoins,
   Building2,
+  Wallet,
+  UserRound,
+  Truck,
+  Hand,
+  ReceiptText,
+  LayoutList,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -36,6 +44,18 @@ const navItems = [
       { name: "Companies", href: "/companies", icon: Building2 },
     ],
   },
+  {
+    name: "Expenses",
+    href: "/expenses/overview",
+    icon: Wallet,
+    children: [
+      { name: "Overview", href: "/expenses/overview", icon: LayoutList },
+      { name: "Salary", href: "/expenses/salary", icon: UserRound },
+      { name: "Vehicle", href: "/expenses/vehicle", icon: Truck },
+      { name: "Hamali", href: "/expenses/hamali", icon: Hand },
+      { name: "Other Expenses", href: "/expenses/other", icon: ReceiptText },
+    ],
+  },
 ];
 
 type SidebarProps = {
@@ -49,6 +69,15 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const item of navItems) {
+      if (item.children) {
+        initial[item.href] = pathname.startsWith(item.href);
+      }
+    }
+    return initial;
+  });
 
   const handleLogout = async () => {
     setIsDialogOpen(false);
@@ -86,6 +115,22 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
     };
   }, []);
 
+  useEffect(() => {
+    setExpandedSections((current) => {
+      const next = { ...current };
+      for (const item of navItems) {
+        if (!item.children) continue;
+        const hasActiveChild = item.children.some((child) => pathname.startsWith(child.href));
+        if (hasActiveChild) {
+          next[item.href] = true;
+        } else if (!(item.href in next)) {
+          next[item.href] = false;
+        }
+      }
+      return next;
+    });
+  }, [pathname]);
+
   return (
     <div
       className={cn(
@@ -110,21 +155,44 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
           return (
             <div key={item.href}>
-              <Link
-                href={item.href}
-                onClick={onNavigate}
+              <div
                 className={cn(
-                  "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "group flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   isActive
                     ? "border border-[#ff6a3d]/40 bg-[#ff6a3d]/14 text-[#ff8f6b]"
                     : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100"
                 )}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                {item.name}
-              </Link>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+                {item.children ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedSections((current) => ({
+                        ...current,
+                        [item.href]: !current[item.href],
+                      }))
+                    }
+                    className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm text-zinc-400 hover:bg-[#1d2026] hover:text-zinc-100"
+                    aria-label={expandedSections[item.href] ? "Collapse menu" : "Expand menu"}
+                  >
+                    {expandedSections[item.href] ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
+                ) : null}
+              </div>
 
-              {item.children ? (
+              {item.children && expandedSections[item.href] ? (
                 <div className="relative ml-8 mt-1 border-l border-[#2a2d34] pl-3">
                   {item.children.map((child) => {
                     const childActive = pathname.startsWith(child.href);
@@ -155,12 +223,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       </nav>
 
       <div className="mt-auto border-t border-[#1d1f24] pt-4">
-        {userInfo ? (
-          <div className="mb-3 rounded-md border border-[#282b31] bg-[#15171c] p-3 text-xs text-zinc-400">
-            <p className="truncate text-sm font-semibold text-zinc-100">{userInfo.email}</p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">{userInfo.role}</p>
-          </div>
-        ) : null}
         <button
           type="button"
           onClick={() => setIsDialogOpen(true)}

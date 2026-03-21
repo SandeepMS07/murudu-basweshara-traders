@@ -35,6 +35,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     purchases: "Purchases",
     sales: "Sales",
     companies: "Companies",
+    expenses: "Expenses",
+    overview: "Overview",
+    salary: "Salary",
+    vehicle: "Vehicle",
+    hamali: "Hamali",
+    other: "Other Expenses",
     bills: "Bills",
     invoices: "Invoices",
     new: "New",
@@ -63,6 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       { label: "Sales", href: "/sales", keywords: "sales bill list table" },
       { label: "Create Sale", href: "/sales/new", keywords: "new add sale" },
       { label: "Companies", href: "/companies", keywords: "issuer buyer company" },
+      { label: "Expenses", href: "/expenses/overview", keywords: "salary vehicle hamali other ledger overview" },
     ],
     []
   );
