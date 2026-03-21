@@ -114,7 +114,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-[#252932] bg-[#111214] text-zinc-100 shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+      <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-[#252932] bg-[#111214] text-zinc-100 shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
         <Table className="min-w-max">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

@@ -357,7 +357,10 @@ export function createSaleColumns(
       header: "PENDING",
       cell: ({ row }) =>
         formatCurrencyINR(
-          Math.max(pendingBySaleId[row.original.id] ?? row.original.pending_amount, 0),
+          Math.max(
+            pendingBySaleId[row.original.id] ?? row.original.pending_amount,
+            0,
+          ),
         ),
     },
     {
@@ -367,6 +370,10 @@ export function createSaleColumns(
         const dueDate = getDueDate(row.original);
         if (!dueDate) return "-";
         return format(dueDate, "yyyy-MM-dd");
+      },
+      meta: {
+        width: "160px",
+        headClassName: "whitespace-nowrap",
       },
     },
     {
@@ -382,8 +389,8 @@ export function createSaleColumns(
         sticky: true,
         right: "0",
         zIndex: 4,
-        width: "216px",
-        headClassName: "text-right pr-4",
+        width: "120px",
+        headClassName: "whitespace-nowrap text-right pr-4",
         cellClassName: "text-right",
         boxShadow: "-8px 0 18px rgba(6, 8, 13, 0.45)",
       },
