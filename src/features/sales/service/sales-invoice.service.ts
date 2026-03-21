@@ -40,7 +40,10 @@ type SaleRow = {
   id: string;
   bill_number: string;
   sale_date: string;
+  dispatch_through: "TRUCK" | "TRACTORY" | null;
   lorry_number: string | null;
+  goods_name: string | null;
+  destination: string | null;
   party: string | null;
   sale_company_id: string | null;
   bags: number | string;
@@ -167,7 +170,9 @@ export async function generateSalesInvoice(
 
   const { data: salesRows, error: salesError } = await supabaseServer
     .from("sales")
-    .select("id, bill_number, sale_date, lorry_number, party, sale_company_id, bags, net_weight, rate, amount")
+    .select(
+      "id, bill_number, sale_date, dispatch_through, lorry_number, goods_name, destination, party, sale_company_id, bags, net_weight, rate, amount"
+    )
     .in("id", saleIds);
 
   if (salesError) {
@@ -245,7 +250,10 @@ export async function generateSalesInvoice(
   const itemsPayload = sortedRows.map((row) => ({
     id: crypto.randomUUID(),
     sale_id: row.id,
-    description: `Bill ${row.bill_number}${row.lorry_number ? ` • ${row.lorry_number}` : ""}`,
+    bill_number: row.bill_number,
+    description: (row.goods_name || "MAIZE").trim() || "MAIZE",
+    dispatch_through: row.dispatch_through === "TRACTORY" ? "TRACTORY" : "TRUCK",
+    destination: row.destination?.trim() || "",
     bags: n(row.bags),
     net_weight: n(row.net_weight),
     rate: n(row.rate),
@@ -262,6 +270,10 @@ export async function generateSalesInvoice(
     issued_on: issuedOn,
     issuer_company: companySnapshot(issuerCompany),
     buyer_company: companySnapshot(buyerCompany),
+    dispatch_through:
+      sortedRows[0]?.dispatch_through === "TRACTORY" ? "TRACTORY" : "TRUCK",
+    destination: sortedRows[0]?.destination?.trim() || "",
+    lorry_number: sortedRows[0]?.lorry_number?.trim() || "",
     items: itemsPayload,
     totals: {
       subtotal,
@@ -291,7 +303,13 @@ export async function generateSalesInvoice(
   }
 
   const itemRows = itemsPayload.map((item) => ({
-    ...item,
+    id: item.id,
+    sale_id: item.sale_id,
+    description: item.description,
+    bags: item.bags,
+    net_weight: item.net_weight,
+    rate: item.rate,
+    amount: item.amount,
     sales_invoice_id: invoiceId,
     updated_at: new Date().toISOString(),
   }));

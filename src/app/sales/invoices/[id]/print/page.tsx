@@ -32,6 +32,9 @@ type SnapshotShape = {
   };
   items?: Array<{
     sale_id?: string;
+    bill_number?: string;
+    dispatch_through?: "TRUCK" | "TRACTORY";
+    destination?: string;
     description?: string;
     bags?: number;
     net_weight?: number;
@@ -39,11 +42,16 @@ type SnapshotShape = {
     amount?: number;
     lorry_number?: string;
   }>;
+  dispatch_through?: "TRUCK" | "TRACTORY";
+  destination?: string;
+  lorry_number?: string;
   totals?: {
     subtotal?: number;
     total_amount?: number;
   };
 };
+
+type SnapshotItem = NonNullable<SnapshotShape["items"]>[number];
 
 function numberToWordsIN(value: number): string {
   const ones = [
@@ -121,11 +129,12 @@ export default async function SalesInvoicePrintPage({
   const snapshot = (invoice.snapshot_json ?? {}) as SnapshotShape;
   const issuer = snapshot.issuer_company ?? {};
   const buyer = snapshot.buyer_company ?? {};
-  const items =
+  const items: SnapshotItem[] =
     snapshot.items && snapshot.items.length > 0
       ? snapshot.items
       : (invoice.items ?? []).map((item) => ({
           sale_id: item.sale_id,
+          bill_number: undefined,
           description: item.description,
           bags: item.bags,
           net_weight: item.net_weight,
@@ -147,7 +156,19 @@ export default async function SalesInvoicePrintPage({
     printDateCompact = invoice.issued_on;
   }
 
-  const lorryNumber = snapshot.items?.[0]?.lorry_number || "-";
+  const lorryNumber =
+    snapshot.lorry_number?.trim() ||
+    snapshot.items?.[0]?.lorry_number?.trim() ||
+    "-";
+  const dispatchThrough =
+    snapshot.dispatch_through
+      || snapshot.items?.[0]?.dispatch_through
+      || "TRUCK";
+  const destination =
+    snapshot.destination?.trim()
+      || snapshot.items?.[0]?.destination?.trim()
+      || buyer.address?.split(",")?.[0]
+      || "NAGAMANGALA";
 
   const copies = [1];
   const rootClassName = `bill-print-root sales-invoice-print-root${
@@ -155,8 +176,24 @@ export default async function SalesInvoicePrintPage({
   }`;
   const totalInWords = numberToWordsIN(total);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.net_weight ?? 0), 0);
-  const minimumLineItems = 12;
+  const minimumLineItems = 8;
   const emptyLineItems = Math.max(0, minimumLineItems - items.length);
+  const fillerRowHeight = emptyLineItems * 32;
+  const billNumbers = Array.from(
+    new Set(
+      items
+        .map((item) => {
+          if (item.bill_number && String(item.bill_number).trim()) {
+            return String(item.bill_number).trim();
+          }
+          const desc = String(item.description ?? "");
+          const match = desc.match(/bill\s+([^\s•-]+)/i);
+          return match?.[1]?.trim() ?? "";
+        })
+        .filter(Boolean)
+    )
+  );
+  const displayInvoiceNo = billNumbers.length > 0 ? billNumbers.join(", ") : invoice.invoice_no;
   const issuerState = issuer.state_name ? `${issuer.state_name}${issuer.state_code ? `, Code: ${issuer.state_code}` : ""}` : "Karnataka, Code: 29";
   const buyerState = buyer.state_name ? `${buyer.state_name}${buyer.state_code ? `, Code: ${buyer.state_code}` : ""}` : "Karnataka, Code: 29";
 
@@ -179,6 +216,7 @@ export default async function SalesInvoicePrintPage({
                   <div>Phone: {issuer.phone || "-"}</div>
                   <div>GSTIN/UIN: {issuer.gstin || "-"}</div>
                   <div>State Name: {issuerState}</div>
+                  <div className="sales-invoice-left-divider" />
 
                   <div className="sales-invoice-subhead">Consignee (Ship to)</div>
                   <div className="sales-invoice-party-name">
@@ -187,6 +225,7 @@ export default async function SalesInvoicePrintPage({
                   <div>{buyer.address || "-"}</div>
                   <div>GSTIN/UIN: {buyer.gstin || "-"}</div>
                   <div>State Name: {buyerState}</div>
+                  <div className="sales-invoice-left-divider" />
 
                   <div className="sales-invoice-subhead">Buyer (Bill to)</div>
                   <div className="sales-invoice-party-name">
@@ -202,7 +241,7 @@ export default async function SalesInvoicePrintPage({
                       <tr>
                         <td>
                           <div>Invoice No.</div>
-                          <div className="sales-invoice-strong">{invoice.invoice_no}</div>
+                          <div className="sales-invoice-strong">{displayInvoiceNo}</div>
                         </td>
                         <td>
                           <div>Dated</div>
@@ -212,30 +251,37 @@ export default async function SalesInvoicePrintPage({
                       <tr>
                         <td>
                           <div>Delivery Note</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                         <td>
                           <div>Mode/Terms of Payment</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                       </tr>
                       <tr>
                         <td>
                           <div>Reference No. & Date.</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                         <td>
                           <div>Other References</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                       </tr>
                       <tr>
                         <td>
                           <div>Buyer&apos;s Order No.</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                         <td>
                           <div>Dated</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                       </tr>
                       <tr>
                         <td>
                           <div>Dispatch Doc No.</div>
+                          <div className="sales-invoice-strong">-</div>
                         </td>
                         <td>
                           <div>Delivery Note Date</div>
@@ -245,11 +291,11 @@ export default async function SalesInvoicePrintPage({
                       <tr>
                         <td>
                           <div>Dispatched through</div>
-                          <div className="sales-invoice-strong">TRUCK</div>
+                          <div className="sales-invoice-strong">{dispatchThrough}</div>
                         </td>
                         <td>
                           <div>Destination</div>
-                          <div className="sales-invoice-strong">{buyer.address?.split(',')?.[0] || "NAGAMANGALA"}</div>
+                          <div className="sales-invoice-strong">{destination}</div>
                         </td>
                       </tr>
                       <tr>
@@ -264,8 +310,7 @@ export default async function SalesInvoicePrintPage({
                       <tr>
                         <td colSpan={2}>
                           <div>Terms of Delivery</div>
-                          <br />
-                          <br />
+                          <div className="sales-invoice-strong">-</div>
                           <br />
                         </td>
                       </tr>
@@ -326,8 +371,8 @@ export default async function SalesInvoicePrintPage({
                       </td>
                     </tr>
                   ))}
-                  {Array.from({ length: emptyLineItems }).map((_, index) => (
-                    <tr key={`empty-line-${index}`} className="sales-invoice-empty-row">
+                  {fillerRowHeight > 0 ? (
+                    <tr className="sales-invoice-filler-row">
                       <td>&nbsp;</td>
                       <td>&nbsp;</td>
                       <td>&nbsp;</td>
@@ -335,9 +380,9 @@ export default async function SalesInvoicePrintPage({
                       <td>&nbsp;</td>
                       <td>&nbsp;</td>
                       <td>&nbsp;</td>
-                      <td>&nbsp;</td>
+                      <td style={{ height: `${fillerRowHeight}px` }}>&nbsp;</td>
                     </tr>
-                  ))}
+                  ) : null}
                 </>
               ) : (
                 <tr>
@@ -383,7 +428,11 @@ export default async function SalesInvoicePrintPage({
             <thead>
               <tr>
                 <th>HSN/SAC</th>
-                <th className="sales-invoice-num">Taxable Value</th>
+                <th className="sales-invoice-num">
+                  Taxable
+                  <br />
+                  Value
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -416,25 +465,37 @@ export default async function SalesInvoicePrintPage({
                   </div>
                 </td>
                 <td className="sales-invoice-footer-right">
-                  <div className="sales-invoice-bank-title">Company&apos;s Bank Details</div>
-                  <div className="sales-invoice-bank-grid">
-                    <div>Bank Name</div><div>: <strong>{issuer.bank_name || "-"}</strong></div>
-                    <div>A/c No.</div><div>: <strong>{issuer.bank_account_no || "-"}</strong></div>
-                    <div>Branch &amp; IFS Code</div><div>: <strong>{issuer.bank_branch_ifsc || "-"}</strong></div>
+                    <div className="sales-invoice-footer-right-inner">
+                      <div className="sales-invoice-bank-title">Company&apos;s Bank Details</div>
+                      <div className="sales-invoice-bank-grid">
+                        <div className="sales-invoice-bank-row">
+                          <span className="sales-invoice-bank-label">Bank Name</span>
+                          <span>: <strong>{issuer.bank_name || "-"}</strong></span>
+                        </div>
+                        <div className="sales-invoice-bank-row">
+                          <span className="sales-invoice-bank-label">A/c No.</span>
+                          <span>: <strong>{issuer.bank_account_no || "-"}</strong></span>
+                        </div>
+                        <div className="sales-invoice-bank-row">
+                          <span className="sales-invoice-bank-label">Branch &amp; IFS Code</span>
+                          <span>: <strong>{issuer.bank_branch_ifsc || "-"}</strong></span>
+                        </div>
+                      </div>
+                    <div className="sales-invoice-sign-company">
+                      for {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}
+                    </div>
+                    <div className="sales-invoice-sign-label">Authorised Signatory</div>
                   </div>
-                  <div className="sales-invoice-sign-company">
-                    for {(issuer.display_name || issuer.name || "Issuer Company").toUpperCase()}
-                  </div>
-                  <div className="sales-invoice-sign-label">Authorised Signatory</div>
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2}>
+                  <div className="sales-invoice-jurisdiction">SUBJECT TO HONNALLI JURISDICTION</div>
+                  <div className="sales-invoice-footer-note">This is a Computer Generated Invoice</div>
                 </td>
               </tr>
             </tbody>
           </table>
-
-          <div className="sales-invoice-footer-lines">
-            <div className="sales-invoice-jurisdiction">SUBJECT TO HONNALLI JURISDICTION</div>
-            <div className="sales-invoice-footer-note">This is a Computer Generated Invoice</div>
-          </div>
         </section>
       ))}
     </main>

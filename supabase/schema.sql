@@ -129,7 +129,10 @@ create table if not exists public.sales (
   bill_number text not null unique,
   sale_date date not null,
   issuer_company_id text null,
+  dispatch_through text not null default 'TRUCK' check (dispatch_through in ('TRUCK', 'TRACTORY')),
   lorry_number text not null default '',
+  goods_name text not null default 'MAIZE',
+  destination text not null default '',
   party text not null default '',
   payment_terms text not null default '',
   bags numeric(12,2) not null default 0,
@@ -300,6 +303,23 @@ create index if not exists idx_sales_invoice_items_sale_id on public.sales_invoi
 
 alter table public.sales add column if not exists sale_company_id text null;
 alter table public.sales add column if not exists issuer_company_id text null;
+alter table public.sales add column if not exists dispatch_through text not null default 'TRUCK';
+alter table public.sales add column if not exists goods_name text not null default 'MAIZE';
+alter table public.sales add column if not exists destination text not null default '';
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'sales_dispatch_through_check'
+      and conrelid = 'public.sales'::regclass
+  ) then
+    alter table public.sales
+      add constraint sales_dispatch_through_check
+      check (dispatch_through in ('TRUCK', 'TRACTORY'));
+  end if;
+end $$;
 alter table public.companies add column if not exists invoice_prefix text not null default '';
 alter table public.companies add column if not exists bank_name text not null default '';
 alter table public.companies add column if not exists bank_account_no text not null default '';

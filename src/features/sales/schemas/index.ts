@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const saleSourceEnum = z.enum(["manual", "import"]);
+export const saleDispatchThroughEnum = z.enum(["TRUCK", "TRACTORY"]);
 
 export const saleSchema = z.object({
   id: z.string().optional(),
@@ -8,7 +9,10 @@ export const saleSchema = z.object({
   bill_number: z.string().trim().min(1, "Bill number is required"),
   sale_date: z.string().min(1, "Date is required"),
   issuer_company_id: z.string().trim().optional().nullable(),
+  dispatch_through: saleDispatchThroughEnum.default("TRUCK"),
   lorry_number: z.string().trim().default(""),
+  goods_name: z.string().trim().min(1, "Goods name is required").default("MAIZE"),
+  destination: z.string().trim().default(""),
   party: z.string().trim().min(1, "Party is required"),
   sale_company_id: z.string().trim().optional().nullable(),
   payment_terms: z.string().trim().default(""),

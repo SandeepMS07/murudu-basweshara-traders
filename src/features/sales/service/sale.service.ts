@@ -18,7 +18,10 @@ type SaleRow = {
   bill_number: string;
   sale_date: string;
   issuer_company_id: string | null;
+  dispatch_through: "TRUCK" | "TRACTORY" | null;
   lorry_number: string | null;
+  goods_name: string | null;
+  destination: string | null;
   party: string | null;
   sale_company_id: string | null;
   payment_terms: string | null;
@@ -66,7 +69,10 @@ function toSale(row: SaleRow): Sale {
     bill_number: row.bill_number,
     sale_date: row.sale_date,
     issuer_company_id: row.issuer_company_id ?? null,
+    dispatch_through: row.dispatch_through === "TRACTORY" ? "TRACTORY" : "TRUCK",
     lorry_number: row.lorry_number ?? "",
+    goods_name: row.goods_name ?? "MAIZE",
+    destination: row.destination ?? "",
     party: row.party ?? "",
     sale_company_id: row.sale_company_id ?? null,
     payment_terms: row.payment_terms ?? "",
@@ -579,7 +585,10 @@ export async function importSalesFromBillWorkbook(
       sl_no: row[0] === "" ? null : Math.trunc(n(row[0])),
       bill_number: billNumber,
       sale_date: parsedDate,
+      dispatch_through: "TRUCK",
       lorry_number: normalizeCompanyName(row[3]),
+      goods_name: "MAIZE",
+      destination: "",
       party,
       sale_company_id: saleCompanyId,
       payment_terms: normalizeCompanyName(row[11]),

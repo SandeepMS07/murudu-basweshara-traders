@@ -79,7 +79,10 @@ export function SaleForm({
           bill_number: initialData.bill_number,
           sale_date: initialData.sale_date,
           issuer_company_id: initialData.issuer_company_id ?? null,
+          dispatch_through: initialData.dispatch_through,
           lorry_number: initialData.lorry_number,
+          goods_name: initialData.goods_name,
+          destination: initialData.destination,
           party: initialData.party,
           sale_company_id: initialData.sale_company_id ?? null,
           payment_terms: initialData.payment_terms,
@@ -99,7 +102,10 @@ export function SaleForm({
           issuer_company_id: issuerOptions.find((company) => company.is_active)?.id
             ?? issuerOptions[0]?.id
             ?? null,
+          dispatch_through: "TRUCK",
           lorry_number: "",
+          goods_name: "MAIZE",
+          destination: "",
           party: "",
           sale_company_id: null,
           payment_terms: "",
@@ -335,6 +341,78 @@ export function SaleForm({
                     <FormLabel>Lorry Number</FormLabel>
                     <FormControl>
                       <Input {...field} className={fieldClassName} placeholder="Enter lorry number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dispatch_through"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dispatched Through</FormLabel>
+                    <Select
+                      value={field.value ?? "TRUCK"}
+                      onValueChange={(value) =>
+                        field.onChange(value === "TRACTORY" ? "TRACTORY" : "TRUCK")
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger className={`${fieldClassName} !h-10 w-full`}>
+                          <SelectValue placeholder="Select dispatch mode" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="border border-[#343946] bg-[#1f2430] text-zinc-100 ring-0">
+                        <SelectItem
+                          value="TRUCK"
+                          className="text-zinc-100 hover:bg-[#31384a] hover:text-white focus:bg-[#31384a] focus:text-white data-[highlighted]:bg-[#31384a] data-[highlighted]:text-white"
+                        >
+                          TRUCK
+                        </SelectItem>
+                        <SelectItem
+                          value="TRACTORY"
+                          className="text-zinc-100 hover:bg-[#31384a] hover:text-white focus:bg-[#31384a] focus:text-white data-[highlighted]:bg-[#31384a] data-[highlighted]:text-white"
+                        >
+                          TRACTORY
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="goods_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Goods Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className={fieldClassName}
+                        placeholder="Enter goods name"
+                        value={field.value ?? "MAIZE"}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="destination"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Destination</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className={fieldClassName}
+                        placeholder="Enter destination"
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
