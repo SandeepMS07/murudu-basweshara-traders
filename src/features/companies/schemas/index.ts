@@ -37,6 +37,14 @@ export const companyPaymentSchema = z.object({
   paid_on: z.string().trim().min(1, "Payment date is required"),
   amount: z.coerce.number().positive("Amount must be greater than zero"),
   note: z.string().trim().default(""),
+  allocations: z
+    .array(
+      z.object({
+        sale_id: z.string().trim().min(1, "Sale id is required"),
+        amount: z.coerce.number().positive("Allocation amount must be greater than zero"),
+      })
+    )
+    .default([]),
 });
 
 export type CompanyPaymentInput = z.infer<typeof companyPaymentSchema>;
@@ -53,6 +61,15 @@ export interface CompanyPayment {
   paid_on: string;
   amount: number;
   note: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CompanyPaymentAllocation {
+  id: string;
+  payment_id: string;
+  sale_id: string;
+  amount: number;
   created_at?: string;
   updated_at?: string;
 }

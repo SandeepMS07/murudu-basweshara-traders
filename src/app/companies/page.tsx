@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { requireAuth } from "@/features/auth/lib/session";
-import { getCompanies, getCompanyPayments } from "@/features/companies/service/company.service";
+import {
+  getCompanies,
+  getCompanyPaymentAllocations,
+  getCompanyPayments,
+} from "@/features/companies/service/company.service";
 import { CompaniesManager } from "@/features/companies/components/CompaniesManager";
 import { getSales } from "@/features/sales/service/sale.service";
 
@@ -12,15 +16,21 @@ export default async function CompaniesPage() {
     redirect("/dashboard");
   }
 
-  const [companies, sales, payments] = await Promise.all([
+  const [companies, sales, payments, allocations] = await Promise.all([
     getCompanies(),
     getSales(),
     getCompanyPayments(),
+    getCompanyPaymentAllocations(),
   ]);
 
   return (
     <AppShell>
-      <CompaniesManager companies={companies} sales={sales} payments={payments} />
+      <CompaniesManager
+        companies={companies}
+        sales={sales}
+        payments={payments}
+        allocations={allocations}
+      />
     </AppShell>
   );
 }

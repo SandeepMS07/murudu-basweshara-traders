@@ -196,6 +196,19 @@ create table if not exists public.company_payments (
 create index if not exists idx_company_payments_company_id on public.company_payments (company_id);
 create index if not exists idx_company_payments_paid_on on public.company_payments (paid_on desc);
 
+create table if not exists public.company_payment_allocations (
+  id text primary key,
+  payment_id text not null references public.company_payments(id) on delete cascade,
+  sale_id text not null references public.sales(id) on delete restrict,
+  amount numeric(14,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (payment_id, sale_id)
+);
+
+create index if not exists idx_company_payment_allocations_sale_id on public.company_payment_allocations (sale_id);
+create index if not exists idx_company_payment_allocations_payment_id on public.company_payment_allocations (payment_id);
+
 -- Backward-compatible migration for older installs where the counter table
 -- used `company_id` instead of `issuer_company_id`.
 alter table public.company_invoice_counters

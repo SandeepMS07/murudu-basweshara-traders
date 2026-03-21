@@ -277,6 +277,7 @@ function SaleActionsCell({
 
 export function createSaleColumns(
   issuerCompanies: Company[],
+  pendingBySaleId: Record<string, number>,
 ): ColumnDef<Sale>[] {
   const parseTermDays = (terms: string | null | undefined) => {
     const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
@@ -354,7 +355,10 @@ export function createSaleColumns(
     {
       accessorKey: "pending_amount",
       header: "PENDING",
-      cell: ({ row }) => formatCurrencyINR(row.original.pending_amount),
+      cell: ({ row }) =>
+        formatCurrencyINR(
+          Math.max(pendingBySaleId[row.original.id] ?? row.original.pending_amount, 0),
+        ),
     },
     {
       id: "due_date",

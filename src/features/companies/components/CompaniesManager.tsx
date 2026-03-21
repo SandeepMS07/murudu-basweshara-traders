@@ -4,7 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { addDays, format, isValid, parseISO } from "date-fns";
 
-import { Company, CompanyPayment } from "@/features/companies/schemas";
+import {
+  Company,
+  CompanyPayment,
+  CompanyPaymentAllocation,
+} from "@/features/companies/schemas";
 import { Sale } from "@/features/sales/schemas";
 import {
   createCompanyPaymentAction,
@@ -23,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
 
 type CompanyDraft = {
   type: "issuer" | "buyer";
@@ -56,11 +61,18 @@ interface CompaniesManagerProps {
   companies: Company[];
   sales: Sale[];
   payments: CompanyPayment[];
+  allocations: CompanyPaymentAllocation[];
 }
 
-export function CompaniesManager({ companies, sales, payments }: CompaniesManagerProps) {
+export function CompaniesManager({
+  companies,
+  sales,
+  payments,
+  allocations,
+}: CompaniesManagerProps) {
   const [data, setData] = useState(companies);
   const [paymentData, setPaymentData] = useState(payments);
+  const [allocationData, setAllocationData] = useState(allocations);
   const [draft, setDraft] = useState<CompanyDraft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -100,9 +112,22 @@ export function CompaniesManager({ companies, sales, payments }: CompaniesManage
     if (!activeBuyer) return [];
     return paymentData.filter((payment) => payment.company_id === activeBuyer.id);
   }, [activeBuyer, paymentData]);
-  const activeBuyerReceived = useMemo(
-    () => activeBuyerPayments.reduce((sum, payment) => sum + payment.amount, 0),
-    [activeBuyerPayments]
+  const activeBuyerSaleIdSet = useMemo(
+    () => new Set(activeBuyerSales.map((sale) => sale.id)),
+    [activeBuyerSales]
+  );
+  const activeBuyerAllocations = useMemo(
+    () => allocationData.filter((allocation) => activeBuyerSaleIdSet.has(allocation.sale_id)),
+    [activeBuyerSaleIdSet, allocationData]
+  );
+  const activeBuyerPending = useMemo(
+    () =>
+      computeEffectiveSalePending(
+        activeBuyerSales,
+        activeBuyerPayments,
+        activeBuyerAllocations
+      ),
+    [activeBuyerAllocations, activeBuyerPayments, activeBuyerSales]
   );
 
   const submitDraft = () => {
@@ -248,20 +273,35 @@ export function CompaniesManager({ companies, sales, payments }: CompaniesManage
               </div>
 
               {detailsTab === "sales" ? (
-                <SalesDetailsTable sales={activeBuyerSales} receivedAmount={activeBuyerReceived} />
+                <SalesDetailsTable
+                  sales={activeBuyerSales}
+                  pendingBySaleId={activeBuyerPending.pendingBySaleId}
+                />
               ) : (
                 <CompanyPaymentsLedger
                   companyId={activeBuyer.id}
+                  sales={activeBuyerSales}
                   payments={activeBuyerPayments}
+                  pendingBySaleId={activeBuyerPending.pendingBySaleId}
                   totalAmount={activeBuyerSales.reduce(
                     (sum, sale) => sum + sale.amount + sale.flight,
                     0
                   )}
-                  onCreate={(payment) => setPaymentData((current) => [payment, ...current])}
+                  onCreate={(payment, createdAllocations) => {
+                    setPaymentData((current) => [payment, ...current]);
+                    if (createdAllocations.length > 0) {
+                      setAllocationData((current) => [...createdAllocations, ...current]);
+                    }
+                  }}
                   onDelete={(paymentId) =>
-                    setPaymentData((current) =>
-                      current.filter((payment) => payment.id !== paymentId)
-                    )
+                    {
+                      setPaymentData((current) =>
+                        current.filter((payment) => payment.id !== paymentId)
+                      );
+                      setAllocationData((current) =>
+                        current.filter((allocation) => allocation.payment_id !== paymentId)
+                      );
+                    }
                   }
                 />
               )}
@@ -529,11 +569,16 @@ function CompanyTable({
   );
 }
 
-function SalesDetailsTable({ sales, receivedAmount }: { sales: Sale[]; receivedAmount: number }) {
+function SalesDetailsTable({
+  sales,
+  pendingBySaleId,
+}: {
+  sales: Sale[];
+  pendingBySaleId: Record<string, number>;
+}) {
   const PAGE_SIZE = 8;
   const totalAmount = sales.reduce((sum, sale) => sum + sale.amount + sale.flight, 0);
-  const basePending = sales.reduce((sum, sale) => sum + sale.pending_amount, 0);
-  const totalPending = Math.max(basePending - receivedAmount, 0);
+  const totalPending = sales.reduce((sum, sale) => sum + (pendingBySaleId[sale.id] ?? sale.pending_amount), 0);
   const totalBags = sales.reduce((sum, sale) => sum + sale.bags, 0);
   const [page, setPage] = useState(1);
   const today = new Date();
@@ -561,7 +606,8 @@ function SalesDetailsTable({ sales, receivedAmount }: { sales: Sale[]; receivedA
     const dueDate = getDueDate(sale);
     if (!dueDate) return "unknown" as const;
     const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-    if (sale.pending_amount <= 0) return "cleared" as const;
+    const effectivePending = pendingBySaleId[sale.id] ?? sale.pending_amount;
+    if (effectivePending <= 0) return "cleared" as const;
     if (dueStart.getTime() < todayStart.getTime()) return "overdue" as const;
     if (dueStart.getTime() === todayStart.getTime()) return "due_today" as const;
     return "upcoming" as const;
@@ -664,7 +710,9 @@ function SalesDetailsTable({ sales, receivedAmount }: { sales: Sale[]; receivedA
                   <td className="px-3 py-2 text-right">
                     {formatCurrencyINR(sale.amount + sale.flight)}
                   </td>
-                  <td className="px-3 py-2 text-right">{formatCurrencyINR(sale.pending_amount)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {formatCurrencyINR(pendingBySaleId[sale.id] ?? sale.pending_amount)}
+                  </td>
                   <td className="px-3 py-2">{sale.payment_terms || "-"}</td>
                   <td className="px-3 py-2">{formatDueDate(sale)}</td>
                 </tr>
@@ -705,21 +753,26 @@ function SalesDetailsTable({ sales, receivedAmount }: { sales: Sale[]; receivedA
 
 function CompanyPaymentsLedger({
   companyId,
+  sales,
   payments,
+  pendingBySaleId,
   totalAmount,
   onCreate,
   onDelete,
 }: {
   companyId: string;
+  sales: Sale[];
   payments: CompanyPayment[];
+  pendingBySaleId: Record<string, number>;
   totalAmount: number;
-  onCreate: (payment: CompanyPayment) => void;
+  onCreate: (payment: CompanyPayment, allocations: CompanyPaymentAllocation[]) => void;
   onDelete: (id: string) => void;
 }) {
   const PAGE_SIZE = 8;
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>({});
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CompanyPayment | null>(null);
   const [page, setPage] = useState(1);
@@ -735,6 +788,14 @@ function CompanyPaymentsLedger({
     () => payments.reduce((sum, payment) => sum + payment.amount, 0),
     [payments]
   );
+  const saleAllocationRows = useMemo(
+    () =>
+      sales.map((sale) => {
+        const remaining = Math.max(pendingBySaleId[sale.id] ?? sale.pending_amount, 0);
+        return { sale, remaining };
+      }),
+    [pendingBySaleId, sales]
+  );
   const remaining = Math.max(totalAmount - totalReceived, 0);
 
   const createPayment = () => {
@@ -747,6 +808,25 @@ function CompanyPaymentsLedger({
       toast.error("Payment amount must be greater than zero");
       return;
     }
+    const allocationsPayload = saleAllocationRows
+      .map((row) => {
+        const raw = allocationInputs[row.sale.id];
+        if (!raw) return null;
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value <= 0) return null;
+        return { sale_id: row.sale.id, amount: value, max: row.remaining };
+      })
+      .filter((item): item is { sale_id: string; amount: number; max: number } => !!item);
+    const totalAllocated = allocationsPayload.reduce((sum, item) => sum + item.amount, 0);
+    if (totalAllocated > parsedAmount) {
+      toast.error("Allocated total cannot exceed payment amount");
+      return;
+    }
+    const invalidAllocation = allocationsPayload.find((item) => item.amount > item.max);
+    if (invalidAllocation) {
+      toast.error("Allocation exceeds remaining pending for one or more bills");
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -755,10 +835,15 @@ function CompanyPaymentsLedger({
           paid_on: date,
           amount: parsedAmount,
           note,
+          allocations: allocationsPayload.map((item) => ({
+            sale_id: item.sale_id,
+            amount: item.amount,
+          })),
         });
-        onCreate(created);
+        onCreate(created.payment, created.allocations);
         setAmount("");
         setNote("");
+        setAllocationInputs({});
         setPaymentDialogOpen(false);
         toast.success("Payment added");
       } catch (error: unknown) {
@@ -908,6 +993,39 @@ function CompanyPaymentsLedger({
               value={note}
               onChange={(event) => setNote(event.target.value)}
             />
+            <div className="rounded-md border border-[#252932] bg-[#14161b] p-3">
+              <div className="mb-2 text-sm font-medium text-zinc-200">Allocate To Bills (Optional)</div>
+              <div className="space-y-2">
+                {saleAllocationRows.length === 0 ? (
+                  <div className="text-xs text-zinc-500">No sales available for allocation.</div>
+                ) : (
+                  saleAllocationRows.map((row) => (
+                    <div key={row.sale.id} className="grid grid-cols-12 items-center gap-2 text-xs">
+                      <div className="col-span-4 text-zinc-300">
+                        Bill {row.sale.bill_number} • Pending {formatCurrencyINR(row.remaining)}
+                      </div>
+                      <div className="col-span-8">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max={row.remaining}
+                          placeholder="Allocate amount"
+                          className="h-9 border-[#2a2d34] bg-[#111214] text-zinc-100"
+                          value={allocationInputs[row.sale.id] ?? ""}
+                          onChange={(event) =>
+                            setAllocationInputs((current) => ({
+                              ...current,
+                              [row.sale.id]: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button

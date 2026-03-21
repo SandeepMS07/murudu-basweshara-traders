@@ -12,12 +12,14 @@ interface SalesTableClientProps {
   data: Sale[];
   buyerCompanies: Company[];
   issuerCompanies: Company[];
+  pendingBySaleId: Record<string, number>;
 }
 
 export function SalesTableClient({
   data,
   buyerCompanies,
   issuerCompanies,
+  pendingBySaleId,
 }: SalesTableClientProps) {
   const [selectedBuyerId, setSelectedBuyerId] = useState("");
   const buyerPhoneById = useMemo(
@@ -30,7 +32,10 @@ export function SalesTableClient({
     return data.filter((sale) => sale.sale_company_id === selectedBuyerId);
   }, [data, selectedBuyerId]);
 
-  const columns = useMemo(() => createSaleColumns(issuerCompanies), [issuerCompanies]);
+  const columns = useMemo(
+    () => createSaleColumns(issuerCompanies, pendingBySaleId),
+    [issuerCompanies, pendingBySaleId]
+  );
   const today = new Date();
   const todayStart = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), today.getDate()),
@@ -57,12 +62,13 @@ export function SalesTableClient({
       const dueDate = getDueDate(sale);
       if (!dueDate) return "unknown" as const;
       const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-      if (sale.pending_amount <= 0) return "cleared" as const;
+      const effectivePending = pendingBySaleId[sale.id] ?? sale.pending_amount;
+      if (effectivePending <= 0) return "cleared" as const;
       if (dueStart.getTime() < todayStart.getTime()) return "overdue" as const;
       if (dueStart.getTime() === todayStart.getTime()) return "due_today" as const;
       return "upcoming" as const;
     },
-    [getDueDate, todayStart]
+    [getDueDate, pendingBySaleId, todayStart]
   );
 
   const getRowClassName = useCallback(

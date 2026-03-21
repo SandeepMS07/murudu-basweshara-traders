@@ -2,6 +2,7 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
   Company,
+  CompanyPaymentAllocation,
   CompanyInput,
   CompanyPayment,
   CompanyPaymentInput,
@@ -38,6 +39,15 @@ type CompanyPaymentRow = {
   updated_at?: string;
 };
 
+type CompanyPaymentAllocationRow = {
+  id: string;
+  payment_id: string;
+  sale_id: string;
+  amount: number | string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 function toCompany(row: CompanyRow): Company {
   return {
     id: row.id,
@@ -67,6 +77,19 @@ function toCompanyPayment(row: CompanyPaymentRow): CompanyPayment {
     paid_on: row.paid_on,
     amount: typeof row.amount === "number" ? row.amount : Number(row.amount || 0),
     note: row.note ?? "",
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function toCompanyPaymentAllocation(
+  row: CompanyPaymentAllocationRow
+): CompanyPaymentAllocation {
+  return {
+    id: row.id,
+    payment_id: row.payment_id,
+    sale_id: row.sale_id,
+    amount: typeof row.amount === "number" ? row.amount : Number(row.amount || 0),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -340,11 +363,93 @@ export async function getCompanyPayments(companyId?: string): Promise<CompanyPay
   return (data as CompanyPaymentRow[]).map(toCompanyPayment);
 }
 
-export async function createCompanyPayment(input: CompanyPaymentInput): Promise<CompanyPayment> {
+export async function getCompanyPaymentAllocations(
+  saleIds?: string[]
+): Promise<CompanyPaymentAllocation[]> {
+  let query = supabaseServer
+    .from("company_payment_allocations")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (saleIds && saleIds.length > 0) {
+    query = query.in("sale_id", saleIds);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`Failed to load payment allocations: ${error.message}`);
+  }
+
+  return (data as CompanyPaymentAllocationRow[]).map(toCompanyPaymentAllocation);
+}
+
+export async function createCompanyPayment(
+  input: CompanyPaymentInput
+): Promise<{ payment: CompanyPayment; allocations: CompanyPaymentAllocation[] }> {
   await assertAdminAccess();
 
+  const allocations = (input.allocations ?? []).filter((item) => item.amount > 0);
+  const saleIds = [...new Set(allocations.map((item) => item.sale_id))];
+  const totalAllocated = allocations.reduce((sum, item) => sum + item.amount, 0);
+  if (totalAllocated > input.amount) {
+    throw new Error("Allocated amount cannot exceed payment amount");
+  }
+
+  if (saleIds.length > 0) {
+    const { data: salesRows, error: salesError } = await supabaseServer
+      .from("sales")
+      .select("id, sale_company_id, pending_amount")
+      .in("id", saleIds);
+
+    if (salesError) {
+      throw new Error(`Failed to validate sale allocations: ${salesError.message}`);
+    }
+
+    const saleMap = new Map(
+      ((salesRows as Array<{ id: string; sale_company_id: string | null; pending_amount: number | string }>) ?? [])
+        .map((row) => [row.id, row])
+    );
+
+    if (saleMap.size !== saleIds.length) {
+      throw new Error("Some selected sales for allocation were not found");
+    }
+
+    for (const saleId of saleIds) {
+      const sale = saleMap.get(saleId);
+      if (!sale || sale.sale_company_id !== input.company_id) {
+        throw new Error("Allocation sales must belong to the selected company");
+      }
+    }
+
+    const { data: existingAllocRows, error: existingAllocError } = await supabaseServer
+      .from("company_payment_allocations")
+      .select("sale_id, amount")
+      .in("sale_id", saleIds);
+
+    if (existingAllocError) {
+      throw new Error(`Failed to validate existing allocations: ${existingAllocError.message}`);
+    }
+
+    const allocatedBySale = new Map<string, number>();
+    for (const row of (existingAllocRows as Array<{ sale_id: string; amount: number | string }>) ?? []) {
+      allocatedBySale.set(row.sale_id, (allocatedBySale.get(row.sale_id) ?? 0) + Number(row.amount || 0));
+    }
+
+    for (const alloc of allocations) {
+      const sale = saleMap.get(alloc.sale_id);
+      if (!sale) continue;
+      const salePending = Number(sale.pending_amount || 0);
+      const alreadyAllocated = allocatedBySale.get(alloc.sale_id) ?? 0;
+      const remaining = Math.max(salePending - alreadyAllocated, 0);
+      if (alloc.amount > remaining) {
+        throw new Error(`Allocation exceeds remaining pending for bill ${alloc.sale_id}`);
+      }
+    }
+  }
+
+  const paymentId = input.id ?? crypto.randomUUID();
   const payload = {
-    id: input.id ?? crypto.randomUUID(),
+    id: paymentId,
     company_id: input.company_id,
     paid_on: input.paid_on,
     amount: input.amount,
@@ -362,7 +467,32 @@ export async function createCompanyPayment(input: CompanyPaymentInput): Promise<
     throw new Error(`Failed to create company payment: ${error.message}`);
   }
 
-  return toCompanyPayment(data as CompanyPaymentRow);
+  let createdAllocations: CompanyPaymentAllocation[] = [];
+  if (allocations.length > 0) {
+    const allocationPayload = allocations.map((item) => ({
+      id: crypto.randomUUID(),
+      payment_id: paymentId,
+      sale_id: item.sale_id,
+      amount: item.amount,
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { data: allocData, error: allocError } = await supabaseServer
+      .from("company_payment_allocations")
+      .insert(allocationPayload)
+      .select("*");
+
+    if (allocError) {
+      await supabaseServer.from("company_payments").delete().eq("id", paymentId);
+      throw new Error(`Failed to create payment allocations: ${allocError.message}`);
+    }
+
+    createdAllocations = (allocData as CompanyPaymentAllocationRow[]).map(
+      toCompanyPaymentAllocation
+    );
+  }
+
+  return { payment: toCompanyPayment(data as CompanyPaymentRow), allocations: createdAllocations };
 }
 
 export async function deleteCompanyPayment(id: string): Promise<void> {

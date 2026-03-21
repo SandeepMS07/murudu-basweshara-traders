@@ -8,38 +8,48 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { getSales } from "@/features/sales/service/sale.service";
 import { SalesTableClient } from "@/features/sales/components/SalesTableClient";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
-import { getCompanies, getCompanyPayments } from "@/features/companies/service/company.service";
+import {
+  getCompanies,
+  getCompanyPaymentAllocations,
+  getCompanyPayments,
+} from "@/features/companies/service/company.service";
+import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
 
 export default async function SalesPage() {
   await requireAuth();
-  const [sales, buyerCompanies, issuerCompanies, companyPayments] = await Promise.all([
+  const [sales, buyerCompanies, issuerCompanies, companyPayments, allocations] = await Promise.all([
     getSales(),
     getCompanies("buyer"),
     getCompanies("issuer"),
     getCompanyPayments(),
+    getCompanyPaymentAllocations(),
   ]);
   const activeIssuerCompanies = issuerCompanies.filter((company) => company.is_active);
 
   let totalNetWeight = 0;
   let totalAmount = 0;
-  let basePending = 0;
   let totalReceived = 0;
 
   for (const sale of sales) {
     totalNetWeight += sale.net_weight;
     totalAmount += sale.amount;
-    basePending += sale.pending_amount;
   }
 
   for (const payment of companyPayments) {
     totalReceived += payment.amount;
   }
 
+  const { pendingBySaleId } = computeEffectiveSalePending(sales, companyPayments, allocations);
+  let effectivePendingTotal = 0;
+  for (const sale of sales) {
+    effectivePendingTotal += pendingBySaleId[sale.id] ?? sale.pending_amount;
+  }
+
   const totals = {
     netWeight: totalNetWeight,
     amount: totalAmount,
     received: totalReceived,
-    pending: Math.max(basePending - totalReceived, 0),
+    pending: effectivePendingTotal,
   };
 
   return (
@@ -116,6 +126,7 @@ export default async function SalesPage() {
         data={sales}
         buyerCompanies={buyerCompanies}
         issuerCompanies={activeIssuerCompanies}
+        pendingBySaleId={pendingBySaleId}
       />
     </AppShell>
   );
