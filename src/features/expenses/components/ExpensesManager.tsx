@@ -56,6 +56,7 @@ type VehicleFields = {
 };
 
 const VEHICLE_REASON_PREFIX = "__vehicle__::";
+const HAMALI_REASON_PREFIX = "__hamali__::";
 
 function composeVehicleReason(fields: VehicleFields): string {
   const payload = {
@@ -83,6 +84,25 @@ function parseVehicleReason(rawReason: string): VehicleFields {
     }
   }
   return { vehicleType: "", vehicleNumber: "", reason: rawReason };
+}
+
+function composeHamaliReason(workerCount: string): string {
+  return `${HAMALI_REASON_PREFIX}${JSON.stringify({ workerCount: workerCount.trim() })}`;
+}
+
+function parseHamaliReason(rawReason: string): { workerCount: string } {
+  if (!rawReason) return { workerCount: "" };
+  if (rawReason.startsWith(HAMALI_REASON_PREFIX)) {
+    try {
+      const parsed = JSON.parse(rawReason.slice(HAMALI_REASON_PREFIX.length)) as {
+        workerCount?: string | number;
+      };
+      return { workerCount: parsed.workerCount?.toString() ?? "" };
+    } catch {
+      return { workerCount: "" };
+    }
+  }
+  return { workerCount: "" };
 }
 
 interface ExpensesManagerProps {
@@ -113,6 +133,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
   const [expenseAmount, setExpenseAmount] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
+  const [hamaliWorkerCount, setHamaliWorkerCount] = useState("");
   const [employeeName, setEmployeeName] = useState("");
 
   const employeeMap = useMemo(
@@ -156,6 +177,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
     setExpenseAmount("");
     setVehicleType("");
     setVehicleNumber("");
+    setHamaliWorkerCount("");
     setEditingExpense(null);
   };
 
@@ -169,6 +191,10 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
         setVehicleType(parsed.vehicleType);
         setVehicleNumber(parsed.vehicleNumber);
         setExpenseReason(parsed.reason);
+      } else if (tab === "hamali") {
+        const parsed = parseHamaliReason(row.reason ?? "");
+        setHamaliWorkerCount(parsed.workerCount);
+        setExpenseReason("");
       } else {
         setExpenseReason(row.reason ?? "");
       }
@@ -202,6 +228,10 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
       toast.error("Vehicle number is required");
       return;
     }
+    if (category === "hamali" && !hamaliWorkerCount.trim()) {
+      toast.error("No of worker is required");
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -216,6 +246,8 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                   vehicleNumber,
                   reason: expenseReason,
                 })
+              : category === "hamali"
+                ? composeHamaliReason(hamaliWorkerCount)
               : expenseReason,
           amount,
         };
@@ -544,6 +576,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                 <tr>
                   <th className="px-3 py-2 text-left">Sl No</th>
                   <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-left">No of Worker</th>
                   <th className="px-3 py-2 text-right">How Much Paid</th>
                   <th className="px-3 py-2 text-right">Actions</th>
                 </tr>
@@ -552,41 +585,49 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                 {hamaliRows.length ? (
                   hamaliRows.map((row, index) => (
                     <tr key={row.id} className="border-t border-[#252932] text-zinc-200">
-                      <td className="px-3 py-2">{index + 1}</td>
-                      <td className="px-3 py-2">{row.expense_date}</td>
-                      <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openExpenseDialog(row)}
-                            className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() =>
-                              openDeleteDialog({
-                                type: "expense",
-                                id: row.id,
-                                label: `hamali entry ${index + 1}`,
-                              })
-                            }
-                            className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
+                      {(() => {
+                        const parsed = parseHamaliReason(row.reason || "");
+                        return (
+                          <>
+                            <td className="px-3 py-2">{index + 1}</td>
+                            <td className="px-3 py-2">{row.expense_date}</td>
+                            <td className="px-3 py-2">{parsed.workerCount || "-"}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openExpenseDialog(row)}
+                                  className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() =>
+                                    openDeleteDialog({
+                                      type: "expense",
+                                      id: row.id,
+                                      label: `hamali entry ${index + 1}`,
+                                    })
+                                  }
+                                  className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </>
+                        );
+                      })()}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-zinc-500">
+                    <td colSpan={5} className="px-3 py-8 text-center text-zinc-500">
                       No hamali expenses.
                     </td>
                   </tr>
@@ -701,6 +742,20 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                   value={expenseReason}
                   onChange={(event) => setExpenseReason(event.target.value)}
                   placeholder="Reason"
+                  className="border-[#2a2d34] bg-[#111214] text-zinc-100"
+                />
+              </div>
+            ) : null}
+            {tab === "hamali" ? (
+              <div>
+                <label className="mb-1 block text-xs text-zinc-400">No of Worker</label>
+                <Input
+                  type="number"
+                  min={1}
+                  step="1"
+                  value={hamaliWorkerCount}
+                  onChange={(event) => setHamaliWorkerCount(event.target.value)}
+                  placeholder="No of worker"
                   className="border-[#2a2d34] bg-[#111214] text-zinc-100"
                 />
               </div>
