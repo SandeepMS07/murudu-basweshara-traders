@@ -46,9 +46,10 @@ export async function generateBillFromPurchaseAction(purchaseId: string) {
 
 export async function updatePurchasePaymentThroughAction(
   purchaseId: string,
-  paymentThrough: PaymentMethod
+  paymentThrough: PaymentMethod,
+  paymentDate?: string | null
 ) {
-  return updatePurchasePaymentThrough(purchaseId, paymentThrough);
+  return updatePurchasePaymentThrough(purchaseId, paymentThrough, paymentDate);
 }
 
 export async function checkPurchaseBillNoAvailabilityAction(

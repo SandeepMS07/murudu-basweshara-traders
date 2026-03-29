@@ -74,6 +74,7 @@ alter table public.purchases add column if not exists mob text not null default 
 alter table public.purchases add column if not exists bags numeric(12,2) not null default 0;
 alter table public.purchases add column if not exists bag_avg numeric(12,2) not null default 0;
 alter table public.purchases add column if not exists payment_through text not null default 'none' check (payment_through in ('RTGS', 'UPI', 'none'));
+alter table public.purchases add column if not exists payment_date date;
 
 create table if not exists public.bills (
   id text primary key,

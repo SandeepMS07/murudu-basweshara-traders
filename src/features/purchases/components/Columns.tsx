@@ -394,7 +394,9 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
 
 export interface PurchaseColumnOptions {
   paymentMethodById: Record<string, PaymentMethod>;
+  paymentDateById: Record<string, string | null>;
   onPaymentMethodChange: (purchaseId: string, method: PaymentMethod) => void;
+  onPaymentDateChange: (purchaseId: string, date: string | null) => void;
 }
 
 const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [
@@ -406,7 +408,12 @@ const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [
 export function createPurchaseColumns(
   options: PurchaseColumnOptions,
 ): ColumnDef<Purchase>[] {
-  const { paymentMethodById, onPaymentMethodChange } = options;
+  const {
+    paymentMethodById,
+    paymentDateById,
+    onPaymentMethodChange,
+    onPaymentDateChange,
+  } = options;
 
   return [
     {
@@ -533,6 +540,29 @@ export function createPurchaseColumns(
               </option>
             ))}
           </select>
+        );
+      },
+    },
+    {
+      id: "payment_date",
+      header: "PAYMENT DATE",
+      cell: ({ row }) => {
+        const purchaseId = row.original.id;
+        const method = paymentMethodById[purchaseId] ?? "none";
+        const paymentDate = paymentDateById[purchaseId] ?? null;
+        return (
+          <input
+            type="date"
+            value={paymentDate ?? ""}
+            disabled={method === "none"}
+            onChange={(event) =>
+              onPaymentDateChange(
+                purchaseId,
+                event.target.value ? event.target.value : null,
+              )
+            }
+            className="w-full cursor-pointer rounded border border-[#2a2d34] bg-[#17191f] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+          />
         );
       },
     },

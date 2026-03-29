@@ -22,6 +22,7 @@ type PurchaseRow = {
   add_amount: number | string;
   cash_paid: number | string;
   upi_paid: number | string;
+  payment_date: string | null;
   payment_through: PaymentMethod | null;
   source: "manual" | "app";
   less_weight: number | string;
@@ -57,6 +58,7 @@ function toPurchase(row: PurchaseRow): Purchase {
     add_amount: n(row.add_amount),
     cash_paid: n(row.cash_paid),
     upi_paid: n(row.upi_paid),
+    payment_date: row.payment_date ?? null,
     payment_through: (row.payment_through ?? "none") as PaymentMethod,
     source: row.source,
     less_weight: n(row.less_weight),
@@ -156,6 +158,7 @@ export async function createPurchase(input: PurchaseInput): Promise<Purchase> {
     add_amount: calculated.add_amount,
     cash_paid: calculated.cash_paid,
     upi_paid: calculated.upi_paid,
+    payment_date: calculated.payment_date,
     payment_through: calculated.payment_through,
     source: calculated.source,
     less_weight: calculated.less_weight,
@@ -208,6 +211,7 @@ export async function updatePurchase(id: string, input: PurchaseInput): Promise<
     add_amount: calculated.add_amount,
     cash_paid: calculated.cash_paid,
     upi_paid: calculated.upi_paid,
+    payment_date: calculated.payment_date,
     payment_through: calculated.payment_through,
     source: calculated.source,
     less_weight: calculated.less_weight,
@@ -236,17 +240,26 @@ export async function updatePurchase(id: string, input: PurchaseInput): Promise<
 
 export async function updatePurchasePaymentThrough(
   id: string,
-  payment_through: PaymentMethod
+  payment_through: PaymentMethod,
+  payment_date?: string | null
 ): Promise<Purchase> {
   const user = await requireAuth();
   if (user.role !== "admin" && user.role !== "operator") {
     throw new Error("Forbidden");
   }
 
+  const normalizedPaymentDate =
+    payment_through === "none"
+      ? null
+      : payment_date && payment_date.trim()
+        ? payment_date
+        : new Date().toISOString().split("T")[0];
+
   const { data, error } = await supabaseServer
     .from("purchases")
     .update({
       payment_through,
+      payment_date: normalizedPaymentDate,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

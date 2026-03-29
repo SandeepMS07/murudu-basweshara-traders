@@ -110,7 +110,9 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
           add_amount: initialData.add_amount,
           cash_paid: initialData.cash_paid,
           upi_paid: initialData.upi_paid,
+          payment_date: initialData.payment_date ?? null,
           source: initialData.source,
+          payment_through: initialData.payment_through ?? "none",
         }
       : {
       bill_no: nextBillNo ?? 1,
@@ -126,7 +128,9 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
       add_amount: 0,
       cash_paid: 0,
       upi_paid: 0,
+      payment_date: null,
       source: "app",
+      payment_through: "none",
     },
   });
 
@@ -167,7 +171,12 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
     try {
       const digits = mobileNumber.replace(/\D/g, "");
       const normalizedMob = digits ? `${countryCode}${digits}` : "";
-      const payload = purchaseSchema.parse({ ...values, mob: normalizedMob });
+      const payload = purchaseSchema.parse({
+        ...values,
+        mob: normalizedMob,
+        payment_date: values.payment_date ?? initialData?.payment_date ?? null,
+        payment_through: values.payment_through ?? initialData?.payment_through ?? "none",
+      });
 
       if (isEditing && initialData?.id) {
         await updatePurchaseAction(initialData.id, payload);

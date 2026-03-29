@@ -30,6 +30,9 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
   const [paymentMethodOverrides, setPaymentMethodOverrides] = useState<
     Record<string, PaymentMethod>
   >({});
+  const [paymentDateOverrides, setPaymentDateOverrides] = useState<
+    Record<string, string | null>
+  >({});
 
   const paymentMethods = useMemo(
     () =>
@@ -42,18 +45,38 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
     [data, paymentMethodOverrides]
   );
 
+  const paymentDates = useMemo(
+    () =>
+      Object.fromEntries(
+        data.map((purchase) => [
+          purchase.id,
+          paymentDateOverrides[purchase.id] ?? purchase.payment_date ?? null,
+        ])
+      ) as Record<string, string | null>,
+    [data, paymentDateOverrides]
+  );
+
   const handlePaymentMethodChange = useCallback(
     (purchaseId: string, method: PaymentMethod) => {
       const previous = paymentMethods[purchaseId] ?? "none";
+      const previousDate = paymentDates[purchaseId] ?? null;
+      const nextDate =
+        method === "none"
+          ? null
+          : previousDate ?? new Date().toISOString().split("T")[0];
 
       setPaymentMethodOverrides((current) => ({
         ...current,
         [purchaseId]: method,
       }));
+      setPaymentDateOverrides((current) => ({
+        ...current,
+        [purchaseId]: nextDate,
+      }));
 
       startTransition(async () => {
         try {
-          await updatePurchasePaymentThroughAction(purchaseId, method);
+          await updatePurchasePaymentThroughAction(purchaseId, method, nextDate);
         } catch (error: unknown) {
           const message =
             error instanceof Error
@@ -64,19 +87,64 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
             ...current,
             [purchaseId]: previous,
           }));
+          setPaymentDateOverrides((current) => ({
+            ...current,
+            [purchaseId]: previousDate,
+          }));
         }
       });
     },
-    [paymentMethods, startTransition]
+    [paymentDates, paymentMethods, startTransition]
+  );
+
+  const handlePaymentDateChange = useCallback(
+    (purchaseId: string, paymentDate: string | null) => {
+      const currentMethod = paymentMethods[purchaseId] ?? "none";
+      if (currentMethod === "none") return;
+      const previousDate = paymentDates[purchaseId] ?? null;
+
+      setPaymentDateOverrides((current) => ({
+        ...current,
+        [purchaseId]: paymentDate,
+      }));
+
+      startTransition(async () => {
+        try {
+          await updatePurchasePaymentThroughAction(
+            purchaseId,
+            currentMethod,
+            paymentDate
+          );
+        } catch (error: unknown) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Failed to save payment date";
+          toast.error(message);
+          setPaymentDateOverrides((current) => ({
+            ...current,
+            [purchaseId]: previousDate,
+          }));
+        }
+      });
+    },
+    [paymentDates, paymentMethods, startTransition]
   );
 
   const columns = useMemo(
     () =>
       createPurchaseColumns({
         paymentMethodById: paymentMethods,
+        paymentDateById: paymentDates,
         onPaymentMethodChange: handlePaymentMethodChange,
+        onPaymentDateChange: handlePaymentDateChange,
       }),
-    [paymentMethods, handlePaymentMethodChange]
+    [
+      paymentDates,
+      paymentMethods,
+      handlePaymentMethodChange,
+      handlePaymentDateChange,
+    ]
   );
 
   const paymentLegend = useMemo(() => {

@@ -32,6 +32,7 @@ export const purchaseSchema = z.object({
   add_amount: z.number().min(0).default(0),
   cash_paid: z.number().min(0).default(0),
   upi_paid: z.number().min(0).default(0),
+  payment_date: z.string().nullable().optional().default(null),
   source: z.enum(["manual", "app"]).default("app"),
   payment_through: paymentMethodEnum.default("none"),
 });
