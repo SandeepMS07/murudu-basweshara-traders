@@ -8,6 +8,9 @@ import { Bill } from "@/features/bills/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function BillPrintPage({
   params,
   searchParams,
@@ -93,7 +96,9 @@ export default async function BillPrintPage({
                 <div className="bill-print-title">MB Groups</div>
               </div>
               <div className="bill-print-invoice-box">
-                <div className="bill-print-invoice-label">ESTIMATION INVOICE</div>
+                <div className="bill-print-invoice-label">
+                  ESTIMATION INVOICE
+                </div>
                 <div className="bill-print-invoice-number">{billNumber}</div>
               </div>
             </div>
@@ -104,24 +109,81 @@ export default async function BillPrintPage({
               <div className="bill-print-yard">APMC Yard</div>
               <div>Honnali</div>
               <div>Harish Putta :- 9019800731</div>
-              <div>Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398</div>
+              <div>
+                Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398
+              </div>
             </div>
             <div className="bill-print-info-right">
-              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>DATE:</span> <strong>{printDate}</strong></div>
-              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>BILL TO:</span> <strong>{purchase?.name || "-"}</strong></div>
-              <div className="bill-print-kv"><span className="bill-print-icon">◼</span><span>PHONE:</span> <strong>{billToPhone}</strong></div>
-              <div className="bill-print-kv"><span className="bill-print-icon">◉</span><span>PLACE:</span> <strong>{purchase?.place || "-"}</strong></div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◼</span>
+                <span>DATE:</span> <strong>{printDate}</strong>
+              </div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◼</span>
+                <span>BILL TO:</span> <strong>{purchase?.name || "-"}</strong>
+              </div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◼</span>
+                <span>PHONE:</span> <strong>{billToPhone}</strong>
+              </div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◉</span>
+                <span>PLACE:</span> <strong>{purchase?.place || "-"}</strong>
+              </div>
             </div>
           </section>
 
           <table className="bill-print-table bill-print-main-table">
             <tbody>
-              <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-              <tr><td>WEIGHT</td><td>{formatNumberIN(weight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-              <tr><td>LESS</td><td>{formatNumberIN(lessWeight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-              <tr><td>NET WEIGHT</td><td>{formatNumberIN(netWeight, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-              <tr><td>RATE</td><td>{formatCurrencyINR(rate, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-              <tr className="bill-print-key-row"><td>AMOUNT</td><td>{formatCurrencyINR(lineAmount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+              <tr>
+                <th>DESCRIPTION</th>
+                <th>AMOUNT</th>
+              </tr>
+              <tr>
+                <td>WEIGHT</td>
+                <td>
+                  {formatNumberIN(weight, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </td>
+              </tr>
+              <tr>
+                <td>LESS</td>
+                <td>
+                  {formatNumberIN(lessWeight, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </td>
+              </tr>
+              <tr>
+                <td>NET WEIGHT</td>
+                <td>
+                  {formatNumberIN(netWeight, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </td>
+              </tr>
+              <tr>
+                <td>RATE</td>
+                <td>
+                  {formatCurrencyINR(rate, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </td>
+              </tr>
+              <tr className="bill-print-key-row">
+                <td>AMOUNT</td>
+                <td>
+                  {formatCurrencyINR(lineAmount, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </td>
+              </tr>
             </tbody>
           </table>
 
@@ -130,7 +192,7 @@ export default async function BillPrintPage({
               Make all checks payable to MB GROUPS.
               <br />
               Send this bill nd bank passbook to whastapp 9019800731/7795953398
-              <span className="bill-print-note-icons">●  🏦</span>
+              <span className="bill-print-note-icons">● 🏦</span>
             </div>
             <div className="bill-print-note-right" />
           </section>
@@ -143,18 +205,54 @@ export default async function BillPrintPage({
             </div>
             <table className="bill-print-table bill-print-summary-table">
               <tbody>
-                <tr><td>AMOUNT</td><td>{formatCurrencyINR(summaryAmount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                <tr><td>BAG LESS</td><td>{formatCurrencyINR(summaryLess, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                <tr><td>CASH</td><td>{formatCurrencyINR(summaryCash, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
-                <tr><td>EXTRA</td><td>{formatCurrencyINR(summaryExtra, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td></tr>
+                <tr>
+                  <td>AMOUNT</td>
+                  <td>
+                    {formatCurrencyINR(summaryAmount, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </td>
+                </tr>
+                <tr>
+                  <td>BAG LESS</td>
+                  <td>
+                    {formatCurrencyINR(summaryLess, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </td>
+                </tr>
+                <tr>
+                  <td>CASH</td>
+                  <td>
+                    {formatCurrencyINR(summaryCash, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </td>
+                </tr>
+                <tr>
+                  <td>EXTRA</td>
+                  <td>
+                    {formatCurrencyINR(summaryExtra, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </section>
 
           <footer className="bill-print-total-row">
-            <div className="bill-print-thanks">THANK YOU FOR YOUR BUSINESS!</div>
+            <div className="bill-print-thanks">
+              THANK YOU FOR YOUR BUSINESS!
+            </div>
             <div className="bill-print-total-label">TOTAL</div>
-            <div className={`bill-print-total-value ${totalValueSizeClass}`.trim()}>
+            <div
+              className={`bill-print-total-value ${totalValueSizeClass}`.trim()}
+            >
               {summaryTotalText}
             </div>
           </footer>

@@ -51,13 +51,13 @@ export function BillForm({ initialData }: BillFormProps) {
           source: initialData.source,
         }
       : {
-      bill_date: new Date().toISOString().split("T")[0],
-      net_weight: 0,
-      rate: 0,
-      freight: 0,
-      payment_term_days: 0,
-      source: "app",
-    },
+          bill_date: new Date().toISOString().split("T")[0],
+          net_weight: 0,
+          rate: 0,
+          freight: 0,
+          payment_term_days: 0,
+          source: "app",
+        },
   });
 
   const { watch } = form;
@@ -80,7 +80,10 @@ export function BillForm({ initialData }: BillFormProps) {
   if (billDate) {
     try {
       const parsedDate = parseISO(billDate);
-      dueDateString = format(addDays(parsedDate, safePaymentTermDays), "yyyy-MM-dd");
+      dueDateString = format(
+        addDays(parsedDate, safePaymentTermDays),
+        "yyyy-MM-dd",
+      );
       printDate = format(parsedDate, "dd/MM/yyyy");
     } catch {
       dueDateString = "Invalid Date";
@@ -110,7 +113,8 @@ export function BillForm({ initialData }: BillFormProps) {
         router.refresh();
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to save bill";
+      const message =
+        error instanceof Error ? error.message : "Failed to save bill";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -131,40 +135,138 @@ export function BillForm({ initialData }: BillFormProps) {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FormField control={form.control} name="bill_date" render={({ field }) => (
-                  <FormItem><FormLabel>Bill Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="net_weight" render={({ field }) => (
-                  <FormItem><FormLabel>Net Weight</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="rate" render={({ field }) => (
-                  <FormItem><FormLabel>Rate</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="freight" render={({ field }) => (
-                  <FormItem><FormLabel>Freight Amount</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="payment_term_days" render={({ field }) => (
-                  <FormItem><FormLabel>Payment Terms (Days)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} /></FormControl><FormMessage /></FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="bill_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bill Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="net_weight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Net Weight</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="rate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rate</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="freight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Freight Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payment_term_days"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Terms (Days)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseInt(e.target.value, 10) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="bg-muted p-4 rounded-md mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><span className="text-muted-foreground block">Amount:</span> {formatCurrencyINR(amount)}</div>
-                <div><span className="text-muted-foreground block">Due Date:</span> {dueDateString}</div>
+                <div>
+                  <span className="text-muted-foreground block">Amount:</span>{" "}
+                  {formatCurrencyINR(amount)}
+                </div>
+                <div>
+                  <span className="text-muted-foreground block">Due Date:</span>{" "}
+                  {dueDateString}
+                </div>
                 <div className="font-bold text-lg text-primary md:col-span-2">
-                  <span className="text-muted-foreground block text-sm font-normal">Final Amount:</span> {formatCurrencyINR(finalAmount)}
+                  <span className="text-muted-foreground block text-sm font-normal">
+                    Final Amount:
+                  </span>{" "}
+                  {formatCurrencyINR(finalAmount)}
                 </div>
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                >
+                  Cancel
+                </Button>
                 {isGenerateMode && isGenerated && (
-                  <Button type="button" variant="secondary" onClick={handlePrintPdf}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handlePrintPdf}
+                  >
                     Print PDF
                   </Button>
                 )}
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   {isGenerateMode && !isGenerated ? "Generate Bill" : "Save"}
                 </Button>
               </div>
@@ -179,7 +281,9 @@ export function BillForm({ initialData }: BillFormProps) {
             <header className="bill-print-header">
               <div className="bill-print-title">MB GROUPS</div>
               <div className="bill-print-invoice">
-                <div className="bill-print-invoice-label">ESTIMATION INVOICE</div>
+                <div className="bill-print-invoice-label">
+                  ESTIMATION INVOICE
+                </div>
                 <div className="bill-print-invoice-number">
                   {initialData?.bill_no ? String(initialData.bill_no) : "AUTO"}
                 </div>
@@ -198,13 +302,34 @@ export function BillForm({ initialData }: BillFormProps) {
 
             <table className="bill-print-table">
               <tbody>
-                <tr><th>DESCRIPTION</th><th>AMOUNT</th></tr>
-                <tr><td>WEIGHT</td><td>{formatNumberIN(safeNetWeight)}</td></tr>
-                <tr><td>LESS</td><td>{formatNumberIN(safeFreight)}</td></tr>
-                <tr><td>NET WEIGHT</td><td>{formatNumberIN(safeNetWeight)}</td></tr>
-                <tr><td>RATE</td><td>{formatCurrencyINR(safeRate)}</td></tr>
-                <tr><td>AMOUNT</td><td>{formatCurrencyINR(amount)}</td></tr>
-                <tr><td>TOTAL</td><td>{formatCurrencyINR(finalAmount)}</td></tr>
+                <tr>
+                  <th>DESCRIPTION</th>
+                  <th>AMOUNT</th>
+                </tr>
+                <tr>
+                  <td>WEIGHT</td>
+                  <td>{formatNumberIN(safeNetWeight)}</td>
+                </tr>
+                <tr>
+                  <td>LESS</td>
+                  <td>{formatNumberIN(safeFreight)}</td>
+                </tr>
+                <tr>
+                  <td>NET WEIGHT</td>
+                  <td>{formatNumberIN(safeNetWeight)}</td>
+                </tr>
+                <tr>
+                  <td>RATE</td>
+                  <td>{formatCurrencyINR(safeRate)}</td>
+                </tr>
+                <tr>
+                  <td>AMOUNT</td>
+                  <td>{formatCurrencyINR(amount)}</td>
+                </tr>
+                <tr>
+                  <td>TOTAL</td>
+                  <td>{formatCurrencyINR(finalAmount)}</td>
+                </tr>
               </tbody>
             </table>
 

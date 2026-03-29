@@ -19,6 +19,7 @@ const normalizedMobile = z
 
 export const purchaseSchema = z.object({
   id: z.string().optional(),
+  bill_no: z.number().int().min(1, "Bill number is required"),
   date: z.string().min(1, "Date is required"),
   name: z.string().default(""),
   place: z.string().default(""),
@@ -39,7 +40,6 @@ export type PurchaseInput = z.infer<typeof purchaseSchema>;
 
 export interface Purchase extends PurchaseInput {
   id: string; // Enforced after creation
-  bill_no: number;
   less_weight: number;
   net_weight: number;
   amount: number;

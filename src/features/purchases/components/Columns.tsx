@@ -71,7 +71,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
     startTransition(async () => {
       try {
         const bill = await generateBillFromPurchaseAction(purchase.id);
-        const printUrl = `/bills/${bill.id}/print?pid=${purchase.id}`;
+        const printUrl = `/bills/${bill.id}/print?pid=${purchase.id}&_ts=${Date.now()}`;
 
         // Keep user on the same page and print using a hidden iframe.
         const iframe = document.createElement("iframe");
@@ -174,7 +174,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
         <DialogContent
           showCloseButton={false}
-          className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-xl"
+          className="flex max-h-[92vh] w-[88vw] flex-col border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-[980px]"
         >
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Generate Bill</DialogTitle>
@@ -182,11 +182,11 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
               Preview the invoice below, then click Generate Bill.
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-auto rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
-            <div className="bill-print-root bill-print-preview bill-print-inline-preview p-2 sm:p-3">
+          <div className="flex-1 overflow-auto rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
+            <div className="bill-print-root bill-print-preview bill-print-inline-preview h-full p-2 sm:p-3">
               <section
                 className="bill-print-copy mx-auto"
-                style={{ width: "480px", height: "600px", maxWidth: "100%" }}
+                style={{ width: "100%", height: "100%", maxWidth: "100%" }}
               >
                 <header className="bill-print-header">
                   <div className="bill-print-brand-row">

@@ -120,9 +120,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
@@ -154,32 +156,46 @@ a[aria-disabled="true"] {
   grid-template-columns: 1fr 1fr;
   gap: 112px;
   padding: 16px;
-  align-items: start;
+  align-items: stretch;
   background: #ffffff;
   color: #1f2937;
   font-family: "Inter", "Segoe UI", "Avenir Next", sans-serif;
   min-height: 100vh;
 }
 
+.bill-print-root.bill-print-preview:not(.bill-print-inline-preview) .bill-print-copy {
+  min-height: calc(100vh - 32px);
+  height: calc(100vh - 32px);
+}
+
+.bill-print-root.bill-print-preview:not(.bill-print-inline-preview) .bill-print-main-table {
+  flex: 1 1 auto;
+}
+
 .bill-print-root.bill-print-preview.bill-print-inline-preview {
   display: flex;
   justify-content: flex-start;
   padding: 0;
-  min-height: auto;
+  min-height: 100%;
+  height: 100%;
   background: transparent;
 }
 
 .bill-print-inline-preview .bill-print-copy {
   width: 100%;
   max-width: none;
-  height: auto;
-  min-height: 118mm;
+  height: 100%;
+  min-height: 100%;
   box-shadow: 0 8px 20px rgba(43, 50, 66, 0.12);
 }
 
 .bill-print-inline-preview .bill-print-copy:first-of-type,
 .bill-print-inline-preview .bill-print-copy:last-of-type {
   transform: none !important;
+}
+
+.bill-print-inline-preview .bill-print-main-table {
+  flex: 1 1 auto;
 }
 
 .bill-print-copy {
@@ -211,6 +227,7 @@ a[aria-disabled="true"] {
 
 .bill-print-brand-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -218,6 +235,7 @@ a[aria-disabled="true"] {
 
 .bill-print-brand {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
 }
@@ -344,7 +362,6 @@ a[aria-disabled="true"] {
 .bill-print-main-table {
   width: 100%;
   border-collapse: collapse;
-  flex: 1 1 auto;
 }
 
 .bill-print-main-table th,
@@ -725,24 +742,31 @@ a[aria-disabled="true"] {
 .sales-invoice-items tbody td:nth-child(1) {
   width: 4%;
 }
+
 .sales-invoice-items tbody td:nth-child(2) {
   width: 12%;
 }
+
 .sales-invoice-items tbody td:nth-child(3) {
   width: 32%;
 }
+
 .sales-invoice-items tbody td:nth-child(4) {
   width: 10%;
 }
+
 .sales-invoice-items tbody td:nth-child(5) {
   width: 15%;
 }
+
 .sales-invoice-items tbody td:nth-child(6) {
   width: 10%;
 }
+
 .sales-invoice-items tbody td:nth-child(7) {
   width: 5%;
 }
+
 .sales-invoice-items tbody td:nth-child(8) {
   width: 12%;
 }
@@ -751,14 +775,17 @@ a[aria-disabled="true"] {
   border-top: 0;
   border-bottom: 0;
 }
+
 .sales-invoice-summary {
   border-top: 0;
   border-bottom: 0;
 }
+
 .sales-invoice-tax {
   border-top: 0;
   border-bottom: 0;
 }
+
 .sales-invoice-footer {
   border-top: 0;
 }
@@ -938,7 +965,7 @@ a[aria-disabled="true"] {
 @media print {
   @page purchase-sheet {
     size: A4 landscape;
-    margin: 5mm;
+    margin: 4mm;
   }
 
   @page sales-sheet {
@@ -946,39 +973,82 @@ a[aria-disabled="true"] {
     margin: 5mm;
   }
 
-  body * {
+  body>*:not(.bill-print-root) {
     display: none !important;
-    visibility: hidden !important;
-  }
-
-  .bill-print-root,
-  .bill-print-root * {
-    display: revert !important;
-    visibility: visible !important;
   }
 
   .bill-print-root:not(.sales-invoice-print-root) {
     page: purchase-sheet;
-    position: fixed;
-    inset: 0;
+    position: fixed !important;
+    inset: 0 !important;
     display: grid !important;
     grid-template-columns: 1fr 1fr;
-    gap: 44mm;
-    padding: 3mm;
+    gap: 36mm;
+    padding: 2mm;
     align-items: stretch;
+    min-height: 100%;
+    height: 100%;
+    overflow: hidden;
     background: #ffffff;
     color: #000;
+    zoom: 1;
   }
 
   .bill-print-root:not(.sales-invoice-print-root) .bill-print-copy {
-    height: auto;
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
     box-shadow: none;
     transform: none !important;
     width: 100%;
-    min-height: 100%;
-    padding: 4mm 4mm 3mm;
-    border: 1px solid #e2e8f0;
-    border-radius: 0;
+    min-height: 0;
+    padding: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: hidden;
+    page-break-inside: avoid !important;
+    break-inside: avoid-page !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-header,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-info,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-main-table,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-note-row,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-sign-row,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-summary-table,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-total-row {
+    page-break-inside: avoid !important;
+    break-inside: avoid-page !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-main-table tr,
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-summary-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid-page !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-info {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-note-row {
+    display: grid !important;
+    grid-template-columns: 68% 32% !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-sign-row {
+    display: grid !important;
+    grid-template-columns: 54% 46% !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-total-row {
+    display: grid !important;
+    grid-template-columns: 52% 16% 32% !important;
+  }
+
+  .bill-print-root:not(.sales-invoice-print-root) .bill-print-main-table {
+    flex: 1 1 auto !important;
   }
 
   .sales-invoice-print-root {

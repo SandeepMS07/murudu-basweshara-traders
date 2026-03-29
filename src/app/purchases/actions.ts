@@ -6,6 +6,7 @@ import {
   deletePurchase,
   updatePurchase,
   updatePurchasePaymentThrough,
+  isPurchaseBillNoAvailable,
 } from "@/features/purchases/service/purchase.service";
 import { purchaseSchema, PurchaseInput, PaymentMethod } from "@/features/purchases/schemas";
 import { upsertBillById } from "@/features/bills/service/bill.service";
@@ -48,4 +49,11 @@ export async function updatePurchasePaymentThroughAction(
   paymentThrough: PaymentMethod
 ) {
   return updatePurchasePaymentThrough(purchaseId, paymentThrough);
+}
+
+export async function checkPurchaseBillNoAvailabilityAction(
+  billNo: number,
+  excludePurchaseId?: string
+) {
+  return isPurchaseBillNoAvailable(billNo, excludePurchaseId);
 }

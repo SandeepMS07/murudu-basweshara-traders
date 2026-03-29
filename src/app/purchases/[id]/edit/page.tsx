@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PurchaseForm } from "@/features/purchases/components/PurchaseForm";
 import { requireAuth } from "@/features/auth/lib/session";
 import { getPurchaseById } from "@/features/purchases/service/purchase.service";
+import { getBillById } from "@/features/bills/service/bill.service";
 import { notFound, redirect } from "next/navigation";
 
 export default async function EditPurchasePage({
@@ -17,6 +18,7 @@ export default async function EditPurchasePage({
 
   const { id } = await params;
   const purchase = await getPurchaseById(id);
+  const linkedBill = await getBillById(`PUR_BILL_${id}`);
 
   if (!purchase) {
     notFound();
@@ -39,7 +41,7 @@ export default async function EditPurchasePage({
         <h1 className="text-3xl font-bold tracking-tight">Edit Purchase</h1>
         <p className="text-muted-foreground">Modify an existing app-created purchase record.</p>
       </div>
-      <PurchaseForm initialData={purchase} />
+      <PurchaseForm initialData={purchase} linkedBillNo={linkedBill?.bill_no} />
     </AppShell>
   );
 }

@@ -113,12 +113,37 @@ export async function getPurchaseById(id: string): Promise<Purchase | null> {
   return data ? toPurchase(data as PurchaseRow) : null;
 }
 
+export async function isPurchaseBillNoAvailable(
+  billNo: number,
+  excludePurchaseId?: string
+): Promise<boolean> {
+  await requireAuth();
+
+  let query = supabaseServer
+    .from("purchases")
+    .select("id")
+    .eq("bill_no", billNo)
+    .limit(1);
+
+  if (excludePurchaseId) {
+    query = query.neq("id", excludePurchaseId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error && error.code !== "PGRST116") {
+    throw new Error(`Failed to validate purchase bill number: ${error.message}`);
+  }
+
+  return !data;
+}
+
 export async function createPurchase(input: PurchaseInput): Promise<Purchase> {
   await requireAuth();
 
   const calculated = calculatePurchase({ ...input, source: "app" }, crypto.randomUUID());
   const payload = {
     id: calculated.id,
+    bill_no: calculated.bill_no,
     date: calculated.date,
     name: calculated.name,
     place: calculated.place,
@@ -147,6 +172,9 @@ export async function createPurchase(input: PurchaseInput): Promise<Purchase> {
     .single();
 
   if (error) {
+    if (error.code === "23505" && String(error.message).includes("bill_no")) {
+      throw new Error("Bill number already exists");
+    }
     throw new Error(`Failed to create purchase: ${error.message}`);
   }
 
@@ -167,6 +195,7 @@ export async function updatePurchase(id: string, input: PurchaseInput): Promise<
 
   const calculated = calculatePurchase({ ...input, source: existing.source }, id);
   const payload = {
+    bill_no: calculated.bill_no,
     date: calculated.date,
     name: calculated.name,
     place: calculated.place,
@@ -196,6 +225,9 @@ export async function updatePurchase(id: string, input: PurchaseInput): Promise<
     .single();
 
   if (error) {
+    if (error.code === "23505" && String(error.message).includes("bill_no")) {
+      throw new Error("Bill number already exists");
+    }
     throw new Error(`Failed to update purchase: ${error.message}`);
   }
 

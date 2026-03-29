@@ -12,7 +12,6 @@ export function calculatePurchase(input: PurchaseInput, id: string): Purchase {
   return {
     ...input,
     id,
-    bill_no: 0,
     less_weight,
     net_weight,
     amount,

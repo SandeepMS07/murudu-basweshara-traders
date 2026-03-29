@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ import {
 } from "@/features/purchases/schemas";
 import {
   createPurchaseAction,
+  checkPurchaseBillNoAvailabilityAction,
   updatePurchaseAction,
 } from "@/app/purchases/actions";
 import { formatCurrencyINR } from "@/lib/number-format";
@@ -39,6 +40,7 @@ import { formatCurrencyINR } from "@/lib/number-format";
 interface PurchaseFormProps {
   initialData?: Purchase;
   nextBillNo?: number;
+  linkedBillNo?: number;
 }
 type PurchaseFormValues = z.input<typeof purchaseSchema>;
 const BAG_LESS_PER_BAG = 6;
@@ -77,7 +79,7 @@ function splitMobileNumber(input: string | undefined): {
   return { countryCode: matchedCountry.code, mobile: mobilePart };
 }
 
-export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
+export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: PurchaseFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!initialData;
@@ -90,6 +92,12 @@ export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
     defaultValues: initialData
       ? {
           id: initialData.id,
+          bill_no:
+            initialData.bill_no && initialData.bill_no > 0
+              ? initialData.bill_no
+              : linkedBillNo && linkedBillNo > 0
+                ? linkedBillNo
+                : nextBillNo ?? 1,
           date: initialData.date,
           name: initialData.name,
           place: initialData.place,
@@ -105,6 +113,7 @@ export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
           source: initialData.source,
         }
       : {
+      bill_no: nextBillNo ?? 1,
       date: new Date().toISOString().split("T")[0],
       name: "",
       place: "",
@@ -122,6 +131,7 @@ export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
   });
 
   const { watch } = form;
+  const billNo = watch("bill_no");
   const weight = watch("weight");
   const bags = watch("bags");
   const lessPercent = watch("less_percent");
@@ -149,6 +159,8 @@ export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
   const bagAvg = (bags || 0) > 0 ? netWeight / (bags || 1) : 0;
   const fieldClassName =
     "h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100 placeholder:text-zinc-500";
+  const [billNoChecking, setBillNoChecking] = useState(false);
+  const billNoCheckSeqRef = useRef(0);
 
   async function onSubmit(values: PurchaseFormValues) {
     setIsLoading(true);
@@ -175,6 +187,42 @@ export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
       setIsLoading(false);
     }
   }
+
+  useEffect(() => {
+    const candidate = Number(billNo);
+    if (!Number.isInteger(candidate) || candidate <= 0) return;
+
+    const seq = ++billNoCheckSeqRef.current;
+    const timer = window.setTimeout(async () => {
+      try {
+        setBillNoChecking(true);
+        const available = await checkPurchaseBillNoAvailabilityAction(
+          candidate,
+          isEditing ? initialData?.id : undefined
+        );
+        if (billNoCheckSeqRef.current !== seq) return;
+        if (!available) {
+          form.setError("bill_no", {
+            type: "manual",
+            message: "Bill number already exists",
+          });
+        } else {
+          const billNoError = form.formState.errors.bill_no;
+          if (billNoError?.message === "Bill number already exists") {
+            form.clearErrors("bill_no");
+          }
+        }
+      } catch {
+        // Keep typing flow uninterrupted if availability check fails transiently.
+      } finally {
+        if (billNoCheckSeqRef.current === seq) {
+          setBillNoChecking(false);
+        }
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [billNo, form, initialData?.id, isEditing]);
 
   return (
     <Card className="mx-auto w-full max-w-6xl gap-0 py-0 border border-[#1f2229] bg-[#111214] text-zinc-100 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
@@ -212,15 +260,32 @@ export function PurchaseForm({ initialData, nextBillNo }: PurchaseFormProps) {
                   </FormItem>
                 )}
               />
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Bill No</label>
-                <Input
-                  value={isEditing ? "Generated after bill creation" : String(nextBillNo ?? "AUTO")}
-                  readOnly
-                  disabled
-                  className={`${fieldClassName} cursor-not-allowed opacity-80`}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="bill_no"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bill No</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Enter bill number"
+                        className={fieldClassName}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) => {
+                          const parsed = Number.parseInt(e.target.value, 10);
+                          field.onChange(Number.isFinite(parsed) ? parsed : 0);
+                        }}
+                      />
+                    </FormControl>
+                    {billNoChecking ? (
+                      <p className="text-xs text-zinc-500">Checking bill number...</p>
+                    ) : null}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"
