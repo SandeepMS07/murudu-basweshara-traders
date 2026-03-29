@@ -122,13 +122,14 @@ export function SaleForm({
 
   const watched = form.watch();
   const computed = useMemo(() => {
-    const bags = watched.bags || 0;
     const netWeight = watched.net_weight || 0;
+    const factoryWeight = watched.factory_weight || 0;
+    const effectiveWeight = factoryWeight > 0 ? factoryWeight : netWeight;
     const rate = watched.rate || 0;
     const flight = watched.flight || 0;
     const factoryRate = 0;
-    const amount = netWeight * rate - flight;
-    const factoryAmount = netWeight * factoryRate;
+    const amount = effectiveWeight * rate - flight;
+    const factoryAmount = effectiveWeight * factoryRate;
     const pendingAmount = amount - factoryAmount;
     return {
       amount,

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calculateSale } from "@/features/sales/utils/calculations";
 
 describe("calculateSale", () => {
-  it("computes derived totals from rate, flight, and factory rate", () => {
+  it("uses factory weight when provided for amount calculations", () => {
     const sale = calculateSale(
       {
         bill_number: "B-100",
@@ -23,10 +23,35 @@ describe("calculateSale", () => {
       "sale-1"
     );
 
-    expect(sale.amount).toBe(107900);
-    expect(sale.factory_amount).toBe(97200);
-    expect(sale.pending_amount).toBe(10700);
+    expect(sale.amount).toBe(105900);
+    expect(sale.factory_amount).toBe(95400);
+    expect(sale.pending_amount).toBe(10500);
     expect(sale.bag_avg).toBe(100);
+  });
+
+  it("falls back to net weight when factory weight is not set", () => {
+    const sale = calculateSale(
+      {
+        bill_number: "B-102",
+        sale_date: "2026-03-12",
+        lorry_number: "",
+        party: "Test Buyer",
+        sale_company_id: null,
+        payment_terms: "Cash",
+        bags: 20,
+        net_weight: 2000,
+        factory_weight: 0,
+        rate: 10,
+        flight: 100,
+        factory_rate: 5,
+        source: "manual",
+      },
+      "sale-3"
+    );
+
+    expect(sale.amount).toBe(19900);
+    expect(sale.factory_amount).toBe(10000);
+    expect(sale.pending_amount).toBe(9900);
   });
 
   it("uses provided bag average instead of derived value", () => {

@@ -7,14 +7,16 @@ function round2(value: number): number {
 export function calculateSale(input: SaleInput, id: string): Sale {
   const bags = input.bags || 0;
   const netWeight = input.net_weight || 0;
+  const factoryWeight = input.factory_weight || 0;
+  const effectiveWeight = factoryWeight > 0 ? factoryWeight : netWeight;
   const rate = input.rate || 0;
   const flight = input.flight || 0;
   const factoryRate = input.factory_rate || 0;
 
-  const amount = round2(netWeight * rate - flight);
+  const amount = round2(effectiveWeight * rate - flight);
   const computedBagAvg = bags > 0 ? round2(netWeight / bags) : 0;
   const bagAvg = round2(input.bag_avg ?? computedBagAvg);
-  const factoryAmount = round2(netWeight * factoryRate);
+  const factoryAmount = round2(effectiveWeight * factoryRate);
   const pendingAmount = round2(amount - factoryAmount);
 
   return {
@@ -32,7 +34,7 @@ export function calculateSale(input: SaleInput, id: string): Sale {
     payment_terms: input.payment_terms,
     bags: round2(bags),
     net_weight: round2(netWeight),
-    factory_weight: round2(input.factory_weight || 0),
+    factory_weight: round2(factoryWeight),
     rate: round2(rate),
     flight: round2(flight),
     bag_avg: bagAvg,
