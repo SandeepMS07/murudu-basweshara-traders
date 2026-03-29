@@ -12,8 +12,9 @@ import {
   Row,
 } from "@tanstack/react-table";
 import { CSSProperties, ReactNode, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { exportRowsToXlsx } from "@/lib/excel/client-export";
 
 import {
   Table,
@@ -45,6 +46,8 @@ interface DataTableProps<TData, TValue> {
   searchPredicate?: (row: TData, query: string) => boolean;
   rowClassName?: (row: Row<TData>) => string | undefined;
   toolbarRight?: ReactNode;
+  exportFileName?: string;
+  showExportButton?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -55,6 +58,8 @@ export function DataTable<TData, TValue>({
   searchPredicate,
   rowClassName,
   toolbarRight,
+  exportFileName = "table_export",
+  showExportButton = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -81,9 +86,46 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  const handleExportXlsx = () => {
+    const exportableColumns = table
+      .getAllLeafColumns()
+      .filter((column) => {
+        const def = column.columnDef as { accessorKey?: unknown; accessorFn?: unknown };
+        if (column.id === "actions" || column.id === "view_bill") return false;
+        return typeof def.accessorKey === "string" || typeof def.accessorFn === "function";
+      });
+
+    const headers = exportableColumns.map((column) => {
+      const header = column.columnDef.header;
+      if (typeof header === "string") return header;
+      return String(column.id).replaceAll("_", " ").toUpperCase();
+    });
+
+    const rows = table.getFilteredRowModel().rows.map((row) => {
+      const obj: Record<string, string | number | boolean> = {};
+      exportableColumns.forEach((column, index) => {
+        const key = headers[index];
+        const value = row.getValue(column.id);
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+          obj[key] = value;
+          return;
+        }
+        obj[key] = value == null ? "" : JSON.stringify(value);
+      });
+      return obj;
+    });
+
+    const emptyRow = Object.fromEntries(headers.map((header) => [header, ""]));
+    exportRowsToXlsx(rows.length > 0 ? rows : [emptyRow], {
+      fileName: exportFileName,
+      sheetName: "Data",
+      emptyMessage: "No records found",
+    });
+  };
+
   return (
     <div className="space-y-4">
-      {(searchKey || toolbarRight) && (
+      {(searchKey || toolbarRight || showExportButton) && (
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
           {searchKey && (
             <div className="relative w-full xl:max-w-sm xl:flex-none">
@@ -111,6 +153,19 @@ export function DataTable<TData, TValue>({
             </div>
           )}
           {toolbarRight ? <div className="min-w-0 w-full xl:flex-1">{toolbarRight}</div> : null}
+          {showExportButton ? (
+            <div className="xl:ml-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportXlsx}
+                className="h-10 border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
 

@@ -205,6 +205,8 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
     const timer = window.setTimeout(async () => {
       try {
         setBillNoChecking(true);
+        // Debounced availability check with sequence guard prevents stale API responses
+        // from overriding the latest user input state.
         const available = await checkPurchaseBillNoAvailabilityAction(
           candidate,
           isEditing ? initialData?.id : undefined
@@ -277,14 +279,21 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
                     <FormLabel>Bill No</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="Enter bill number"
                         className={fieldClassName}
                         {...field}
-                        value={field.value ?? ""}
+                        value={field.value && field.value > 0 ? String(field.value) : ""}
                         onChange={(e) => {
-                          const parsed = Number.parseInt(e.target.value, 10);
-                          field.onChange(Number.isFinite(parsed) ? parsed : 0);
+                          const digits = e.target.value.replace(/\D/g, "");
+                          if (!digits) {
+                            field.onChange(undefined);
+                            return;
+                          }
+                          const parsed = Number.parseInt(digits, 10);
+                          field.onChange(Number.isFinite(parsed) ? parsed : undefined);
                         }}
                       />
                     </FormControl>

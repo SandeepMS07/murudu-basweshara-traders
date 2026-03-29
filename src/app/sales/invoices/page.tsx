@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { format, parseISO } from "date-fns";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { requireAuth } from "@/features/auth/lib/session";
@@ -9,6 +10,13 @@ import { Button } from "@/components/ui/button";
 export default async function SalesInvoicesPage() {
   await requireAuth();
   const invoices = await getSalesInvoices();
+  const formatDisplayDate = (value: string) => {
+    try {
+      return format(parseISO(value), "dd-MM-yyyy");
+    } catch {
+      return value;
+    }
+  };
 
   return (
     <AppShell>
@@ -40,7 +48,7 @@ export default async function SalesInvoicesPage() {
               invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b border-[#252932] last:border-b-0">
                   <td className="px-3 py-2 font-semibold">{invoice.invoice_no}</td>
-                  <td className="px-3 py-2">{invoice.issued_on}</td>
+                  <td className="px-3 py-2">{formatDisplayDate(invoice.issued_on)}</td>
                   <td className="px-3 py-2 text-right">
                     {formatCurrencyINR(invoice.total_amount)}
                   </td>

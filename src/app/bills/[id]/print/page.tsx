@@ -47,7 +47,7 @@ export default async function BillPrintPage({
 
   let printDate = bill.bill_date;
   try {
-    printDate = format(parseISO(bill.bill_date), "MMMM d, yyyy");
+    printDate = format(parseISO(bill.bill_date), "dd-MM-yyyy");
   } catch {
     printDate = bill.bill_date;
   }

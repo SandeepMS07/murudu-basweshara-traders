@@ -624,7 +624,15 @@ function SalesDetailsTable({
   const formatDueDate = (sale: Sale) => {
     const dueDate = getDueDate(sale);
     if (!dueDate) return "-";
-    return format(dueDate, "yyyy-MM-dd");
+    return format(dueDate, "dd-MM-yyyy");
+  };
+
+  const formatDisplayDate = (value: string) => {
+    try {
+      return format(parseISO(value), "dd-MM-yyyy");
+    } catch {
+      return value;
+    }
   };
 
   return (
@@ -698,7 +706,7 @@ function SalesDetailsTable({
                   className={`border-b border-[#252932] last:border-b-0 ${getRowClassName(sale)}`}
                 >
                   <td className="px-3 py-2">{sale.bill_number}</td>
-                  <td className="px-3 py-2">{sale.sale_date}</td>
+                  <td className="px-3 py-2">{formatDisplayDate(sale.sale_date)}</td>
                   <td className="px-3 py-2">{sale.lorry_number || "-"}</td>
                   <td className="px-3 py-2 text-right">
                     {formatNumberIN(sale.bags, { maximumFractionDigits: 0 })}

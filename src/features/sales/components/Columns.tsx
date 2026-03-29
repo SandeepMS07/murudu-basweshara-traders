@@ -362,6 +362,11 @@ export function createSaleColumns(
             0,
           ),
         ),
+      meta: {
+        width: "170px",
+        headClassName: "whitespace-nowrap",
+        cellClassName: "whitespace-nowrap",
+      },
     },
     {
       id: "due_date",
@@ -369,11 +374,12 @@ export function createSaleColumns(
       cell: ({ row }) => {
         const dueDate = getDueDate(row.original);
         if (!dueDate) return "-";
-        return format(dueDate, "yyyy-MM-dd");
+        return format(dueDate, "dd-MM-yyyy");
       },
       meta: {
-        width: "160px",
+        width: "170px",
         headClassName: "whitespace-nowrap",
+        cellClassName: "whitespace-nowrap pr-10",
       },
     },
     {
@@ -388,10 +394,10 @@ export function createSaleColumns(
       meta: {
         sticky: true,
         right: "0",
-        zIndex: 4,
-        width: "120px",
-        headClassName: "whitespace-nowrap text-right pr-4",
-        cellClassName: "text-right",
+        zIndex: 30,
+        width: "136px",
+        headClassName: "whitespace-nowrap text-right pr-4 bg-[#15171c] border-l border-[#252932]",
+        cellClassName: "text-right bg-[#111214] border-l border-[#252932]",
         boxShadow: "-8px 0 18px rgba(6, 8, 13, 0.45)",
       },
     },

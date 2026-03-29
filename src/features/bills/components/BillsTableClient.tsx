@@ -13,6 +13,7 @@ export function BillsTableClient({ data }: BillsTableClientProps) {
     <DataTable
       columns={billColumns}
       data={data}
+      exportFileName="bills"
       searchKey="bill_for"
       searchPlaceholder="Filter by bill for..."
     />

@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import { Download } from "lucide-react";
 
 import {
   createExpenseAction,
@@ -26,6 +28,7 @@ import {
   ExpenseEmployee,
   ExpenseEntry,
 } from "@/features/expenses/schemas";
+import { exportRowsToXlsx } from "@/lib/excel/client-export";
 
 export type TabKey = "overview" | "salary" | "vehicle" | "hamali" | "other";
 
@@ -334,6 +337,52 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
     });
   };
 
+  const handleExportCurrentTab = () => {
+    if (tab === "overview") return;
+
+    const rows =
+      tab === "salary"
+        ? salaryRows.map((row, index) => ({
+            "Sl No": index + 1,
+            Date: formatDisplayDate(row.expense_date),
+            "Employee Name": employeeMap.get(row.employee_id ?? "")?.name ?? "-",
+            Amount: row.amount,
+          }))
+        : tab === "vehicle"
+          ? vehicleRows.map((row, index) => {
+              const parsed = parseVehicleReason(row.reason || "");
+              return {
+                "Sl No": index + 1,
+                Date: formatDisplayDate(row.expense_date),
+                "Vehicle Type": parsed.vehicleType || "-",
+                "Vehicle Number": parsed.vehicleNumber || "-",
+                Reason: parsed.reason || "-",
+                "How Much Paid": row.amount,
+              };
+            })
+          : tab === "hamali"
+            ? hamaliRows.map((row, index) => {
+                const parsed = parseHamaliReason(row.reason || "");
+                return {
+                  "Sl No": index + 1,
+                  Date: formatDisplayDate(row.expense_date),
+                  "No of Worker": parsed.workerCount || "-",
+                  "How Much Paid": row.amount,
+                };
+              })
+            : otherRows.map((row, index) => ({
+                "Sl No": index + 1,
+                Reason: row.reason || "-",
+                "How Much Paid": row.amount,
+              }));
+
+    exportRowsToXlsx(rows, {
+      fileName: `expenses_${tab}`,
+      sheetName: "Data",
+      emptyMessage: "No records found",
+    });
+  };
+
   return (
     <div className="space-y-6">
       {tab === "overview" ? (
@@ -377,6 +426,15 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
             {tabOptions.find((option) => option.key === tab)?.label}
           </h2>
           <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportCurrentTab}
+              className="border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
             {tab === "salary" ? (
               <Button
                 type="button"
@@ -457,7 +515,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                   salaryRows.map((row, index) => (
                     <tr key={row.id} className="border-t border-[#252932] text-zinc-200">
                       <td className="px-3 py-2">{index + 1}</td>
-                      <td className="px-3 py-2">{row.expense_date}</td>
+                      <td className="px-3 py-2">{formatDisplayDate(row.expense_date)}</td>
                       <td className="px-3 py-2">{employeeMap.get(row.employee_id ?? "")?.name ?? "-"}</td>
                       <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
                       <td className="px-3 py-2">
@@ -522,7 +580,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                         return (
                           <>
                             <td className="px-3 py-2">{index + 1}</td>
-                            <td className="px-3 py-2">{row.expense_date}</td>
+                            <td className="px-3 py-2">{formatDisplayDate(row.expense_date)}</td>
                             <td className="px-3 py-2">{parsed.vehicleType || "-"}</td>
                             <td className="px-3 py-2">{parsed.vehicleNumber || "-"}</td>
                             <td className="px-3 py-2">{parsed.reason || "-"}</td>
@@ -590,7 +648,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                         return (
                           <>
                             <td className="px-3 py-2">{index + 1}</td>
-                            <td className="px-3 py-2">{row.expense_date}</td>
+                            <td className="px-3 py-2">{formatDisplayDate(row.expense_date)}</td>
                             <td className="px-3 py-2">{parsed.workerCount || "-"}</td>
                             <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
                             <td className="px-3 py-2">
@@ -914,3 +972,10 @@ function SummaryCard({
     </div>
   );
 }
+  const formatDisplayDate = (value: string) => {
+    try {
+      return format(parseISO(value), "dd-MM-yyyy");
+    } catch {
+      return value;
+    }
+  };

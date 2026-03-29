@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { useState } from "react";
+import { format, parseISO } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,14 @@ export const billColumns: ColumnDef<BillTableRow>[] = [
   {
     accessorKey: "due_date",
     header: "Due Date",
+    cell: ({ row }) => {
+      const value = String(row.getValue("due_date") ?? "");
+      try {
+        return format(parseISO(value), "dd-MM-yyyy");
+      } catch {
+        return value;
+      }
+    },
   },
   {
     accessorKey: "status",

@@ -149,8 +149,8 @@ export default async function SalesInvoicePrintPage({
   let printDate = invoice.issued_on;
   let printDateCompact = invoice.issued_on;
   try {
-    printDate = format(parseISO(invoice.issued_on), "MMMM d, yyyy");
-    printDateCompact = format(parseISO(invoice.issued_on), "d-MMM-yy");
+    printDate = format(parseISO(invoice.issued_on), "dd-MM-yyyy");
+    printDateCompact = format(parseISO(invoice.issued_on), "dd-MM-yyyy");
   } catch {
     printDate = invoice.issued_on;
     printDateCompact = invoice.issued_on;

@@ -167,6 +167,7 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
     <DataTable
       columns={columns}
       data={data}
+      exportFileName="purchases"
       searchKey="name"
       searchPlaceholder="Filter by name or phone..."
       searchPredicate={(purchase, query) => {

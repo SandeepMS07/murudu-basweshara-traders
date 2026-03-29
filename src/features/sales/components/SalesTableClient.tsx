@@ -124,6 +124,7 @@ export function SalesTableClient({
       <DataTable
         columns={columns}
         data={filteredData}
+        exportFileName="sales_overview"
         searchKey="party"
         searchPlaceholder="Filter by party or phone..."
         searchPredicate={(sale, query) => {
