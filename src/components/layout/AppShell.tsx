@@ -41,6 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     vehicle: "Vehicle",
     hamali: "Hamali",
     other: "Other Expenses",
+    "gunny-bags": "Gunny Bags",
     bills: "Bills",
     invoices: "Invoices",
     new: "New",
@@ -70,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       { label: "Create Sale", href: "/sales/new", keywords: "new add sale" },
       { label: "Companies", href: "/companies", keywords: "issuer buyer company" },
       { label: "Expenses", href: "/expenses/overview", keywords: "salary vehicle hamali other ledger overview" },
+      { label: "Gunny Bags", href: "/gunny-bags", keywords: "gunny bags party overview ledger" },
     ],
     []
   );

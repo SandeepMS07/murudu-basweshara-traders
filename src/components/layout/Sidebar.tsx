@@ -18,6 +18,7 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -56,6 +57,7 @@ const navItems = [
       { name: "Other Expenses", href: "/expenses/other", icon: ReceiptText },
     ],
   },
+  { name: "Gunny Bags", href: "/gunny-bags", icon: Package },
 ];
 
 type SidebarProps = {

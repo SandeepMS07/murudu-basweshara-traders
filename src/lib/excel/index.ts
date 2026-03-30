@@ -4,7 +4,14 @@ import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const EXCEL_FILE = path.join(DATA_DIR, "purchage.xlsx");
-const BASE_SHEETS = ["PURCHASE", "BILL", "APP_PURCHASE", "APP_BILL"] as const;
+const BASE_SHEETS = [
+  "PURCHASE",
+  "BILL",
+  "APP_PURCHASE",
+  "APP_BILL",
+  "APP_GUNNY_BAGS_PURCHASE",
+  "APP_GUNNY_BAGS_PAYMENT",
+] as const;
 
 // Ensure directory exists
 if (!fs.existsSync(DATA_DIR)) {
@@ -139,4 +146,13 @@ export function updateSheetRowById<T extends { id: string }>(
     rows[index] = { ...rows[index], ...updatedRow };
     writeSheetRows(sheetName, rows);
   }
+}
+
+export function deleteSheetRowById<T extends { id: string }>(
+  sheetName: string,
+  id: string
+) {
+  const rows = readSheetRows<T>(sheetName);
+  const nextRows = rows.filter((row) => row.id !== id);
+  writeSheetRows(sheetName, nextRows);
 }
