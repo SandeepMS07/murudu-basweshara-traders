@@ -9,11 +9,14 @@ import {
   createGunnyBagPartyAction,
   createGunnyBagPaymentAction,
   createGunnyBagPurchaseAction,
+  createGunnyBagSaleAction,
   deleteGunnyBagPaymentAction,
   deleteGunnyBagPurchaseAction,
+  deleteGunnyBagSaleAction,
   updateGunnyBagPartyAction,
   updateGunnyBagPaymentAction,
   updateGunnyBagPurchaseAction,
+  updateGunnyBagSaleAction,
 } from "@/app/gunny-bags/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,11 +39,14 @@ import {
   GunnyPaymentRow,
   GunnyPurchaseOverviewRow,
   GunnyPurchaseRow,
+  GunnySaleRow,
 } from "@/features/gunny-bags/service/gunny-bag.service";
 
 interface GunnyBagsOverviewProps {
   purchases: GunnyPurchaseRow[];
   payments: GunnyPaymentRow[];
+  sales: GunnySaleRow[];
+  saleParties: string[];
   purchaseOverview: GunnyPurchaseOverviewRow[];
   parties: GunnyPartyRow[];
   stockSummary: {
@@ -74,25 +80,31 @@ function toDateInputValue(value: string): string {
 export function GunnyBagsOverview({
   purchases,
   payments,
+  sales,
+  saleParties,
   purchaseOverview,
   parties,
   stockSummary,
 }: GunnyBagsOverviewProps) {
-  type DataTab = "purchases" | "payments" | "purchaseSummary";
+  type DataTab = "purchases" | "payments" | "sales" | "purchaseSummary";
 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [saleDialogOpen, setSaleDialogOpen] = useState(false);
   const [deletePurchaseDialogOpen, setDeletePurchaseDialogOpen] = useState(false);
   const [deletePaymentDialogOpen, setDeletePaymentDialogOpen] = useState(false);
+  const [deleteSaleDialogOpen, setDeleteSaleDialogOpen] = useState(false);
   const [partyDialogOpen, setPartyDialogOpen] = useState(false);
   const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
   const [editingPartyId, setEditingPartyId] = useState<string | null>(null);
   const [purchaseToDelete, setPurchaseToDelete] = useState<GunnyPurchaseRow | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<GunnyPaymentRow | null>(null);
+  const [saleToDelete, setSaleToDelete] = useState<GunnySaleRow | null>(null);
 
   const [purchaseDate, setPurchaseDate] = useState(todayISO());
   const [purchaseParty, setPurchaseParty] = useState("");
@@ -104,6 +116,10 @@ export function GunnyBagsOverview({
   const [paymentModePreset, setPaymentModePreset] = useState<PaymentModePreset>("RTGS");
   const [paymentModeOther, setPaymentModeOther] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [saleDate, setSaleDate] = useState(todayISO());
+  const [saleParty, setSaleParty] = useState("");
+  const [saleBags, setSaleBags] = useState("");
+  const [saleRate, setSaleRate] = useState("");
   const [selectedSummaryParty, setSelectedSummaryParty] = useState("ALL");
   const [partyName, setPartyName] = useState("");
   const [partyContactPerson, setPartyContactPerson] = useState("");
@@ -115,6 +131,7 @@ export function GunnyBagsOverview({
   const [pageByTab, setPageByTab] = useState<Record<DataTab, number>>({
     purchases: 1,
     payments: 1,
+    sales: 1,
     purchaseSummary: 1,
   });
 
@@ -128,6 +145,10 @@ export function GunnyBagsOverview({
   const computedPurchaseAmount = useMemo(
     () => parseNumber(purchaseBags) * parseNumber(purchaseRate),
     [purchaseBags, purchaseRate]
+  );
+  const computedSaleAmount = useMemo(
+    () => parseNumber(saleBags) * parseNumber(saleRate),
+    [saleBags, saleRate]
   );
 
   const partyTabs = useMemo(() => {
@@ -155,9 +176,10 @@ export function GunnyBagsOverview({
     () => ({
       purchases: purchases.length,
       payments: payments.length,
+      sales: sales.length,
       purchaseSummary: filteredPurchaseOverview.length,
     }),
-    [filteredPurchaseOverview.length, payments.length, purchases.length]
+    [filteredPurchaseOverview.length, payments.length, purchases.length, sales.length]
   );
 
   const activeTotalRows = totalRowsByTab[activeTab];
@@ -168,6 +190,7 @@ export function GunnyBagsOverview({
 
   const pagedPurchases = purchases.slice(startIndex, endIndex);
   const pagedPayments = payments.slice(startIndex, endIndex);
+  const pagedSales = sales.slice(startIndex, endIndex);
   const pagedPurchaseOverview = filteredPurchaseOverview.slice(startIndex, endIndex);
 
   function updatePage(tab: DataTab, nextPage: number) {
@@ -220,6 +243,14 @@ export function GunnyBagsOverview({
     setPaymentAmount("");
   }
 
+  function resetSaleForm() {
+    setEditingSaleId(null);
+    setSaleDate(todayISO());
+    setSaleParty("");
+    setSaleBags("");
+    setSaleRate("");
+  }
+
   function openCreatePurchaseDialog() {
     resetPurchaseForm();
     setPurchaseDialogOpen(true);
@@ -228,6 +259,11 @@ export function GunnyBagsOverview({
   function openCreatePaymentDialog() {
     resetPaymentForm();
     setPaymentDialogOpen(true);
+  }
+
+  function openCreateSaleDialog() {
+    resetSaleForm();
+    setSaleDialogOpen(true);
   }
 
   function openEditPurchaseDialog(row: GunnyPurchaseRow) {
@@ -255,6 +291,16 @@ export function GunnyBagsOverview({
     }
     setPaymentAmount(String(row.amount));
     setPaymentDialogOpen(true);
+  }
+
+  function openEditSaleDialog(row: GunnySaleRow) {
+    if (!row.id) return;
+    setEditingSaleId(row.id);
+    setSaleDate(toDateInputValue(row.date));
+    setSaleParty(row.party);
+    setSaleBags(String(row.bags));
+    setSaleRate(String(row.rate));
+    setSaleDialogOpen(true);
   }
 
   function submitPurchase() {
@@ -318,6 +364,39 @@ export function GunnyBagsOverview({
         router.refresh();
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : "Failed to save payment");
+      }
+    });
+  }
+
+  function submitSale() {
+    const bags = parseNumber(saleBags);
+    const rate = parseNumber(saleRate);
+    if (!saleDate) return toast.error("Sale date is required");
+    if (!saleParty.trim()) return toast.error("Sale party is required");
+    if (bags <= 0) return toast.error("Bags must be greater than zero");
+    if (rate < 0) return toast.error("Rate must be zero or more");
+
+    startTransition(async () => {
+      try {
+        const payload = {
+          date: saleDate,
+          party: saleParty.trim(),
+          bags,
+          rate,
+          amount: Number(computedSaleAmount.toFixed(2)),
+        };
+        if (editingSaleId) {
+          await updateGunnyBagSaleAction(editingSaleId, payload);
+          toast.success("Sale updated");
+        } else {
+          await createGunnyBagSaleAction(payload);
+          toast.success("Sale added");
+        }
+        setSaleDialogOpen(false);
+        resetSaleForm();
+        router.refresh();
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : "Failed to save sale");
       }
     });
   }
@@ -396,6 +475,28 @@ export function GunnyBagsOverview({
     setDeletePaymentDialogOpen(true);
   }
 
+  function requestDeleteSale(row: GunnySaleRow) {
+    if (!row.id) return;
+    setSaleToDelete(row);
+    setDeleteSaleDialogOpen(true);
+  }
+
+  function deleteSale(row: GunnySaleRow) {
+    const rowId = row.id;
+    if (!rowId) return;
+    startTransition(async () => {
+      try {
+        await deleteGunnyBagSaleAction(rowId);
+        toast.success("Sale deleted");
+        setDeleteSaleDialogOpen(false);
+        setSaleToDelete(null);
+        router.refresh();
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : "Failed to delete sale");
+      }
+    });
+  }
+
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-[#2a2d34] bg-gradient-to-br from-[#161922] to-[#101217] p-5">
@@ -413,6 +514,10 @@ export function GunnyBagsOverview({
               <Plus className="mr-1 h-4 w-4" />
               Add Payment
             </Button>
+            <Button type="button" onClick={openCreateSaleDialog} disabled={isPending} className="border border-[#2f6f58]/70 bg-[#164438] text-[#c9f3e7] hover:bg-[#1d5a49]">
+              <Plus className="mr-1 h-4 w-4" />
+              Add Sale
+            </Button>
             <Button type="button" onClick={openCreatePartyDialog} disabled={isPending} className="border border-[#2f3440] bg-[#141821] text-zinc-200 hover:bg-[#1d222e]">
               <Plus className="mr-1 h-4 w-4" />
               Add Party
@@ -421,17 +526,19 @@ export function GunnyBagsOverview({
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <div className="rounded-xl border border-[#2a2d34] bg-[#111318] p-3">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Total Bags</p>
-            <p className="mt-1 text-2xl font-semibold text-zinc-100">{formatNumberIN(stockSummary.totalBags)}</p>
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Total Bags (In Stock)</p>
+            <p className={`mt-1 text-2xl font-semibold ${stockSummary.leftBags >= 0 ? "text-zinc-100" : "text-[#ff8f6b]"}`}>
+              {formatNumberIN(stockSummary.leftBags)}
+            </p>
           </div>
           <div className="rounded-xl border border-[#2a2d34] bg-[#111318] p-3">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Used Bags</p>
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Sold Bags</p>
             <p className="mt-1 text-2xl font-semibold text-[#ffb390]">{formatNumberIN(stockSummary.usedBags)}</p>
           </div>
           <div className="rounded-xl border border-[#2a2d34] bg-[#111318] p-3">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Bags Left</p>
-            <p className={`mt-1 text-2xl font-semibold ${stockSummary.leftBags >= 0 ? "text-zinc-100" : "text-[#ff8f6b]"}`}>
-              {formatNumberIN(stockSummary.leftBags)}
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Purchased Bags</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-100">
+              {formatNumberIN(stockSummary.totalBags)}
             </p>
           </div>
           <div className="rounded-xl border border-[#2a2d34] bg-[#111318] p-3">
@@ -458,7 +565,9 @@ export function GunnyBagsOverview({
               ? "Purchase Entries"
               : activeTab === "payments"
                 ? "Payment Entries"
-                : "Purchase by Party"}
+                : activeTab === "sales"
+                  ? "Sale Entries"
+                  : "Purchase by Party"}
           </h3>
           <div className="inline-flex rounded-lg border border-[#2e3340] bg-[#12161f] p-1">
             <button
@@ -487,6 +596,15 @@ export function GunnyBagsOverview({
               }`}
             >
               Purchase by Party
+            </button>
+            <button
+              type="button"
+              onClick={() => switchTab("sales")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                activeTab === "sales" ? "bg-[#1f5a4b] text-[#d8fff1]" : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Sale Entries
             </button>
           </div>
         </div>
@@ -612,6 +730,51 @@ export function GunnyBagsOverview({
             </table>
           )}
 
+          {activeTab === "sales" && (
+            <table className="min-w-full text-sm text-zinc-200">
+              <thead className="bg-[#171a22] text-zinc-300">
+                <tr>
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-left">Party</th>
+                  <th className="px-3 py-2 text-right">Bags</th>
+                  <th className="px-3 py-2 text-right">Rate</th>
+                  <th className="px-3 py-2 text-right">Amount</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedSales.length > 0 ? (
+                  pagedSales.map((row, index) => {
+                    const canEdit = !!row.id;
+                    return (
+                      <tr key={row.id ?? `${row.party}-${row.date}-${index}`} className="border-t border-[#252932] odd:bg-[#12141a]">
+                        <td className="px-3 py-2">{row.date || "-"}</td>
+                        <td className="px-3 py-2">{row.party}</td>
+                        <td className="px-3 py-2 text-right">{formatNumberIN(row.bags)}</td>
+                        <td className="px-3 py-2 text-right">{formatNumberIN(row.rate)}</td>
+                        <td className="px-3 py-2 text-right font-semibold">{formatCurrencyINR(row.amount)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center justify-center gap-2">
+                            {canEdit ? (
+                              <>
+                                <button type="button" onClick={() => openEditSaleDialog(row)} className="text-xs font-medium text-[#7fb0ff] hover:text-[#a9cbff]">Edit</button>
+                                <button type="button" onClick={() => requestDeleteSale(row)} className="text-xs font-medium text-[#ff9b86] hover:text-[#ffc3b6]">Delete</button>
+                              </>
+                            ) : (
+                              <span className="text-xs text-zinc-500">-</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr><td colSpan={6} className="px-3 py-8 text-center text-zinc-500">No sale records found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
+
           {activeTab === "purchaseSummary" && (
             <table className="min-w-full text-sm text-zinc-200">
               <thead className="bg-[#171a22] text-zinc-300">
@@ -667,6 +830,7 @@ export function GunnyBagsOverview({
                 setPageByTab({
                   purchases: 1,
                   payments: 1,
+                  sales: 1,
                   purchaseSummary: 1,
                 });
               }}
@@ -711,6 +875,11 @@ export function GunnyBagsOverview({
       <datalist id="gunny-party-options">
         {parties.map((party) => (
           <option key={party.id} value={party.name} />
+        ))}
+      </datalist>
+      <datalist id="gunny-sale-party-options">
+        {saleParties.map((party) => (
+          <option key={party} value={party} />
         ))}
       </datalist>
 
@@ -883,6 +1052,92 @@ export function GunnyBagsOverview({
             >
               Yes, Delete
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteSaleDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteSaleDialogOpen(open);
+          if (!open) setSaleToDelete(null);
+        }}
+      >
+        <DialogContent className="overflow-hidden border border-[#2a2d34] bg-[#15171c] p-0 text-zinc-100 sm:max-w-md">
+          <div className="p-5">
+            <DialogHeader className="gap-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-lg border border-[#7d2a1f]/60 bg-[#3b1b17]/60 p-2 text-[#ff8f6b]">
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-semibold text-zinc-100">Delete Sale?</DialogTitle>
+                  <p className="mt-1 text-sm leading-relaxed text-zinc-400">
+                    Are you sure you want to delete this sale
+                    {saleToDelete?.party ? ` for ${saleToDelete.party}` : ""}? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </DialogHeader>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-[#252932] bg-[#12151d] px-5 py-4">
+            <Button
+              type="button"
+              className="border border-[#2f3440] bg-transparent text-zinc-200 hover:bg-[#1c2029]"
+              onClick={() => {
+                setDeleteSaleDialogOpen(false);
+                setSaleToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending || !saleToDelete}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              onClick={() => {
+                if (!saleToDelete) return;
+                deleteSale(saleToDelete);
+              }}
+            >
+              Yes, Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={saleDialogOpen} onOpenChange={setSaleDialogOpen}>
+        <DialogContent className="overflow-hidden border border-[#2a2d34] bg-[#15171c] p-0 text-zinc-100 sm:max-w-md">
+          <div className="p-5">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold text-zinc-100">{editingSaleId ? "Edit Sale" : "Add Sale"}</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 grid gap-3">
+              <label className="grid gap-1.5 text-xs text-zinc-400">
+                Date
+                <Input className="h-10 border-[#2f3440] bg-[#0f1218] text-zinc-100 placeholder:text-zinc-500 focus-visible:border-[#3c4a65] focus-visible:ring-0" type="date" value={saleDate} onChange={(event) => setSaleDate(event.target.value)} />
+              </label>
+              <label className="grid gap-1.5 text-xs text-zinc-400">
+                Party
+                <Input className="h-10 border-[#2f3440] bg-[#0f1218] text-zinc-100 placeholder:text-zinc-500 focus-visible:border-[#3c4a65] focus-visible:ring-0" list="gunny-sale-party-options" placeholder="Sale party name" value={saleParty} onChange={(event) => setSaleParty(event.target.value)} />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="grid gap-1.5 text-xs text-zinc-400">
+                  Bags
+                  <Input className="h-10 border-[#2f3440] bg-[#0f1218] text-zinc-100 placeholder:text-zinc-500 focus-visible:border-[#3c4a65] focus-visible:ring-0" type="number" step="0.01" placeholder="Bags" value={saleBags} onChange={(event) => setSaleBags(event.target.value)} />
+                </label>
+                <label className="grid gap-1.5 text-xs text-zinc-400">
+                  Rate
+                  <Input className="h-10 border-[#2f3440] bg-[#0f1218] text-zinc-100 placeholder:text-zinc-500 focus-visible:border-[#3c4a65] focus-visible:ring-0" type="number" step="0.01" placeholder="Rate" value={saleRate} onChange={(event) => setSaleRate(event.target.value)} />
+                </label>
+              </div>
+              <p className="rounded-md border border-[#293042] bg-[#101723] px-3 py-2 text-xs text-zinc-300">Amount: <span className="font-semibold text-zinc-100">{formatCurrencyINR(computedSaleAmount)}</span></p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-[#252932] bg-[#12151d] px-5 py-4">
+            <Button type="button" className="border border-[#2f3440] bg-transparent text-zinc-200 hover:bg-[#1c2029]" onClick={() => setSaleDialogOpen(false)}>Cancel</Button>
+            <Button type="button" className="border border-[#2f6f58]/70 bg-[#164438] text-[#c9f3e7] hover:bg-[#1d5a49]" onClick={submitSale} disabled={isPending}>{editingSaleId ? "Update" : "Add"}</Button>
           </div>
         </DialogContent>
       </Dialog>

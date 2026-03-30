@@ -263,6 +263,30 @@ create table if not exists public.gunny_bag_payments (
 create index if not exists idx_gunny_bag_payments_date on public.gunny_bag_payments (date desc);
 create index if not exists idx_gunny_bag_payments_party on public.gunny_bag_payments (party);
 
+create table if not exists public.gunny_bag_sales (
+  id text primary key,
+  date date not null,
+  party text not null,
+  bags numeric(12,2) not null default 0,
+  rate numeric(12,2) not null default 0,
+  amount numeric(14,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_gunny_bag_sales_date on public.gunny_bag_sales (date desc);
+create index if not exists idx_gunny_bag_sales_party on public.gunny_bag_sales (party);
+
+create table if not exists public.gunny_bag_sale_parties (
+  id text primary key,
+  name text not null unique,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_gunny_bag_sale_parties_name on public.gunny_bag_sale_parties (name);
+
 create table if not exists public.gunny_bag_parties (
   id text primary key,
   name text not null unique,

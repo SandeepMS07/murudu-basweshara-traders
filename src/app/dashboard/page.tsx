@@ -210,11 +210,11 @@ export default async function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Total Bags</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Bags In Stock</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
-                {formatNumberIN(gunnyStock.totalBags, {
+                {formatNumberIN(gunnyStock.leftBags, {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 2,
                 })}
@@ -223,7 +223,7 @@ export default async function DashboardPage() {
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Used Bags</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Sold Bags</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
@@ -237,11 +237,11 @@ export default async function DashboardPage() {
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Bags Left</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Purchased Bags</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${gunnyStock.leftBags >= 0 ? "text-[#ff8f6b]" : "text-[#ff6a3d]"}`}>
-                {formatNumberIN(gunnyStock.leftBags, {
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatNumberIN(gunnyStock.totalBags, {
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 2,
                 })}

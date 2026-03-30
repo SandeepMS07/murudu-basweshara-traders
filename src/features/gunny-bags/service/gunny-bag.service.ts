@@ -4,6 +4,7 @@ import {
   GunnyBagPartyInput,
   GunnyBagPaymentInput,
   GunnyBagPurchaseInput,
+  GunnyBagSaleInput,
 } from "@/features/gunny-bags/schemas";
 
 type GunnyPurchaseDbRow = {
@@ -36,6 +37,22 @@ type GunnyPartyDbRow = {
   created_at?: string | null;
 };
 
+type GunnySaleDbRow = {
+  id: string;
+  date: string;
+  party: string;
+  bags: number | string;
+  rate: number | string;
+  amount: number | string;
+  created_at?: string | null;
+};
+
+type GunnySalePartyDbRow = {
+  id: string;
+  name: string;
+  is_active: boolean;
+};
+
 export type GunnyPurchaseRow = {
   id: string;
   slNo: number | null;
@@ -65,6 +82,16 @@ export type GunnyPartyRow = {
   isActive: boolean;
 };
 
+export type GunnySaleRow = {
+  id: string;
+  slNo: number | null;
+  date: string;
+  party: string;
+  bags: number;
+  rate: number;
+  amount: number;
+};
+
 export type GunnyPurchaseOverviewRow = {
   party: string;
   totalBags: number;
@@ -83,6 +110,8 @@ export type GunnyPartyLedgerRow = {
 export type GunnyBagsOverview = {
   purchases: GunnyPurchaseRow[];
   payments: GunnyPaymentRow[];
+  sales: GunnySaleRow[];
+  saleParties: string[];
   purchaseOverview: GunnyPurchaseOverviewRow[];
   partyLedger: GunnyPartyLedgerRow[];
   parties: GunnyPartyRow[];
@@ -151,6 +180,18 @@ function toPartyRow(row: GunnyPartyDbRow): GunnyPartyRow {
   };
 }
 
+function toSaleRow(row: GunnySaleDbRow): GunnySaleRow {
+  return {
+    id: row.id,
+    slNo: null,
+    date: toDisplayDate(row.date),
+    party: normalizeParty(row.party),
+    bags: n(row.bags),
+    rate: n(row.rate),
+    amount: n(row.amount),
+  };
+}
+
 async function ensureGunnyPartyExists(partyName: string): Promise<void> {
   const normalized = normalizeParty(partyName);
   if (!normalized) return;
@@ -185,8 +226,38 @@ async function ensureGunnyPartyExists(partyName: string): Promise<void> {
   }
 }
 
+async function ensureGunnySalePartyExists(partyName: string): Promise<void> {
+  const normalized = normalizeParty(partyName);
+  if (!normalized) return;
+
+  const { data, error } = await supabaseServer
+    .from("gunny_bag_sale_parties")
+    .select("id")
+    .eq("name", normalized)
+    .limit(1)
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") {
+    throw new Error(`Failed to validate gunny bag sale party: ${error.message}`);
+  }
+
+  if (data?.id) return;
+
+  const { error: insertError } = await supabaseServer.from("gunny_bag_sale_parties").insert({
+    id: crypto.randomUUID(),
+    name: normalized,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (insertError) {
+    throw new Error(`Failed to create gunny bag sale party: ${insertError.message}`);
+  }
+}
+
 export async function getGunnyBagsOverview(): Promise<GunnyBagsOverview> {
-  const [purchasesResult, paymentsResult, partiesResult, salesResult] = await Promise.all([
+  const [purchasesResult, paymentsResult, partiesResult, gunnySalesResult, salePartiesResult] = await Promise.all([
     supabaseServer
       .from("gunny_bag_purchases")
       .select("*")
@@ -202,7 +273,16 @@ export async function getGunnyBagsOverview(): Promise<GunnyBagsOverview> {
       .select("*")
       .eq("is_active", true)
       .order("name", { ascending: true }),
-    supabaseServer.from("sales").select("bags"),
+    supabaseServer
+      .from("gunny_bag_sales")
+      .select("*")
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabaseServer
+      .from("gunny_bag_sale_parties")
+      .select("*")
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
   ]);
 
   if (purchasesResult.error) {
@@ -214,19 +294,31 @@ export async function getGunnyBagsOverview(): Promise<GunnyBagsOverview> {
   if (partiesResult.error) {
     throw new Error(`Failed to load gunny bag parties: ${partiesResult.error.message}`);
   }
-  if (salesResult.error) {
-    throw new Error(`Failed to load sales for gunny bag usage: ${salesResult.error.message}`);
+  if (gunnySalesResult.error) {
+    throw new Error(`Failed to load gunny bag sales: ${gunnySalesResult.error.message}`);
+  }
+  if (salePartiesResult.error) {
+    throw new Error(`Failed to load gunny bag sale parties: ${salePartiesResult.error.message}`);
   }
 
   const purchases = (purchasesResult.data as GunnyPurchaseDbRow[]).map(toPurchaseRow);
   const payments = (paymentsResult.data as GunnyPaymentDbRow[]).map(toPaymentRow);
   const parties = (partiesResult.data as GunnyPartyDbRow[]).map(toPartyRow);
+  const sales = (gunnySalesResult.data as GunnySaleDbRow[]).map(toSaleRow);
+  const saleParties = Array.from(
+    new Set<string>([
+      ...(salePartiesResult.data as GunnySalePartyDbRow[]).map((row) => normalizeParty(row.name)),
+      ...sales.map((row) => normalizeParty(row.party)),
+    ])
+  )
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
   const totalBags = Number(
     purchases.reduce((sum, row) => sum + row.bags, 0).toFixed(2)
   );
   const usedBags = Number(
-    (salesResult.data as Array<{ bags: number | string | null }>)
-      .reduce((sum, row) => sum + n(row.bags), 0)
+    sales
+      .reduce((sum, row) => sum + row.bags, 0)
       .toFixed(2)
   );
   const leftBags = Number((totalBags - usedBags).toFixed(2));
@@ -276,6 +368,8 @@ export async function getGunnyBagsOverview(): Promise<GunnyBagsOverview> {
   return {
     purchases,
     payments,
+    sales,
+    saleParties,
     purchaseOverview,
     partyLedger,
     parties,
@@ -352,6 +446,39 @@ export async function createGunnyBagPayment(input: GunnyBagPaymentInput): Promis
   return toPaymentRow(data as GunnyPaymentDbRow);
 }
 
+export async function createGunnyBagSale(input: GunnyBagSaleInput): Promise<GunnySaleRow> {
+  await requireAuth();
+  await ensureGunnySalePartyExists(input.party);
+
+  const normalizedBags = Number(input.bags.toFixed(2));
+  const normalizedRate = Number(input.rate.toFixed(2));
+  const computedAmount = Number((normalizedBags * normalizedRate).toFixed(2));
+  const normalizedAmount = Number((input.amount ?? computedAmount).toFixed(2));
+
+  const payload = {
+    id: crypto.randomUUID(),
+    date: input.date,
+    party: normalizeParty(input.party),
+    bags: normalizedBags,
+    rate: normalizedRate,
+    amount: normalizedAmount,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseServer
+    .from("gunny_bag_sales")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create gunny bag sale: ${error.message}`);
+  }
+
+  return toSaleRow(data as GunnySaleDbRow);
+}
+
 export async function updateGunnyBagPurchase(
   id: string,
   input: GunnyBagPurchaseInput
@@ -416,6 +543,41 @@ export async function updateGunnyBagPayment(
   return toPaymentRow(data as GunnyPaymentDbRow);
 }
 
+export async function updateGunnyBagSale(
+  id: string,
+  input: GunnyBagSaleInput
+): Promise<GunnySaleRow> {
+  await requireAuth();
+  await ensureGunnySalePartyExists(input.party);
+
+  const normalizedBags = Number(input.bags.toFixed(2));
+  const normalizedRate = Number(input.rate.toFixed(2));
+  const computedAmount = Number((normalizedBags * normalizedRate).toFixed(2));
+  const normalizedAmount = Number((input.amount ?? computedAmount).toFixed(2));
+
+  const payload = {
+    date: input.date,
+    party: normalizeParty(input.party),
+    bags: normalizedBags,
+    rate: normalizedRate,
+    amount: normalizedAmount,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseServer
+    .from("gunny_bag_sales")
+    .update(payload)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update gunny bag sale: ${error.message}`);
+  }
+
+  return toSaleRow(data as GunnySaleDbRow);
+}
+
 export async function deleteGunnyBagPurchase(id: string): Promise<void> {
   await requireAuth();
 
@@ -439,6 +601,19 @@ export async function deleteGunnyBagPayment(id: string): Promise<void> {
 
   if (error) {
     throw new Error(`Failed to delete gunny bag payment: ${error.message}`);
+  }
+}
+
+export async function deleteGunnyBagSale(id: string): Promise<void> {
+  await requireAuth();
+
+  const { error } = await supabaseServer
+    .from("gunny_bag_sales")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to delete gunny bag sale: ${error.message}`);
   }
 }
 

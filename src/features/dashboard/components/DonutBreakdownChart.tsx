@@ -32,14 +32,16 @@ export function DonutBreakdownChart({ title = "Breakdown", slices }: DonutBreakd
   const total = useMemo(() => slices.reduce((sum, slice) => sum + slice.value, 0), [slices]);
 
   const chartData = useMemo(() => {
-    let cursor = -Math.PI / 2;
-    return slices.map((slice) => {
-      const ratio = total > 0 ? slice.value / total : 0;
-      const start = cursor;
-      const end = cursor + ratio * Math.PI * 2;
-      cursor = end;
-      return { ...slice, start, end, ratio };
-    });
+    return slices
+      .reduce<
+        Array<Slice & { start: number; end: number; ratio: number }>
+      >((acc, slice) => {
+        const prevEnd = acc.length > 0 ? acc[acc.length - 1].end : -Math.PI / 2;
+        const ratio = total > 0 ? slice.value / total : 0;
+        const end = prevEnd + ratio * Math.PI * 2;
+        acc.push({ ...slice, start: prevEnd, end, ratio });
+        return acc;
+      }, []);
   }, [slices, total]);
 
   const active = hoverIndex !== null ? chartData[hoverIndex] : null;

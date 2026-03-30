@@ -12,6 +12,8 @@ export default async function GunnyBagsPage() {
       <GunnyBagsOverview
         purchases={overview.purchases}
         payments={overview.payments}
+        sales={overview.sales}
+        saleParties={overview.saleParties}
         purchaseOverview={overview.purchaseOverview}
         parties={overview.parties}
         stockSummary={overview.stockSummary}
