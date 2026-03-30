@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Loader2,
@@ -69,7 +70,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >(() => {
     const initial: Record<string, boolean> = {};
     for (const item of navItems) {
       if (item.children) {
@@ -120,7 +123,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       const next = { ...current };
       for (const item of navItems) {
         if (!item.children) continue;
-        const hasActiveChild = item.children.some((child) => pathname.startsWith(child.href));
+        const hasActiveChild = item.children.some((child) =>
+          pathname.startsWith(child.href),
+        );
         if (hasActiveChild) {
           next[item.href] = true;
         } else if (!(item.href in next)) {
@@ -136,14 +141,22 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       className={cn(
         "flex h-full w-full flex-col bg-[#0f1013] px-4 py-6 text-zinc-100",
         "lg:px-4 lg:py-6",
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-2 px-2 pb-8">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#181a1f] text-zinc-200">
-          <LayersIcon className="h-5 w-5" />
+        <div className="relative h-9 w-9 overflow-hidden rounded-md border border-[#2a2d34] bg-[#0d1020]">
+          <Image
+            src="/brand/mb-logo-mark.png"
+            alt="MB Groups logo"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
-        <span className="text-xl font-bold tracking-tight text-zinc-100">PB Manager</span>
+        <span className="text-xl font-bold tracking-tight text-zinc-100">
+          MB Groups
+        </span>
       </div>
 
       <nav className="flex-1 space-y-1">
@@ -160,7 +173,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                   "group flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   isActive
                     ? "border border-[#ff6a3d]/40 bg-[#ff6a3d]/14 text-[#ff8f6b]"
-                    : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100"
+                    : "text-zinc-400 hover:bg-[#181a1f] hover:text-zinc-100",
                 )}
               >
                 <Link
@@ -181,7 +194,11 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                       }))
                     }
                     className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm text-zinc-400 hover:bg-[#1d2026] hover:text-zinc-100"
-                    aria-label={expandedSections[item.href] ? "Collapse menu" : "Expand menu"}
+                    aria-label={
+                      expandedSections[item.href]
+                        ? "Collapse menu"
+                        : "Expand menu"
+                    }
                   >
                     {expandedSections[item.href] ? (
                       <ChevronDown className="h-4 w-4" />
@@ -207,7 +224,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                           "before:absolute before:-left-3 before:top-1/2 before:h-px before:w-2 before:bg-[#2a2d34]",
                           childActive
                             ? "text-[#ff8f6b]"
-                            : "text-zinc-500 hover:bg-[#181a1f] hover:text-zinc-100"
+                            : "text-zinc-500 hover:bg-[#181a1f] hover:text-zinc-100",
                         )}
                       >
                         <ChildIcon className="h-4 w-4 shrink-0" />
@@ -243,8 +260,8 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Confirm Logout</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              You will be signed out of PB Manager. Please confirm that you want to
-              log out of the console.
+              You will be signed out of MB Groups. Please confirm that you want
+              to log out of the console.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm text-zinc-100">
@@ -285,26 +302,5 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function LayersIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="12 2 2 7 12 12 22 7 12 2" />
-      <polyline points="2 12 12 17 22 12" />
-      <polyline points="2 17 12 22 22 17" />
-    </svg>
   );
 }

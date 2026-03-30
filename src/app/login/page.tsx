@@ -6,6 +6,7 @@ import * as z from "zod";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { loginSchema } from "@/features/auth/schemas";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "sonner";
 import { LoginHeroPanel } from "@/components/auth/LoginHeroPanel";
 import { LoginLoadingOverlay } from "@/components/auth/LoginLoadingOverlay";
@@ -92,16 +99,19 @@ export default function LoginPage() {
       }
 
       if (!response.ok) {
-        toast.error("Login Failed", { description: data.error || "Invalid credentials." });
+        toast.error("Login Failed", {
+          description: data.error || "Invalid credentials.",
+        });
         return;
       }
 
       toast.success("Login Successful", { description: "Welcome back!" });
       router.push("/dashboard");
       router.refresh();
-      
     } catch {
-      toast.error("Something went wrong", { description: "Please try again later." });
+      toast.error("Something went wrong", {
+        description: "Please try again later.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +125,19 @@ export default function LoginPage() {
         <div className="flex items-center justify-center p-6 sm:p-10 lg:p-16">
           <Card className="relative w-full max-w-lg border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-none">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl">PB Manager</CardTitle>
+              <div className="mb-2 flex justify-center">
+                <div className="rounded-2xl border border-[#2a2d34] bg-[#101218] p-1">
+                  <Image
+                    src="/brand/mb-logo-mark.png"
+                    alt="MB Groups logo"
+                    width={52}
+                    height={52}
+                    className="h-12 w-12 object-contain sm:h-[52px] sm:w-[52px]"
+                    priority
+                  />
+                </div>
+              </div>
+              <CardTitle className="text-3xl">MB Groups</CardTitle>
               <CardDescription className="text-zinc-400">
                 Sign in to continue
               </CardDescription>
@@ -123,7 +145,10 @@ export default function LoginPage() {
             <CardContent>
               <LoginLoadingOverlay visible={isLoading} />
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="email"
@@ -146,7 +171,9 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-zinc-300">Password</FormLabel>
+                        <FormLabel className="text-zinc-300">
+                          Password
+                        </FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input
@@ -159,9 +186,15 @@ export default function LoginPage() {
                               type="button"
                               onClick={() => setShowPassword((prev) => !prev)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-zinc-200"
-                              aria-label={showPassword ? "Hide password" : "Show password"}
+                              aria-label={
+                                showPassword ? "Hide password" : "Show password"
+                              }
                             >
-                              {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                              {showPassword ? (
+                                <Eye className="h-4 w-4" />
+                              ) : (
+                                <EyeOff className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </FormControl>
@@ -183,7 +216,9 @@ export default function LoginPage() {
                     className="h-10 w-full border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
                     disabled={isLoading}
                   >
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
                     Sign in
                   </Button>
                 </form>

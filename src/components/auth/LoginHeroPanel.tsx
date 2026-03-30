@@ -6,7 +6,7 @@ export function LoginHeroPanel() {
   return (
     <div className="relative hidden border-r border-[#1d1f24] p-14 lg:flex lg:flex-col">
       <div>
-        <p className="text-sm uppercase tracking-[0.18em] text-zinc-500">PB Manager</p>
+        <p className="text-sm uppercase tracking-[0.18em] text-zinc-500">MB Groups</p>
         <h1 className="mt-4 text-4xl font-semibold leading-tight">
           Manage Purchases
           <br />

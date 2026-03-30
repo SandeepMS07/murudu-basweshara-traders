@@ -237,7 +237,15 @@ a[aria-disabled="true"] {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.bill-print-logo-image {
+  width: auto;
+  height: 84px;
+  object-fit: contain;
+  display: block;
+  background: #ffffff;
 }
 
 .bill-print-logo-mark {

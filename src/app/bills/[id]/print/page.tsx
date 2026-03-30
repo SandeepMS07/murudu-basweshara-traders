@@ -92,8 +92,11 @@ export default async function BillPrintPage({
           <header className="bill-print-header">
             <div className="bill-print-brand-row">
               <div className="bill-print-brand">
-                <div className="bill-print-logo-mark">MB</div>
-                <div className="bill-print-title">MB Groups</div>
+                <img
+                  src="/brand/mb-logo-bill.png"
+                  alt="MB Groups logo"
+                  className="bill-print-logo-image"
+                />
               </div>
               <div className="bill-print-invoice-box">
                 <div className="bill-print-invoice-label">

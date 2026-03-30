@@ -52,6 +52,22 @@ type SaleRow = {
   amount: number | string;
 };
 
+function withInvoiceSchemaHint(action: string, message: string): Error {
+  const lowerMessage = message.toLowerCase();
+  const missingInvoiceTables =
+    lowerMessage.includes("public.sales_invoices") ||
+    lowerMessage.includes("public.sales_invoice_items");
+  const missingInvoiceSeqFn = lowerMessage.includes("next_company_invoice_seq");
+
+  if (missingInvoiceTables || missingInvoiceSeqFn) {
+    return new Error(
+      `${action}: invoice schema is missing in Supabase. Run SQL from supabase/schema.sql (or supabase/sales-invoice-setup.sql) and retry. Original error: ${message}`
+    );
+  }
+
+  return new Error(`${action}: ${message}`);
+}
+
 function n(value: number | string | null | undefined): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -118,7 +134,7 @@ export async function getSalesInvoices(): Promise<SalesInvoice[]> {
     .order("issued_on", { ascending: false });
 
   if (error) {
-    throw new Error(`Failed to load sales invoices: ${error.message}`);
+    throw withInvoiceSchemaHint("Failed to load sales invoices", error.message);
   }
 
   return (data as SalesInvoiceRow[]).map((row) => toSalesInvoice(row));
@@ -132,7 +148,7 @@ export async function getSalesInvoiceById(id: string): Promise<SalesInvoice | nu
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to load sales invoice: ${error.message}`);
+    throw withInvoiceSchemaHint("Failed to load sales invoice", error.message);
   }
 
   if (!data) {
@@ -146,7 +162,7 @@ export async function getSalesInvoiceById(id: string): Promise<SalesInvoice | nu
     .order("created_at", { ascending: true });
 
   if (itemsError) {
-    throw new Error(`Failed to load sales invoice items: ${itemsError.message}`);
+    throw withInvoiceSchemaHint("Failed to load sales invoice items", itemsError.message);
   }
 
   return toSalesInvoice(
@@ -236,7 +252,7 @@ export async function generateSalesInvoice(
   );
 
   if (seqError) {
-    throw new Error(`Failed to generate invoice sequence: ${seqError.message}`);
+    throw withInvoiceSchemaHint("Failed to generate invoice sequence", seqError.message);
   }
 
   const invoiceSeq = Math.trunc(n(seqData));
@@ -299,7 +315,7 @@ export async function generateSalesInvoice(
     .single();
 
   if (invoiceError) {
-    throw new Error(`Failed to create sales invoice: ${invoiceError.message}`);
+    throw withInvoiceSchemaHint("Failed to create sales invoice", invoiceError.message);
   }
 
   const itemRows = itemsPayload.map((item) => ({
@@ -321,7 +337,7 @@ export async function generateSalesInvoice(
 
   if (itemsInsertError) {
     await supabaseServer.from("sales_invoices").delete().eq("id", invoiceId);
-    throw new Error(`Failed to create invoice items: ${itemsInsertError.message}`);
+    throw withInvoiceSchemaHint("Failed to create invoice items", itemsInsertError.message);
   }
 
   return toSalesInvoice(
