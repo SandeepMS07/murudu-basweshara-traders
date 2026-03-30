@@ -15,5 +15,14 @@ export const gunnyBagPaymentSchema = z.object({
   amount: z.number().positive("Amount must be greater than zero"),
 });
 
+export const gunnyBagPartySchema = z.object({
+  name: z.string().trim().min(1, "Party name is required"),
+  contactPerson: z.string().trim().optional(),
+  phone: z.string().trim().optional(),
+  place: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+});
+
 export type GunnyBagPurchaseInput = z.infer<typeof gunnyBagPurchaseSchema>;
 export type GunnyBagPaymentInput = z.infer<typeof gunnyBagPaymentSchema>;
+export type GunnyBagPartyInput = z.infer<typeof gunnyBagPartySchema>;

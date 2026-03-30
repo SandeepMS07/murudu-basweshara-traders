@@ -236,6 +236,48 @@ create index if not exists idx_expenses_category on public.expenses (category);
 create index if not exists idx_expenses_expense_date on public.expenses (expense_date desc);
 create index if not exists idx_expenses_employee_id on public.expenses (employee_id);
 
+create table if not exists public.gunny_bag_purchases (
+  id text primary key,
+  date date not null,
+  party text not null,
+  bags numeric(12,2) not null default 0,
+  rate numeric(12,2) not null default 0,
+  amount numeric(14,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_gunny_bag_purchases_date on public.gunny_bag_purchases (date desc);
+create index if not exists idx_gunny_bag_purchases_party on public.gunny_bag_purchases (party);
+
+create table if not exists public.gunny_bag_payments (
+  id text primary key,
+  date date not null,
+  party text not null,
+  mode text not null default '',
+  amount numeric(14,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_gunny_bag_payments_date on public.gunny_bag_payments (date desc);
+create index if not exists idx_gunny_bag_payments_party on public.gunny_bag_payments (party);
+
+create table if not exists public.gunny_bag_parties (
+  id text primary key,
+  name text not null unique,
+  contact_person text not null default '',
+  phone text not null default '',
+  place text not null default '',
+  notes text not null default '',
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_gunny_bag_parties_name on public.gunny_bag_parties (name);
+create index if not exists idx_gunny_bag_parties_is_active on public.gunny_bag_parties (is_active);
+
 -- Backward-compatible migration for older installs where the counter table
 -- used `company_id` instead of `issuer_company_id`.
 alter table public.company_invoice_counters

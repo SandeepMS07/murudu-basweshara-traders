@@ -16,7 +16,13 @@ import {
 import { Sidebar } from "./Sidebar";
 import { SessionUser } from "@/features/auth/types";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  wide = false,
+}: {
+  children: ReactNode;
+  wide?: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -193,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sidebar />
           </div>
           <main className="min-h-0 min-w-0 w-full flex-1 overflow-auto bg-[#0f1013]">
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 lg:p-8">
+            <div className={`mx-auto flex w-full flex-col gap-6 p-4 lg:p-8 ${wide ? "max-w-none" : "max-w-7xl"}`}>
               <header className="sticky top-0 z-20 rounded-2xl border border-[#1d1f24] bg-[#111214]/95 px-3 py-2 backdrop-blur-md lg:px-4 lg:py-3">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex items-center gap-2 lg:hidden">

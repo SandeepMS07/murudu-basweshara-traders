@@ -5,19 +5,16 @@ import { getGunnyBagsOverview } from "@/features/gunny-bags/service/gunny-bag.se
 
 export default async function GunnyBagsPage() {
   await requireAuth();
-  const overview = getGunnyBagsOverview();
+  const overview = await getGunnyBagsOverview();
 
   return (
-    <AppShell>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">Gunny Bags</h1>
-        <p className="mt-1 text-sm text-zinc-500">Overview from the GUNNY BAGS sheet.</p>
-      </div>
+    <AppShell wide>
       <GunnyBagsOverview
         purchases={overview.purchases}
         payments={overview.payments}
         purchaseOverview={overview.purchaseOverview}
-        partyLedger={overview.partyLedger}
+        parties={overview.parties}
+        stockSummary={overview.stockSummary}
       />
     </AppShell>
   );

@@ -3,13 +3,17 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { AppShell } from "@/components/layout/AppShell";
 import { getPurchases } from "@/features/purchases/service/purchase.service";
 import { getSales } from "@/features/sales/service/sale.service";
+import { getGunnyBagStockSummary } from "@/features/gunny-bags/service/gunny-bag.service";
 import { PurchaseTrendChart } from "@/features/dashboard/components/PurchaseTrendChart";
+import { BarTrendChart } from "@/features/dashboard/components/BarTrendChart";
+import { DonutBreakdownChart } from "@/features/dashboard/components/DonutBreakdownChart";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
   const purchases = await getPurchases();
   const sales = await getSales();
+  const gunnyStock = await getGunnyBagStockSummary();
 
   const totalPurchasesAmount = purchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
   const totalSalesAmount = sales.reduce((acc, s) => acc + (s.amount || 0), 0);
@@ -46,6 +50,13 @@ export default async function DashboardPage() {
     .map(([date, amount]) => ({ date, amount }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-7);
+  const realizedSalesAmount = totalSalesAmount - totalSalesPending;
+  const collectionPercent = totalSalesAmount > 0 ? (realizedSalesAmount / totalSalesAmount) * 100 : 0;
+  const paymentCoveragePercent = totalPurchasesAmount > 0 ? ((rtgsAmount + upiAmount) / totalPurchasesAmount) * 100 : 0;
+  const gunnyUtilizationPercent = gunnyStock.totalBags > 0 ? (gunnyStock.usedBags / gunnyStock.totalBags) * 100 : 0;
+  const stockBagsNegative = stockBags < 0;
+  const stockWeightNegative = stockWeight < 0;
+  const gunnyLeftNegative = gunnyStock.leftBags < 0;
 
   return (
     <AppShell>
@@ -55,70 +66,91 @@ export default async function DashboardPage() {
           <p className="text-zinc-500">Welcome back, {user.email} ({user.role})</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Purchases</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Purchases</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{purchases.length}</div>
-              <p className="text-xs text-zinc-500">Entries in workbook</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Purchase Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-1">
               <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalPurchasesAmount)}</div>
+              <p className="text-xs text-zinc-500">{purchases.length} entries</p>
             </CardContent>
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Sales</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Sales</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{sales.length}</div>
-              <p className="text-xs text-zinc-500">Entries in BILL</p>
-            </CardContent>
-          </Card>
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Sales Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-1">
               <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalSalesAmount)}</div>
+              <p className="text-xs text-zinc-500">{sales.length} entries</p>
             </CardContent>
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Receivables</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalSalesPending)}</div>
+              <p className="text-xs text-zinc-500">
+                Collected: {formatCurrencyINR(realizedSalesAmount)} ({formatNumberIN(collectionPercent, { maximumFractionDigits: 1 })}%)
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Purchase Payments Coverage</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-2xl font-bold text-emerald-300">
+                {formatNumberIN(paymentCoveragePercent, { maximumFractionDigits: 1 })}%
+              </div>
+              <p className="text-xs text-zinc-500">
+                Paid: {formatCurrencyINR(rtgsAmount + upiAmount)} / {formatCurrencyINR(totalPurchasesAmount)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-zinc-400">Stock Bags</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">
-                {formatNumberIN(stockBags, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
+            <CardContent className="space-y-2">
+              <div className={`text-2xl font-bold ${stockBagsNegative ? "text-[#ff6a3d]" : "text-[#ff8f6b]"}`}>
+                {formatNumberIN(stockBags, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </div>
+              <p className="text-xs text-zinc-500">
+                Purchased {formatNumberIN(totalPurchasedBags, { maximumFractionDigits: 0 })} | Sold {formatNumberIN(totalSoldBags, { maximumFractionDigits: 0 })}
+              </p>
             </CardContent>
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-zinc-400">Stock Weight</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">
-                {formatNumberIN(stockWeight, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                kg
+            <CardContent className="space-y-2">
+              <div className={`text-2xl font-bold ${stockWeightNegative ? "text-[#ff6a3d]" : "text-[#ff8f6b]"}`}>
+                {formatNumberIN(stockWeight, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
               </div>
+              <p className="text-xs text-zinc-500">
+                In {formatNumberIN(totalPurchasedNetWeight, { maximumFractionDigits: 2 })} | Out {formatNumberIN(totalSoldNetWeight, { maximumFractionDigits: 2 })}
+              </p>
             </CardContent>
           </Card>
-
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Bags Left</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className={`text-2xl font-bold ${gunnyLeftNegative ? "text-[#ff6a3d]" : "text-[#ff8f6b]"}`}>
+                {formatNumberIN(gunnyStock.leftBags, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-xs text-zinc-500">
+                Total {formatNumberIN(gunnyStock.totalBags, { maximumFractionDigits: 2 })} | Used {formatNumberIN(gunnyStock.usedBags, { maximumFractionDigits: 2 })}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
@@ -135,49 +167,14 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader>
-              <CardTitle className="text-base text-zinc-100">Payment Through</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>RTGS</span>
-                  <span className="font-medium">{formatCurrencyINR(rtgsAmount)}</span>
-                </div>
-                <div className="h-2 rounded-full bg-[#2a2d34]">
-                  <div
-                    className="h-2 rounded-full bg-[#ff6a3d]"
-                    style={{ width: `${totalPurchasesAmount ? (rtgsAmount / totalPurchasesAmount) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>UPI</span>
-                  <span className="font-medium">{formatCurrencyINR(upiAmount)}</span>
-                </div>
-                <div className="h-2 rounded-full bg-[#2a2d34]">
-                  <div
-                    className="h-2 rounded-full bg-[#ff8f6b]"
-                    style={{ width: `${totalPurchasesAmount ? (upiAmount / totalPurchasesAmount) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Pending</span>
-                  <span className="font-medium">{formatCurrencyINR(pendingAmount)}</span>
-                </div>
-                <div className="h-2 rounded-full bg-[#2a2d34]">
-                  <div
-                    className="h-2 rounded-full bg-[#ffb79e]"
-                    style={{ width: `${totalPurchasesAmount ? (pendingAmount / totalPurchasesAmount) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <DonutBreakdownChart
+            title="Payment Through"
+            slices={[
+              { label: "RTGS", value: rtgsAmount, color: "#ff6a3d" },
+              { label: "UPI", value: upiAmount, color: "#ff9b78" },
+              { label: "Pending", value: pendingAmount, color: "#7f8796" },
+            ]}
+          />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
@@ -187,7 +184,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               {salesTrend.length > 0 ? (
-                <PurchaseTrendChart data={salesTrend} />
+                <BarTrendChart data={salesTrend} barColor="#5b90ff" />
               ) : (
                 <p className="text-sm text-zinc-400">No sales data yet.</p>
               )}
@@ -211,6 +208,46 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Total Bags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatNumberIN(gunnyStock.totalBags, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Used Bags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatNumberIN(gunnyStock.usedBags, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+              <p className="text-xs text-zinc-500">Utilization: {formatNumberIN(gunnyUtilizationPercent, { maximumFractionDigits: 1 })}%</p>
+            </CardContent>
+          </Card>
+          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Gunny Bags Left</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${gunnyStock.leftBags >= 0 ? "text-[#ff8f6b]" : "text-[#ff6a3d]"}`}>
+                {formatNumberIN(gunnyStock.leftBags, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}
+              </div>
+            </CardContent>
+          </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-zinc-400">Average Bags / Purchase</CardTitle>
