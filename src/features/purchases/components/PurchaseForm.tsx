@@ -153,13 +153,17 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
   // Computed preview values
   const lessWeight = ((weight || 0) * (lessPercent || 0)) / 100;
   const netWeight = (weight || 0) - lessWeight;
-  const amount = netWeight * (rate || 0);
+  const amount = Number(((netWeight * (rate || 0)) / 100).toFixed(2));
   const finalTotal =
-    amount -
-    (bagLess || 0) +
-    (addAmount || 0) -
-    (cashPaid || 0) -
-    (upiPaid || 0);
+    Number(
+      (
+        amount -
+        (bagLess || 0) +
+        (addAmount || 0) -
+        (cashPaid || 0) -
+        (upiPaid || 0)
+      ).toFixed(2)
+    );
   const bagAvg = (bags || 0) > 0 ? netWeight / (bags || 1) : 0;
   const fieldClassName =
     "h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100 placeholder:text-zinc-500";
@@ -622,24 +626,28 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
               <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-zinc-500">Less Wt</span>
-                  <span className="text-base font-medium text-zinc-100">{lessWeight.toFixed(2)}</span>
+                  <span className="text-base font-medium text-zinc-100">{lessWeight.toFixed(0)}</span>
                 </div>
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-zinc-500">Net Wt</span>
-                  <span className="text-base font-medium text-zinc-100">{netWeight.toFixed(2)}</span>
+                  <span className="text-base font-medium text-zinc-100">{netWeight.toFixed(0)}</span>
                 </div>
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-zinc-500">Amount</span>
-                  <span className="text-base font-medium text-zinc-100">{formatCurrencyINR(amount)}</span>
+                  <span className="text-base font-medium text-zinc-100">
+                    {formatCurrencyINR(amount, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
                 </div>
                 <div>
                   <span className="block text-xs uppercase tracking-wide text-zinc-500">Bag Avg</span>
-                  <span className="text-base font-medium text-zinc-100">{bagAvg.toFixed(2)}</span>
+                  <span className="text-base font-medium text-zinc-100">{bagAvg.toFixed(0)}</span>
                 </div>
               </div>
               <div className="mt-3 border-t border-[#252932] pt-2">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">Final Total</p>
-                <p className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(finalTotal)}</p>
+                <p className="text-2xl font-bold text-[#ff8f6b]">
+                  {formatCurrencyINR(finalTotal, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </p>
               </div>
             </div>
 

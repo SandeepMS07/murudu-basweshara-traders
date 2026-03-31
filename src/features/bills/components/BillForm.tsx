@@ -68,12 +68,13 @@ export function BillForm({ initialData }: BillFormProps) {
   const paymentTermDays = watch("payment_term_days");
   const safeNetWeight = netWeight ?? 0;
   const safeRate = rate ?? 0;
+  const displayRate = safeRate * 100;
   const safeFreight = freight ?? 0;
   const safePaymentTermDays = paymentTermDays ?? 0;
 
   // Computed preview values
-  const amount = safeNetWeight * safeRate;
-  const finalAmount = amount - safeFreight;
+  const amount = Number(((safeNetWeight * safeRate) / 100).toFixed(2));
+  const finalAmount = Number((amount - safeFreight).toFixed(2));
 
   let dueDateString = "Invalid Date";
   let printDate = billDate;
@@ -320,7 +321,7 @@ export function BillForm({ initialData }: BillFormProps) {
                 </tr>
                 <tr>
                   <td>RATE</td>
-                  <td>{formatCurrencyINR(safeRate)}</td>
+                  <td>{formatCurrencyINR(displayRate)}</td>
                 </tr>
                 <tr>
                   <td>AMOUNT</td>

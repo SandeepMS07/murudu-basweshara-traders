@@ -42,6 +42,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
       : previewTotalText.length >= 10
         ? "bill-print-total-value-md"
         : "";
+  const previewRate = purchase.rate * 100;
 
   const handleDelete = () => {
     if (isManual) return;
@@ -275,9 +276,9 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                     <tr>
                       <td>RATE</td>
                       <td>
-                        {formatCurrencyINR(purchase.rate, {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
+                        {formatCurrencyINR(previewRate, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
                         })}
                       </td>
                     </tr>
@@ -455,21 +456,45 @@ export function createPurchaseColumns(
     {
       accessorKey: "weight",
       header: "WEIGHT",
+      cell: ({ row }) => {
+        const value = Number(row.getValue("weight"));
+        return formatNumberIN(value, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
+      },
     },
     {
       accessorKey: "less_weight",
       header: "LESS",
+      cell: ({ row }) => {
+        const value = Number(row.getValue("less_weight"));
+        return formatNumberIN(value, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
+      },
     },
     {
       accessorKey: "net_weight",
       header: "NET WEIGHT",
+      cell: ({ row }) => {
+        const value = Number(row.getValue("net_weight"));
+        return formatNumberIN(value, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
+      },
     },
     {
       accessorKey: "rate",
       header: "RATE",
       cell: ({ row }) => {
         const amount = Number(row.getValue("rate"));
-        return formatCurrencyINR(amount);
+        return formatCurrencyINR(amount / 100, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
       },
     },
     {
@@ -477,7 +502,10 @@ export function createPurchaseColumns(
       header: "AMOUNT",
       cell: ({ row }) => {
         const amount = Number(row.getValue("amount"));
-        return formatCurrencyINR(amount);
+        return formatCurrencyINR(amount, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
       },
     },
     {
@@ -485,7 +513,10 @@ export function createPurchaseColumns(
       header: "LESS",
       cell: ({ row }) => {
         const amount = Number(row.getValue("bag_less"));
-        return formatCurrencyINR(amount);
+        return formatCurrencyINR(amount, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
       },
     },
     {
@@ -493,7 +524,10 @@ export function createPurchaseColumns(
       header: "ADD",
       cell: ({ row }) => {
         const amount = Number(row.getValue("add_amount"));
-        return formatCurrencyINR(amount);
+        return formatCurrencyINR(amount, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
       },
     },
     {
@@ -501,7 +535,10 @@ export function createPurchaseColumns(
       header: "CASH",
       cell: ({ row }) => {
         const amount = Number(row.getValue("cash_paid"));
-        return formatCurrencyINR(amount);
+        return formatCurrencyINR(amount, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
       },
     },
     {
@@ -509,7 +546,10 @@ export function createPurchaseColumns(
       header: "PHONE PAY",
       cell: ({ row }) => {
         const amount = Number(row.getValue("upi_paid"));
-        return formatCurrencyINR(amount);
+        return formatCurrencyINR(amount, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
       },
     },
     {
@@ -517,7 +557,14 @@ export function createPurchaseColumns(
       header: "TOTAL AMOUNT",
       cell: ({ row }) => {
         const amount = Number(row.getValue("final_total"));
-        return <div className="font-medium">{formatCurrencyINR(amount)}</div>;
+        return (
+          <div className="font-medium">
+            {formatCurrencyINR(amount, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            })}
+          </div>
+        );
       },
     },
     {
@@ -581,7 +628,10 @@ export function createPurchaseColumns(
       header: "BAG AVG",
       cell: ({ row }) => {
         const avg = Number(row.getValue("bag_avg"));
-        return formatNumberIN(avg);
+        return formatNumberIN(avg, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
       },
     },
     {
