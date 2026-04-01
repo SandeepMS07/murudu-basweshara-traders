@@ -13,7 +13,7 @@ export function calculateSale(input: SaleInput, id: string): Sale {
   const flight = input.flight || 0;
   const factoryRate = input.factory_rate || 0;
 
-  const amount = round2(effectiveWeight * rate - flight);
+  const amount = round2(effectiveWeight * rate);
   const computedBagAvg = bags > 0 ? round2(netWeight / bags) : 0;
   const bagAvg = round2(input.bag_avg ?? computedBagAvg);
   const factoryAmount = round2(effectiveWeight * factoryRate);

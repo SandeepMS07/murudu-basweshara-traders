@@ -61,8 +61,7 @@ export function computeEffectiveSalePending(
   const allocatedBySaleId = new Map<string, number>();
   for (const sale of sales) {
     const explicit = explicitAllocatedBySaleId.get(sale.id) ?? 0;
-    const grossAmount = sale.amount + sale.flight;
-    const remaining = Math.max(grossAmount - explicit, 0);
+    const remaining = Math.max(sale.amount - explicit, 0);
     remainingBySaleId.set(sale.id, remaining);
     allocatedBySaleId.set(sale.id, Math.max(explicit, 0));
   }
@@ -134,8 +133,7 @@ export function computeEffectiveSalePending(
   const allocatedBySaleRecord: Record<string, number> = {};
   for (const sale of sales) {
     const allocated = allocatedBySaleId.get(sale.id) ?? 0;
-    const grossAmount = sale.amount + sale.flight;
-    pendingBySaleId[sale.id] = Math.max(grossAmount - allocated, 0);
+    pendingBySaleId[sale.id] = Math.max(sale.amount - allocated, 0);
     allocatedBySaleRecord[sale.id] = Math.max(allocated, 0);
   }
 

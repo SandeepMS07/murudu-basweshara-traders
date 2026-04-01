@@ -126,9 +126,8 @@ export function SaleForm({
     const factoryWeight = watched.factory_weight || 0;
     const effectiveWeight = factoryWeight > 0 ? factoryWeight : netWeight;
     const rate = watched.rate || 0;
-    const flight = watched.flight || 0;
     const factoryRate = 0;
-    const amount = effectiveWeight * rate - flight;
+    const amount = effectiveWeight * rate;
     const factoryAmount = effectiveWeight * factoryRate;
     const pendingAmount = amount - factoryAmount;
     return {

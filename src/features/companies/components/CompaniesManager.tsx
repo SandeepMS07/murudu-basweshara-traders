@@ -577,7 +577,7 @@ function SalesDetailsTable({
   pendingBySaleId: Record<string, number>;
 }) {
   const PAGE_SIZE = 8;
-  const totalAmount = sales.reduce((sum, sale) => sum + sale.amount + sale.flight, 0);
+  const totalAmount = sales.reduce((sum, sale) => sum + sale.amount, 0);
   const totalPending = sales.reduce((sum, sale) => sum + (pendingBySaleId[sale.id] ?? sale.pending_amount), 0);
   const totalBags = sales.reduce((sum, sale) => sum + sale.bags, 0);
   const [page, setPage] = useState(1);
@@ -733,7 +733,7 @@ function SalesDetailsTable({
                   </td>
                   <td className="px-3 py-2 text-right">{formatCurrencyINR(sale.rate)}</td>
                   <td className="px-3 py-2 text-right">
-                    {formatCurrencyINR(sale.amount + sale.flight)}
+                    {formatCurrencyINR(sale.amount)}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {formatCurrencyINR(pendingBySaleId[sale.id] ?? sale.pending_amount)}

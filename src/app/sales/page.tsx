@@ -60,7 +60,7 @@ export default async function SalesPage() {
 
   for (const sale of sales) {
     totalNetWeight += sale.net_weight;
-    totalAmount += sale.amount + sale.flight;
+    totalAmount += sale.amount;
   }
 
   for (const payment of companyPayments) {
