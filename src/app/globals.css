@@ -970,6 +970,15 @@ a[aria-disabled="true"] {
   border-top: 0;
 }
 
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @media print {
   @page purchase-sheet {
     size: A4 landscape;

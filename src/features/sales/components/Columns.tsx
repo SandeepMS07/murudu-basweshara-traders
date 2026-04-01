@@ -321,27 +321,34 @@ export function createSaleColumns(
     {
       accessorKey: "net_weight",
       header: "NET WEIGHT",
-      cell: ({ row }) => formatNumberIN(row.original.net_weight),
+      cell: ({ row }) =>
+        formatNumberIN(row.original.net_weight, { maximumFractionDigits: 0 }),
     },
     {
       accessorKey: "factory_weight",
       header: "FACTORY",
-      cell: ({ row }) => formatNumberIN(row.original.factory_weight),
+      cell: ({ row }) =>
+        formatNumberIN(row.original.factory_weight, { maximumFractionDigits: 0 }),
     },
     {
       accessorKey: "rate",
       header: "RATE",
-      cell: ({ row }) => formatNumberIN(row.original.rate),
+      cell: ({ row }) => formatNumberIN(row.original.rate, { maximumFractionDigits: 2 }),
     },
     {
       accessorKey: "flight",
       header: "FLIGHT",
-      cell: ({ row }) => formatNumberIN(row.original.flight),
+      cell: ({ row }) =>
+        formatNumberIN(row.original.flight, { maximumFractionDigits: 0 }),
     },
     {
       accessorKey: "amount",
       header: "AMOUNT",
-      cell: ({ row }) => formatCurrencyINR(row.original.amount),
+      cell: ({ row }) =>
+        formatCurrencyINR(row.original.amount, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }),
     },
     {
       accessorKey: "party",
@@ -361,6 +368,7 @@ export function createSaleColumns(
             pendingBySaleId[row.original.id] ?? row.original.pending_amount,
             0,
           ),
+          { minimumFractionDigits: 0, maximumFractionDigits: 0 }
         ),
       meta: {
         width: "170px",

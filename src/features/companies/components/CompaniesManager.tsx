@@ -219,15 +219,15 @@ export function CompaniesManager({
           </Button>
         </div>
 
-        <div className="mt-3 space-y-3">
-          <div className="overflow-x-auto">
-            <div className="inline-flex min-w-full gap-2">
-              {buyerCompanies.map((company) => (
-                <button
-                  key={company.id}
-                  type="button"
-                  onClick={() => setActiveBuyerId(company.id)}
-                  className={`rounded-md border px-3 py-2 text-sm transition ${
+          <div className="mt-3 space-y-3">
+            <div className="overflow-x-auto hide-scrollbar">
+              <div className="inline-flex min-w-max gap-2 whitespace-nowrap">
+                {buyerCompanies.map((company) => (
+                  <button
+                    key={company.id}
+                    type="button"
+                    onClick={() => setActiveBuyerId(company.id)}
+                    className={`rounded-md border px-3 py-2 text-sm transition ${
                     activeBuyer?.id === company.id
                       ? "border-[#ff6a3d] bg-[#2a1d1a] text-[#ffb39a]"
                       : "border-[#252932] bg-[#15171c] text-zinc-300 hover:text-zinc-100"

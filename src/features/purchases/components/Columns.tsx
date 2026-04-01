@@ -42,7 +42,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
       : previewTotalText.length >= 10
         ? "bill-print-total-value-md"
         : "";
-  const previewRate = purchase.rate * 100;
+  const previewRate = purchase.rate;
 
   const handleDelete = () => {
     if (isManual) return;
@@ -491,7 +491,7 @@ export function createPurchaseColumns(
       header: "RATE",
       cell: ({ row }) => {
         const amount = Number(row.getValue("rate"));
-        return formatCurrencyINR(amount / 100, {
+        return formatCurrencyINR(amount, {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });

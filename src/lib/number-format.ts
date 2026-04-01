@@ -18,9 +18,7 @@ export function formatNumberIN(
 
   const minCandidate = hasMin
     ? options!.minimumFractionDigits!
-    : hasMax
-      ? options!.maximumFractionDigits!
-      : 2;
+    : 0;
   const maxCandidate = hasMax ? options!.maximumFractionDigits! : 2;
 
   const minimumFractionDigits = Math.max(0, Math.min(20, Math.trunc(minCandidate)));
