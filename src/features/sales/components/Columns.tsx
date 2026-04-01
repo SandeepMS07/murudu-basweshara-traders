@@ -341,7 +341,8 @@ export function createSaleColumns(
     {
       accessorKey: "amount",
       header: "AMOUNT",
-      cell: ({ row }) => formatCurrencyINR(row.original.amount),
+      cell: ({ row }) =>
+        formatCurrencyINR(row.original.amount + row.original.flight),
     },
     {
       accessorKey: "party",

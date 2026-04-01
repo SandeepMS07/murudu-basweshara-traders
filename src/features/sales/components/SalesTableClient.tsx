@@ -74,9 +74,12 @@ export function SalesTableClient({
   const getRowClassName = useCallback(
     (sale: Sale) => {
       const status = getRowDueStatus(sale);
-      if (status === "overdue") return "bg-[#2a1111]/40 hover:bg-[#361616]/50";
-      if (status === "due_today") return "bg-[#2a2412]/40 hover:bg-[#352d16]/50";
-      if (status === "cleared") return "bg-[#102015]/30 hover:bg-[#16301f]/45";
+      if (status === "overdue")
+        return "bg-[#2a1111]/40 text-[#f5d3d3] hover:bg-[#361616]/50";
+      if (status === "due_today")
+        return "bg-[#2a2412]/40 text-[#f7e3b0] hover:bg-[#352d16]/50";
+      if (status === "cleared")
+        return "bg-[#102015]/30 text-[#c7f2d2] hover:bg-[#16301f]/45";
       return "";
     },
     [getRowDueStatus]
@@ -125,6 +128,9 @@ export function SalesTableClient({
         columns={columns}
         data={filteredData}
         exportFileName="sales_overview"
+        disablePagination
+        scrollToBottom
+        scrollContainerClassName="max-h-[70vh]"
         searchKey="party"
         searchPlaceholder="Filter by party or phone..."
         searchPredicate={(sale, query) => {

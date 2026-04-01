@@ -169,6 +169,15 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
     "h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100 placeholder:text-zinc-500";
   const [billNoChecking, setBillNoChecking] = useState(false);
   const billNoCheckSeqRef = useRef(0);
+  const [billNoText, setBillNoText] = useState(() => {
+    const initial = form.getValues("bill_no");
+    return initial ? String(initial) : "";
+  });
+
+  useEffect(() => {
+    const nextValue = billNo ? String(billNo) : "";
+    setBillNoText((prev) => (prev === nextValue ? prev : nextValue));
+  }, [billNo]);
 
   async function onSubmit(values: PurchaseFormValues) {
     setIsLoading(true);
@@ -289,14 +298,15 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
                         placeholder="Enter bill number"
                         className={fieldClassName}
                         {...field}
-                        value={field.value && field.value > 0 ? String(field.value) : ""}
+                        value={billNoText}
                         onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, "");
-                          if (!digits) {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          setBillNoText(raw);
+                          if (!raw) {
                             field.onChange(undefined);
                             return;
                           }
-                          const parsed = Number.parseInt(digits, 10);
+                          const parsed = Number.parseInt(raw, 10);
                           field.onChange(Number.isFinite(parsed) ? parsed : undefined);
                         }}
                       />

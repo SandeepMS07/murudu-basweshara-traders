@@ -602,6 +602,16 @@ function SalesDetailsTable({
     return addDays(saleDate, parseTermDays(sale.payment_terms));
   };
 
+  const totalOverduePending = sales.reduce((sum, sale) => {
+    const dueDate = getDueDate(sale);
+    if (!dueDate) return sum;
+    const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    if (dueStart.getTime() >= todayStart.getTime()) return sum;
+    const pending = pendingBySaleId[sale.id] ?? sale.pending_amount;
+    if (pending <= 0) return sum;
+    return sum + pending;
+  }, 0);
+
   const getRowDueStatus = (sale: Sale) => {
     const dueDate = getDueDate(sale);
     if (!dueDate) return "unknown" as const;
@@ -615,9 +625,12 @@ function SalesDetailsTable({
 
   const getRowClassName = (sale: Sale) => {
     const status = getRowDueStatus(sale);
-    if (status === "overdue") return "bg-[#2a1111]/40 hover:bg-[#361616]/50";
-    if (status === "due_today") return "bg-[#2a2412]/40 hover:bg-[#352d16]/50";
-    if (status === "cleared") return "bg-[#102015]/30 hover:bg-[#16301f]/45";
+    if (status === "overdue")
+      return "bg-[#2a1111]/40 text-[#f5d3d3] hover:bg-[#361616]/50";
+    if (status === "due_today")
+      return "bg-[#2a2412]/40 text-[#f7e3b0] hover:bg-[#352d16]/50";
+    if (status === "cleared")
+      return "bg-[#102015]/30 text-[#c7f2d2] hover:bg-[#16301f]/45";
     return "";
   };
 
@@ -661,7 +674,7 @@ function SalesDetailsTable({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Amount</div>
           <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalAmount)}</div>
@@ -669,6 +682,10 @@ function SalesDetailsTable({
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Pending</div>
           <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalPending)}</div>
+        </div>
+        <div className="rounded-md border border-[#3b1b1b] bg-[#2a1111]/40 p-2 text-sm">
+          <div className="text-zinc-300">Total Overdue</div>
+          <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalOverduePending)}</div>
         </div>
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Bags</div>

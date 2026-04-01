@@ -14,9 +14,9 @@ interface PurchasesTableClientProps {
 }
 
 const paymentRowStyles: Record<PaymentMethod, string> = {
-  RTGS: "bg-[#251810]/45 hover:bg-[#2f1d13]/55",
-  UPI: "bg-[#121d33]/45 hover:bg-[#162444]/55",
-  none: "bg-[#111214] hover:bg-[#17191f]",
+  RTGS: "bg-[#251810]/45 text-[#ffd7c7] hover:bg-[#2f1d13]/55",
+  UPI: "bg-[#121d33]/45 text-[#c7d7ff] hover:bg-[#162444]/55",
+  none: "bg-[#111214] text-zinc-200 hover:bg-[#17191f]",
 };
 
 const paymentBadgeStyles: Record<PaymentMethod, string> = {
@@ -168,6 +168,9 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
       columns={columns}
       data={data}
       exportFileName="purchases"
+      disablePagination
+      scrollToBottom
+      scrollContainerClassName="max-h-[70vh]"
       searchKey="name"
       searchPlaceholder="Filter by name or phone..."
       searchPredicate={(purchase, query) => {

@@ -17,13 +17,41 @@ import { computeEffectiveSalePending } from "@/features/companies/lib/payment-al
 
 export default async function SalesPage() {
   await requireAuth();
-  const [sales, buyerCompanies, issuerCompanies, companyPayments, allocations] = await Promise.all([
-    getSales(),
+  const sales = await getSales();
+  const [
+    buyerCompaniesResult,
+    issuerCompaniesResult,
+    companyPaymentsResult,
+    allocationsResult,
+  ] = await Promise.allSettled([
     getCompanies("buyer"),
     getCompanies("issuer"),
     getCompanyPayments(),
     getCompanyPaymentAllocations(),
   ]);
+
+  const buyerCompanies =
+    buyerCompaniesResult.status === "fulfilled" ? buyerCompaniesResult.value : [];
+  const issuerCompanies =
+    issuerCompaniesResult.status === "fulfilled" ? issuerCompaniesResult.value : [];
+  const companyPayments =
+    companyPaymentsResult.status === "fulfilled" ? companyPaymentsResult.value : [];
+  const allocations =
+    allocationsResult.status === "fulfilled" ? allocationsResult.value : [];
+
+  if (buyerCompaniesResult.status === "rejected") {
+    console.error("Failed to load buyer companies", buyerCompaniesResult.reason);
+  }
+  if (issuerCompaniesResult.status === "rejected") {
+    console.error("Failed to load issuer companies", issuerCompaniesResult.reason);
+  }
+  if (companyPaymentsResult.status === "rejected") {
+    console.error("Failed to load company payments", companyPaymentsResult.reason);
+  }
+  if (allocationsResult.status === "rejected") {
+    console.error("Failed to load company allocations", allocationsResult.reason);
+  }
+
   const activeIssuerCompanies = issuerCompanies.filter((company) => company.is_active);
 
   let totalNetWeight = 0;
@@ -32,14 +60,17 @@ export default async function SalesPage() {
 
   for (const sale of sales) {
     totalNetWeight += sale.net_weight;
-    totalAmount += sale.amount;
+    totalAmount += sale.amount + sale.flight;
   }
 
   for (const payment of companyPayments) {
     totalReceived += payment.amount;
   }
 
-  const { pendingBySaleId } = computeEffectiveSalePending(sales, companyPayments, allocations);
+  const pendingBySaleId =
+    companyPayments.length > 0 || allocations.length > 0
+      ? computeEffectiveSalePending(sales, companyPayments, allocations).pendingBySaleId
+      : {};
   let effectivePendingTotal = 0;
   for (const sale of sales) {
     effectivePendingTotal += pendingBySaleId[sale.id] ?? sale.pending_amount;

@@ -11,7 +11,7 @@ import {
   getFilteredRowModel,
   Row,
 } from "@tanstack/react-table";
-import { CSSProperties, ReactNode, useMemo, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportRowsToXlsx } from "@/lib/excel/client-export";
@@ -48,6 +48,9 @@ interface DataTableProps<TData, TValue> {
   toolbarRight?: ReactNode;
   exportFileName?: string;
   showExportButton?: boolean;
+  disablePagination?: boolean;
+  scrollToBottom?: boolean;
+  scrollContainerClassName?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -60,6 +63,9 @@ export function DataTable<TData, TValue>({
   toolbarRight,
   exportFileName = "table_export",
   showExportButton = true,
+  disablePagination = false,
+  scrollToBottom = false,
+  scrollContainerClassName,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -75,7 +81,7 @@ export function DataTable<TData, TValue>({
     data: filteredByPredicate,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: disablePagination ? undefined : getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onGlobalFilterChange: setGlobalFilter,
@@ -123,6 +129,18 @@ export function DataTable<TData, TValue>({
     });
   };
 
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!disablePagination || !scrollToBottom) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const raf = requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [disablePagination, scrollToBottom, filteredByPredicate.length]);
+
   return (
     <div className="space-y-4">
       {(searchKey || toolbarRight || showExportButton) && (
@@ -169,7 +187,14 @@ export function DataTable<TData, TValue>({
         </div>
       )}
 
-      <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-[#252932] bg-[#111214] text-zinc-100 shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+      <div
+        ref={scrollContainerRef}
+        className={cn(
+          "overflow-x-auto rounded-xl border border-[#252932] bg-[#111214] text-zinc-100 shadow-[0_12px_30px_rgba(0,0,0,0.3)]",
+          disablePagination ? "overflow-y-auto" : "overflow-y-hidden",
+          disablePagination ? scrollContainerClassName ?? "max-h-[70vh]" : "",
+        )}
+      >
         <Table className="min-w-max">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -253,30 +278,32 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       
-      <div className="flex items-center justify-end space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-          className="border-[#2a2d34] bg-[#17191f] text-zinc-300 hover:bg-[#1d2026] hover:text-zinc-100"
-        >
-          Previous
-        </Button>
-        <span className="flex items-center justify-center text-sm text-zinc-500">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-          className="border-[#2a2d34] bg-[#17191f] text-zinc-300 hover:bg-[#1d2026] hover:text-zinc-100"
-        >
-          Next
-        </Button>
-      </div>
+      {!disablePagination ? (
+        <div className="flex items-center justify-end space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="border-[#2a2d34] bg-[#17191f] text-zinc-300 hover:bg-[#1d2026] hover:text-zinc-100"
+          >
+            Previous
+          </Button>
+          <span className="flex items-center justify-center text-sm text-zinc-500">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="border-[#2a2d34] bg-[#17191f] text-zinc-300 hover:bg-[#1d2026] hover:text-zinc-100"
+          >
+            Next
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
