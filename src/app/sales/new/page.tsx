@@ -4,7 +4,7 @@ import { SaleForm } from "@/features/sales/components/SaleForm";
 import {
   getBuyerCompaniesForSales,
   getIssuerCompaniesForSales,
-  getNextSaleIdentifiers,
+  getNextSaleIdentifiersForDate,
 } from "@/features/sales/service/sale.service";
 
 export default async function NewSalePage() {
@@ -12,7 +12,7 @@ export default async function NewSalePage() {
   const [buyerCompanies, issuerCompanies, nextIds] = await Promise.all([
     getBuyerCompaniesForSales(),
     getIssuerCompaniesForSales(),
-    getNextSaleIdentifiers(),
+    getNextSaleIdentifiersForDate(new Date().toISOString().split("T")[0]),
   ]);
 
   return (

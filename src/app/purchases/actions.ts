@@ -54,7 +54,8 @@ export async function updatePurchasePaymentThroughAction(
 
 export async function checkPurchaseBillNoAvailabilityAction(
   billNo: number,
+  billDate: string,
   excludePurchaseId?: string
 ) {
-  return isPurchaseBillNoAvailable(billNo, excludePurchaseId);
+  return isPurchaseBillNoAvailable(billNo, billDate, excludePurchaseId);
 }

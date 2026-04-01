@@ -5,7 +5,8 @@ import { getNextPurchaseBillNoPreview } from "@/features/purchases/service/purch
 
 export default async function NewPurchasePage() {
   await requireAuth();
-  const nextBillNo = await getNextPurchaseBillNoPreview();
+  const today = new Date().toISOString().split("T")[0];
+  const nextBillNo = await getNextPurchaseBillNoPreview(today);
 
   return (
     <AppShell>

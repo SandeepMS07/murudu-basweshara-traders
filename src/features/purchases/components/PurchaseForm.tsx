@@ -136,6 +136,7 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
 
   const { watch } = form;
   const billNo = watch("bill_no");
+  const billDate = watch("date");
   const weight = watch("weight");
   const bags = watch("bags");
   const lessPercent = watch("less_percent");
@@ -212,7 +213,9 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
 
   useEffect(() => {
     const candidate = Number(billNo);
+    const dateForCheck = billDate || "";
     if (!Number.isInteger(candidate) || candidate <= 0) return;
+    if (!dateForCheck) return;
 
     const seq = ++billNoCheckSeqRef.current;
     const timer = window.setTimeout(async () => {
@@ -222,6 +225,7 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
         // from overriding the latest user input state.
         const available = await checkPurchaseBillNoAvailabilityAction(
           candidate,
+          dateForCheck,
           isEditing ? initialData?.id : undefined
         );
         if (billNoCheckSeqRef.current !== seq) return;
@@ -246,7 +250,7 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [billNo, form, initialData?.id, isEditing]);
+  }, [billNo, billDate, form, initialData?.id, isEditing]);
 
   return (
     <Card className="mx-auto w-full max-w-6xl gap-0 py-0 border border-[#1f2229] bg-[#111214] text-zinc-100 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">

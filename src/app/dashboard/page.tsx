@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { addDays, isValid, parseISO } from "date-fns";
 import { requireAuth } from "@/features/auth/lib/session";
 import { AppShell } from "@/components/layout/AppShell";
 import { getPurchases } from "@/features/purchases/service/purchase.service";
@@ -46,6 +47,45 @@ export default async function DashboardPage() {
     .map(([date, amount]) => ({ date, amount }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-7);
+
+  const parseTermDays = (terms: string | null | undefined) => {
+    const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return parsed;
+  };
+
+  const getDueDate = (saleDate: string, terms: string | null | undefined) => {
+    const parsed = parseISO(saleDate);
+    if (!isValid(parsed)) return null;
+    return addDays(parsed, parseTermDays(terms));
+  };
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const partySummary = new Map<
+    string,
+    { pending: number; overdue: number }
+  >();
+
+  for (const sale of sales) {
+    const party = (sale.party || "Unknown").trim() || "Unknown";
+    const pending = sale.pending_amount || 0;
+    const dueDate = getDueDate(sale.sale_date, sale.payment_terms);
+    const dueStart = dueDate
+      ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+      : null;
+    const isOverdue = !!dueStart && dueStart.getTime() < todayStart.getTime() && pending > 0;
+
+    const existing = partySummary.get(party) ?? { pending: 0, overdue: 0 };
+    partySummary.set(party, {
+      pending: existing.pending + pending,
+      overdue: existing.overdue + (isOverdue ? pending : 0),
+    });
+  }
+
+  const partySummaryRows = [...partySummary.entries()]
+    .map(([party, totals]) => ({ party, ...totals }))
+    .sort((a, b) => b.pending - a.pending);
 
   return (
     <AppShell>
@@ -195,16 +235,37 @@ export default async function DashboardPage() {
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader>
-              <CardTitle className="text-base text-zinc-100">Sales Summary</CardTitle>
+              <CardTitle className="text-base text-zinc-100">Party Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-md border border-[#2a2d34] bg-[#15171c] p-3">
-                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Sales Amount</p>
-                <p className="mt-1 text-xl font-semibold text-[#ff8f6b]">{formatCurrencyINR(totalSalesAmount)}</p>
+            <CardContent className="flex h-72 flex-col gap-3">
+              <div className="grid grid-cols-3 gap-2 rounded-md border border-[#2a2d34] bg-[#15171c] px-3 py-2 text-xs uppercase tracking-[0.14em] text-zinc-500">
+                <span>Party</span>
+                <span className="text-right">Pending</span>
+                <span className="text-right">Overdue</span>
               </div>
-              <div className="rounded-md border border-[#2a2d34] bg-[#15171c] p-3">
-                <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Pending Amount</p>
-                <p className="mt-1 text-xl font-semibold text-[#ff8f6b]">{formatCurrencyINR(totalSalesPending)}</p>
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {partySummaryRows.length === 0 ? (
+                  <div className="rounded-md border border-[#2a2d34] bg-[#15171c] p-3 text-sm text-zinc-400">
+                    No party data yet.
+                  </div>
+                ) : (
+                  partySummaryRows.map((row) => (
+                    <div
+                      key={row.party}
+                      className="grid grid-cols-3 gap-2 rounded-md border border-[#2a2d34] bg-[#15171c] px-3 py-2 text-sm"
+                    >
+                      <span className="truncate text-zinc-200" title={row.party}>
+                        {row.party}
+                      </span>
+                      <span className="text-right font-semibold text-zinc-100">
+                        {formatCurrencyINR(row.pending)}
+                      </span>
+                      <span className="text-right font-semibold text-[#ff8f6b]">
+                        {formatCurrencyINR(row.overdue)}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

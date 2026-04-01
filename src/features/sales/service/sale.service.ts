@@ -11,6 +11,7 @@ import {
   getCompanies,
   upsertBuyerCompanyByName,
 } from "@/features/companies/service/company.service";
+import { getFinancialYearBounds } from "@/lib/financial-year";
 
 type SaleRow = {
   id: string;
@@ -245,10 +246,38 @@ export async function createSale(input: SaleInput): Promise<Sale> {
     throw new Error("Forbidden");
   }
 
+  const billNumber = normalizeBillNumber(input.bill_number);
+  if (!billNumber) {
+    throw new Error("Bill number is required");
+  }
+
+  const { start, end } = getFinancialYearBounds(input.sale_date || new Date());
+  const { data: existingBill, error: billError } = await supabaseServer
+    .from("sales")
+    .select("id")
+    .eq("bill_number", billNumber)
+    .gte("sale_date", start)
+    .lte("sale_date", end)
+    .limit(1)
+    .maybeSingle();
+
+  if (billError && billError.code !== "PGRST116") {
+    throw new Error(`Failed to validate bill number: ${billError.message}`);
+  }
+  if (existingBill) {
+    throw new Error("Bill number already exists for this financial year");
+  }
+
   const resolved = await resolvePartyFields(input);
   const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
-    { ...input, ...resolved, issuer_company_id: issuerCompanyId, source: "manual" },
+    {
+      ...input,
+      ...resolved,
+      issuer_company_id: issuerCompanyId,
+      bill_number: billNumber,
+      source: "manual",
+    },
     crypto.randomUUID()
   );
   const payload = {
@@ -280,6 +309,29 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
     throw new Error("Sale not found");
   }
 
+  const billNumber = normalizeBillNumber(input.bill_number);
+  if (!billNumber) {
+    throw new Error("Bill number is required");
+  }
+
+  const { start, end } = getFinancialYearBounds(input.sale_date || new Date());
+  const { data: existingBill, error: billError } = await supabaseServer
+    .from("sales")
+    .select("id")
+    .eq("bill_number", billNumber)
+    .gte("sale_date", start)
+    .lte("sale_date", end)
+    .neq("id", id)
+    .limit(1)
+    .maybeSingle();
+
+  if (billError && billError.code !== "PGRST116") {
+    throw new Error(`Failed to validate bill number: ${billError.message}`);
+  }
+  if (existingBill) {
+    throw new Error("Bill number already exists for this financial year");
+  }
+
   const resolved = await resolvePartyFields(input);
   const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
@@ -287,6 +339,7 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
       ...input,
       ...resolved,
       issuer_company_id: issuerCompanyId,
+      bill_number: billNumber,
       source: existing.source,
     },
     id
@@ -346,10 +399,13 @@ export async function upsertSaleByBillNumber(input: SaleInput): Promise<Sale> {
     throw new Error("Bill number is required");
   }
 
+  const { start, end } = getFinancialYearBounds(input.sale_date || new Date());
   const { data: existing, error: existingError } = await supabaseServer
     .from("sales")
     .select("id, source")
     .eq("bill_number", billNumber)
+    .gte("sale_date", start)
+    .lte("sale_date", end)
     .maybeSingle();
 
   if (existingError) {
@@ -635,6 +691,16 @@ export async function getNextSaleIdentifiers(): Promise<{
   nextSlNo: number;
   nextBillNumber: string;
 }> {
+  return getNextSaleIdentifiersForDate(new Date().toISOString().split("T")[0]);
+}
+
+export async function getNextSaleIdentifiersForDate(
+  saleDate: string
+): Promise<{
+  nextSlNo: number;
+  nextBillNumber: string;
+}> {
+  const { start, end } = getFinancialYearBounds(saleDate || new Date());
   const [{ data: slRows, error: slError }, { data: billRows, error: billError }] =
     await Promise.all([
       supabaseServer
@@ -643,7 +709,11 @@ export async function getNextSaleIdentifiers(): Promise<{
         .not("sl_no", "is", null)
         .order("sl_no", { ascending: false })
         .limit(1),
-      supabaseServer.from("sales").select("bill_number"),
+      supabaseServer
+        .from("sales")
+        .select("bill_number")
+        .gte("sale_date", start)
+        .lte("sale_date", end),
     ]);
 
   if (slError) {

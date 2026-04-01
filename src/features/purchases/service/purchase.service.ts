@@ -6,6 +6,7 @@ import {
 import { calculatePurchase } from "../utils/calculations";
 import { requireAuth } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
+import { getFinancialYearBounds } from "@/lib/financial-year";
 
 type PurchaseRow = {
   id: string;
@@ -69,11 +70,16 @@ function toPurchase(row: PurchaseRow): Purchase {
   };
 }
 
-export async function getNextPurchaseBillNoPreview(): Promise<number> {
+export async function getNextPurchaseBillNoPreview(billDate?: string): Promise<number> {
   await requireAuth();
+  const { start, end } = getFinancialYearBounds(
+    billDate && billDate.trim() ? billDate : new Date()
+  );
   const { data, error } = await supabaseServer
     .from("purchases")
     .select("bill_no")
+    .gte("date", start)
+    .lte("date", end)
     .order("bill_no", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
@@ -117,14 +123,20 @@ export async function getPurchaseById(id: string): Promise<Purchase | null> {
 
 export async function isPurchaseBillNoAvailable(
   billNo: number,
+  billDate: string,
   excludePurchaseId?: string
 ): Promise<boolean> {
   await requireAuth();
+  const { start, end } = getFinancialYearBounds(
+    billDate && billDate.trim() ? billDate : new Date()
+  );
 
   let query = supabaseServer
     .from("purchases")
     .select("id")
     .eq("bill_no", billNo)
+    .gte("date", start)
+    .lte("date", end)
     .limit(1);
 
   if (excludePurchaseId) {
