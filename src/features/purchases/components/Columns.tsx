@@ -277,7 +277,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                       <td>RATE</td>
                       <td>
                         {formatCurrencyINR(previewRate, {
-                          minimumFractionDigits: 2,
+                          minimumFractionDigits: 0,
                           maximumFractionDigits: 2,
                         })}
                       </td>
@@ -452,6 +452,13 @@ export function createPurchaseColumns(
     {
       accessorKey: "bags",
       header: "BAGS",
+      cell: ({ row }) => {
+        const value = Number(row.getValue("bags"));
+        return formatNumberIN(value, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
+      },
     },
     {
       accessorKey: "weight",
@@ -492,7 +499,7 @@ export function createPurchaseColumns(
       cell: ({ row }) => {
         const amount = Number(row.getValue("rate"));
         return formatCurrencyINR(amount, {
-          minimumFractionDigits: 2,
+          minimumFractionDigits: 0,
           maximumFractionDigits: 2,
         });
       },

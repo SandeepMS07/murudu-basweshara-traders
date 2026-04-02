@@ -12,26 +12,42 @@ export default async function DashboardPage() {
   const purchases = await getPurchases();
   const sales = await getSales();
 
-  const totalPurchasesAmount = purchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const totalSalesAmount = sales.reduce((acc, s) => acc + (s.amount || 0), 0);
-  const totalSalesPending = sales.reduce((acc, s) => acc + (s.pending_amount || 0), 0);
-  const totalPurchasedBags = purchases.reduce((acc, p) => acc + Number(p.bags || 0), 0);
-  const totalSoldBags = sales.reduce((acc, s) => acc + Number(s.bags || 0), 0);
+  const getFinancialYearBoundsIST = () => {
+    const nowIst = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+    const year = nowIst.getFullYear();
+    const month = nowIst.getMonth();
+    const startYear = month >= 3 ? year : year - 1;
+    const start = `${startYear}-04-01`;
+    const end = `${startYear + 1}-04-01`;
+    return { start, end };
+  };
+
+  const { start: fyStart, end: fyEnd } = getFinancialYearBoundsIST();
+  const fyPurchases = purchases.filter((p) => p.date >= fyStart && p.date < fyEnd);
+  const fySales = sales.filter((s) => s.sale_date >= fyStart && s.sale_date < fyEnd);
+
+  const totalPurchasesAmount = fyPurchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
+  const totalSalesAmount = fySales.reduce((acc, s) => acc + (s.amount || 0), 0);
+  const totalSalesPending = fySales.reduce((acc, s) => acc + (s.pending_amount || 0), 0);
+  const totalPurchasedBags = fyPurchases.reduce((acc, p) => acc + Number(p.bags || 0), 0);
+  const totalSoldBags = fySales.reduce((acc, s) => acc + Number(s.bags || 0), 0);
   const stockBags = totalPurchasedBags - totalSoldBags;
-  const totalPurchasedNetWeight = purchases.reduce((acc, p) => acc + Number(p.net_weight || 0), 0);
-  const totalSoldNetWeight = sales.reduce((acc, s) => acc + Number(s.net_weight || 0), 0);
+  const totalPurchasedNetWeight = fyPurchases.reduce((acc, p) => acc + Number(p.net_weight || 0), 0);
+  const totalSoldNetWeight = fySales.reduce((acc, s) => acc + Number(s.net_weight || 0), 0);
   const stockWeight = totalPurchasedNetWeight - totalSoldNetWeight;
-  const rtgsAmount = purchases
+  const rtgsAmount = fyPurchases
     .filter((p) => p.payment_through === "RTGS")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const upiAmount = purchases
+  const upiAmount = fyPurchases
     .filter((p) => p.payment_through === "UPI")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const pendingAmount = purchases
+  const pendingAmount = fyPurchases
     .filter((p) => p.payment_through === "none")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
   const byDate = new Map<string, number>();
-  for (const p of purchases) {
+  for (const p of fyPurchases) {
     byDate.set(p.date, (byDate.get(p.date) || 0) + p.final_total);
   }
   const trend = [...byDate.entries()]
@@ -40,7 +56,7 @@ export default async function DashboardPage() {
     .slice(-10);
 
   const salesByDate = new Map<string, number>();
-  for (const sale of sales) {
+  for (const sale of fySales) {
     salesByDate.set(sale.sale_date, (salesByDate.get(sale.sale_date) || 0) + sale.amount);
   }
   const salesTrend = [...salesByDate.entries()]
@@ -67,7 +83,7 @@ export default async function DashboardPage() {
     { pending: number; overdue: number }
   >();
 
-  for (const sale of sales) {
+  for (const sale of fySales) {
     const party = (sale.party || "Unknown").trim() || "Unknown";
     const pending = sale.pending_amount || 0;
     const dueDate = getDueDate(sale.sale_date, sale.payment_terms);
@@ -95,23 +111,17 @@ export default async function DashboardPage() {
           <p className="text-zinc-500">Welcome back, {user.email} ({user.role})</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">Total Purchases</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{purchases.length}</div>
-              <p className="text-xs text-zinc-500">Entries in workbook</p>
-            </CardContent>
-          </Card>
-
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-zinc-400">Total Purchase Amount</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalPurchasesAmount)}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatCurrencyINR(totalPurchasesAmount, {
+                  maximumFractionDigits: 0,
+                })}
+              </div>
             </CardContent>
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
@@ -119,7 +129,7 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium text-zinc-400">Total Sales</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{sales.length}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{fySales.length}</div>
               <p className="text-xs text-zinc-500">Entries in BILL</p>
             </CardContent>
           </Card>
@@ -128,7 +138,11 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium text-zinc-400">Total Sales Amount</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{formatCurrencyINR(totalSalesAmount)}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">
+                {formatCurrencyINR(totalSalesAmount, {
+                  maximumFractionDigits: 0,
+                })}
+              </div>
             </CardContent>
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
@@ -151,8 +165,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatNumberIN(stockWeight, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
                 })}{" "}
                 kg
               </div>
@@ -183,7 +197,9 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>RTGS</span>
-                  <span className="font-medium">{formatCurrencyINR(rtgsAmount)}</span>
+                  <span className="font-medium">
+                    {formatCurrencyINR(rtgsAmount, { maximumFractionDigits: 0 })}
+                  </span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
@@ -195,7 +211,9 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>UPI</span>
-                  <span className="font-medium">{formatCurrencyINR(upiAmount)}</span>
+                  <span className="font-medium">
+                    {formatCurrencyINR(upiAmount, { maximumFractionDigits: 0 })}
+                  </span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
@@ -207,7 +225,9 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>Pending</span>
-                  <span className="font-medium">{formatCurrencyINR(pendingAmount)}</span>
+                  <span className="font-medium">
+                    {formatCurrencyINR(pendingAmount, { maximumFractionDigits: 0 })}
+                  </span>
                 </div>
                 <div className="h-2 rounded-full bg-[#2a2d34]">
                   <div
@@ -258,10 +278,10 @@ export default async function DashboardPage() {
                         {row.party}
                       </span>
                       <span className="text-right font-semibold text-zinc-100">
-                        {formatCurrencyINR(row.pending)}
+                        {formatCurrencyINR(row.pending, { maximumFractionDigits: 0 })}
                       </span>
                       <span className="text-right font-semibold text-[#ff8f6b]">
-                        {formatCurrencyINR(row.overdue)}
+                        {formatCurrencyINR(row.overdue, { maximumFractionDigits: 0 })}
                       </span>
                     </div>
                   ))
@@ -279,8 +299,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatNumberIN(
-                  purchases.reduce((acc, p) => acc + p.bags, 0) / Math.max(purchases.length, 1),
-                  { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                  fyPurchases.reduce((acc, p) => acc + p.bags, 0) / Math.max(fyPurchases.length, 1),
+                  { minimumFractionDigits: 0, maximumFractionDigits: 0 }
                 )}
               </div>
             </CardContent>
@@ -292,8 +312,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatNumberIN(
-                  purchases.reduce((acc, p) => acc + p.net_weight, 0) / Math.max(purchases.length, 1),
-                  { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                  fyPurchases.reduce((acc, p) => acc + p.net_weight, 0) / Math.max(fyPurchases.length, 1),
+                  { minimumFractionDigits: 0, maximumFractionDigits: 0 }
                 )}
               </div>
             </CardContent>
@@ -305,7 +325,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatCurrencyINR(
-                  purchases.reduce((acc, p) => acc + p.rate, 0) / Math.max(purchases.length, 1)
+                  fyPurchases.reduce((acc, p) => acc + p.rate, 0) / Math.max(fyPurchases.length, 1),
+                  { maximumFractionDigits: 0 }
                 )}
               </div>
             </CardContent>

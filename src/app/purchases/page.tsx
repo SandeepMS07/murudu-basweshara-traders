@@ -62,7 +62,11 @@ export default async function PurchasesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatNumberIN(totals.weight)} kg
+              {formatNumberIN(totals.weight, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}{" "}
+              kg
             </p>
           </CardContent>
         </Card>
@@ -72,7 +76,9 @@ export default async function PurchasesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatCurrencyINR(totals.amount)}
+              {formatCurrencyINR(totals.amount, {
+                maximumFractionDigits: 0,
+              })}
             </p>
           </CardContent>
         </Card>

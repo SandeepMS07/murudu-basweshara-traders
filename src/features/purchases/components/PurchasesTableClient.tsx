@@ -194,7 +194,9 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
                 <span className="font-semibold">{method === "none" ? "None" : method}</span>
                 <span className="text-zinc-300/90">• {paymentLegend[method].count}</span>
                 <span className="hidden text-zinc-200/90 md:inline">
-                  {formatCurrencyINR(paymentLegend[method].amount)}
+                  {formatCurrencyINR(paymentLegend[method].amount, {
+                    maximumFractionDigits: 0,
+                  })}
                 </span>
               </div>
             ))}

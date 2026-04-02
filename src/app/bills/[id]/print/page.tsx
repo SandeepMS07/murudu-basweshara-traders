@@ -56,7 +56,7 @@ export default async function BillPrintPage({
   const lessWeight = purchase?.less_weight ?? 0;
   const netWeight = bill.net_weight;
   const rate = bill.rate;
-  const displayRate = rate * 100;
+  const displayRate = rate;
   const lineAmount = bill.amount;
   const summaryAmount = purchase ? purchase.amount : bill.amount;
   const summaryLess = purchase ? purchase.bag_less : bill.freight;
@@ -64,8 +64,7 @@ export default async function BillPrintPage({
   const summaryExtra = purchase ? purchase.add_amount : 0;
   const summaryTotal = purchase ? purchase.final_total : bill.final_amount;
   const summaryTotalText = formatCurrencyINR(summaryTotal, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   });
   const totalValueSizeClass =
     summaryTotalText.length >= 12
@@ -147,8 +146,7 @@ export default async function BillPrintPage({
                 <td>WEIGHT</td>
                 <td>
                   {formatNumberIN(weight, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 0,
                   })}
                 </td>
               </tr>
@@ -156,8 +154,7 @@ export default async function BillPrintPage({
                 <td>LESS</td>
                 <td>
                   {formatNumberIN(lessWeight, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 0,
                   })}
                 </td>
               </tr>
@@ -165,8 +162,7 @@ export default async function BillPrintPage({
                 <td>NET WEIGHT</td>
                 <td>
                   {formatNumberIN(netWeight, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 0,
                   })}
                 </td>
               </tr>
@@ -174,7 +170,7 @@ export default async function BillPrintPage({
                 <td>RATE</td>
                 <td>
                   {formatCurrencyINR(displayRate, {
-                    minimumFractionDigits: 2,
+                    minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
                   })}
                 </td>
@@ -183,8 +179,7 @@ export default async function BillPrintPage({
                 <td>AMOUNT</td>
                 <td>
                   {formatCurrencyINR(lineAmount, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 0,
                   })}
                 </td>
               </tr>
@@ -213,8 +208,7 @@ export default async function BillPrintPage({
                   <td>AMOUNT</td>
                   <td>
                     {formatCurrencyINR(summaryAmount, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 0,
                     })}
                   </td>
                 </tr>
@@ -222,8 +216,7 @@ export default async function BillPrintPage({
                   <td>BAG LESS</td>
                   <td>
                     {formatCurrencyINR(summaryLess, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 0,
                     })}
                   </td>
                 </tr>
@@ -231,8 +224,7 @@ export default async function BillPrintPage({
                   <td>CASH</td>
                   <td>
                     {formatCurrencyINR(summaryCash, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 0,
                     })}
                   </td>
                 </tr>
@@ -240,8 +232,7 @@ export default async function BillPrintPage({
                   <td>EXTRA</td>
                   <td>
                     {formatCurrencyINR(summaryExtra, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
+                      maximumFractionDigits: 0,
                     })}
                   </td>
                 </tr>

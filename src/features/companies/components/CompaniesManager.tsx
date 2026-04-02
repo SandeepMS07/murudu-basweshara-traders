@@ -284,7 +284,7 @@ export function CompaniesManager({
                   payments={activeBuyerPayments}
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
                   totalAmount={activeBuyerSales.reduce(
-                    (sum, sale) => sum + sale.amount + sale.flight,
+                    (sum, sale) => sum + sale.amount,
                     0
                   )}
                   onCreate={(payment, createdAllocations) => {
