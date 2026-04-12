@@ -252,7 +252,7 @@ input[type="number"] {
 
 .bill-print-logo-image {
   width: auto;
-  height: 84px;
+  height: 190px;
   object-fit: contain;
   display: block;
   background: #ffffff;
@@ -333,9 +333,22 @@ input[type="number"] {
   color: #475569;
 }
 
+.bill-print-info-left .bill-print-contact {
+  display: grid;
+  grid-template-columns: 120px 8px 1fr;
+  column-gap: 6px;
+  align-items: baseline;
+}
+
 .bill-print-info-right {
   padding: 10px 12px 8px;
 }
+
+.bill-print-info-phone {
+  grid-template-columns: 14px 30% 56%;
+  align-items: baseline;
+}
+
 
 .bill-print-kv {
   display: grid;

@@ -111,9 +111,14 @@ export default async function BillPrintPage({
             <div className="bill-print-info-left">
               <div className="bill-print-yard">APMC Yard</div>
               <div>Honnali</div>
-              <div>Harish Putta :- 9019800731</div>
-              <div>
-                Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398
+
+              <div className="bill-print-info-phone">
+                <span className="bill-print-icon"></span>
+                <span>Harish Putta</span> <strong>: 9019800731</strong>
+              </div>
+              <div className="bill-print-info-phone">
+                <span className="bill-print-icon"></span>
+                <span>Jagadish</span> <strong>: 7795953398</strong>
               </div>
             </div>
             <div className="bill-print-info-right">

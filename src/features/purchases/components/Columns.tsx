@@ -213,9 +213,13 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                   <div className="bill-print-info-left">
                     <div className="bill-print-yard">APMC Yard</div>
                     <div>Honnali</div>
-                    <div>Harish Putta :- 9019800731</div>
-                    <div>
-                      Jagadish&nbsp;&nbsp;&nbsp;&nbsp;:-&nbsp;&nbsp;7795953398
+                    <div className="bill-print-info-phone">
+                      <span className="bill-print-icon"></span>
+                      <span>Harish Putta</span> <strong>: 9019800731</strong>
+                    </div>
+                    <div className="bill-print-info-phone">
+                      <span className="bill-print-icon"></span>
+                      <span>Jagadish</span> <strong>: 7795953398</strong>
                     </div>
                   </div>
                   <div className="bill-print-info-right">
@@ -406,6 +410,7 @@ export interface PurchaseColumnOptions {
 const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [
   { label: "RTGS", value: "RTGS" },
   { label: "UPI", value: "UPI" },
+  { label: "Cash", value: "CASH" },
   { label: "None", value: "none" },
 ];
 
@@ -621,13 +626,6 @@ export function createPurchaseColumns(
             className="w-full cursor-pointer rounded border border-[#2a2d34] bg-[#17191f] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
           />
         );
-      },
-    },
-    {
-      id: "mode",
-      header: "MODE",
-      cell: ({ row }) => {
-        return String(row.original.source || "").toUpperCase();
       },
     },
     {

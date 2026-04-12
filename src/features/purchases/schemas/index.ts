@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const paymentMethodEnum = z.enum(["RTGS", "UPI", "none"]);
+const paymentMethodEnum = z.enum(["RTGS", "UPI", "CASH", "none"]);
 export type PaymentMethod = z.infer<typeof paymentMethodEnum>;
 
 const normalizedMobile = z

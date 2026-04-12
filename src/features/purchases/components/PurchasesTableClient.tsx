@@ -16,12 +16,14 @@ interface PurchasesTableClientProps {
 const paymentRowStyles: Record<PaymentMethod, string> = {
   RTGS: "bg-[#251810]/45 text-[#ffd7c7] hover:bg-[#2f1d13]/55",
   UPI: "bg-[#121d33]/45 text-[#c7d7ff] hover:bg-[#162444]/55",
+  CASH: "bg-[#1f1710]/45 text-[#f2d5b5] hover:bg-[#281c12]/55",
   none: "bg-[#111214] text-zinc-200 hover:bg-[#17191f]",
 };
 
 const paymentBadgeStyles: Record<PaymentMethod, string> = {
   RTGS: "border-[#ff8f6b]/40 bg-[#ff8f6b]/12 text-[#ffb295]",
   UPI: "border-[#3b82f6]/45 bg-[#1d4ed8]/18 text-[#93c5fd]",
+  CASH: "border-[#f59e0b]/45 bg-[#b45309]/15 text-[#fcd34d]",
   none: "border-[#4b5563]/45 bg-[#2a2f3a]/40 text-[#d1d5db]",
 };
 
@@ -151,6 +153,7 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
     const summary: Record<PaymentMethod, { count: number; amount: number }> = {
       RTGS: { count: 0, amount: 0 },
       UPI: { count: 0, amount: 0 },
+      CASH: { count: 0, amount: 0 },
       none: { count: 0, amount: 0 },
     };
 
@@ -185,7 +188,7 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
       toolbarRight={
         <div className="w-full p-0 xl:ml-auto xl:flex xl:justify-end">
           <div className="flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible xl:pb-0">
-            {(["RTGS", "UPI", "none"] as const).map((method) => (
+            {(["RTGS", "UPI", "CASH", "none"] as const).map((method) => (
               <div
                 key={method}
                 className={`inline-flex shrink-0 items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs ${paymentBadgeStyles[method]}`}
