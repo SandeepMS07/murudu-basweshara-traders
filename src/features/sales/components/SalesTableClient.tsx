@@ -3,7 +3,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { addDays, isValid, parseISO } from "date-fns";
 
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
+import { Button } from "@/components/ui/button";
 import { createSaleColumns } from "@/features/sales/components/Columns";
 import { Sale } from "@/features/sales/schemas";
 import { Company } from "@/features/companies/schemas";
@@ -13,6 +16,7 @@ interface SalesTableClientProps {
   buyerCompanies: Company[];
   issuerCompanies: Company[];
   pendingBySaleId: Record<string, number>;
+  addSaleHref?: string;
 }
 
 export function SalesTableClient({
@@ -20,6 +24,7 @@ export function SalesTableClient({
   buyerCompanies,
   issuerCompanies,
   pendingBySaleId,
+  addSaleHref,
 }: SalesTableClientProps) {
   const [selectedBuyerId, setSelectedBuyerId] = useState("");
   const buyerPhoneById = useMemo(
@@ -85,22 +90,33 @@ export function SalesTableClient({
     [getRowDueStatus]
   );
 
-  const toolbarRight = (
-    <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
-      <div className="flex flex-wrap items-center gap-2 lg:mr-auto">
-        <div className="inline-flex items-center gap-2 rounded-md border border-[#3b1b1b] bg-[#2a1111]/40 px-2 py-1 text-xs text-zinc-200">
+  const toolbarRight = null;
+
+  const toolbarFarRight = addSaleHref ? (
+    <Link href={addSaleHref} className="w-full sm:w-auto">
+      <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
+        <Plus className="mr-2 h-4 w-4" />
+        Add Sale
+      </Button>
+    </Link>
+  ) : null;
+
+  const toolbarBelow = (
+    <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#3b1b1b] bg-[#2a1111]/40 px-2 py-1 text-xs text-zinc-200">
           <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
           Overdue (date crossed)
         </div>
-        <div className="inline-flex items-center gap-2 rounded-md border border-[#3d3418] bg-[#2a2412]/40 px-2 py-1 text-xs text-zinc-200">
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#3d3418] bg-[#2a2412]/40 px-2 py-1 text-xs text-zinc-200">
           <span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
           Due Today
         </div>
-        <div className="inline-flex items-center gap-2 rounded-md border border-[#1d3a27] bg-[#102015]/30 px-2 py-1 text-xs text-zinc-200">
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#1d3a27] bg-[#102015]/30 px-2 py-1 text-xs text-zinc-200">
           <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
           Cleared
         </div>
-        <div className="inline-flex items-center gap-2 rounded-md border border-[#2a2d34] bg-[#15171c] px-2 py-1 text-xs text-zinc-200">
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#2a2d34] bg-[#15171c] px-2 py-1 text-xs text-zinc-200">
           <span className="h-2 w-2 rounded-full bg-[#71717a]" />
           Upcoming
         </div>
@@ -110,7 +126,7 @@ export function SalesTableClient({
         onChange={(event) => {
           setSelectedBuyerId(event.target.value);
         }}
-        className="h-10 rounded-md border border-[#2a2d34] bg-[#14161b] px-3 text-sm text-zinc-100"
+        className="h-10 w-full rounded-md border border-[#2a2d34] bg-[#14161b] px-3 text-sm text-zinc-100 lg:max-w-[320px]"
       >
         <option value="">All buyer companies</option>
         {buyerCompanies.map((company) => (
@@ -141,6 +157,8 @@ export function SalesTableClient({
           return party.includes(query) || (!!queryDigits && buyerPhone.includes(queryDigits));
         }}
         toolbarRight={toolbarRight}
+        toolbarBelow={toolbarBelow}
+        toolbarFarRight={toolbarFarRight}
         rowClassName={(row) => getRowClassName(row.original)}
       />
     </>

@@ -1,8 +1,4 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
-
 import { AppShell } from "@/components/layout/AppShell";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/features/auth/lib/session";
 import { getSales } from "@/features/sales/service/sale.service";
@@ -85,22 +81,7 @@ export default async function SalesPage() {
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">Sales</h1>
-          <p className="text-zinc-500">Manage sales from BILL sheet and manual records.</p>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Link href="/sales/new" className="w-full sm:w-auto">
-            <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Sale
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-5">
+      <div className="mb-3 grid grid-cols-2 gap-3 xl:grid-cols-5">
         <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Total Sales</CardTitle>
@@ -158,6 +139,7 @@ export default async function SalesPage() {
         buyerCompanies={buyerCompanies}
         issuerCompanies={activeIssuerCompanies}
         pendingBySaleId={pendingBySaleId}
+        addSaleHref="/sales/new"
       />
     </AppShell>
   );

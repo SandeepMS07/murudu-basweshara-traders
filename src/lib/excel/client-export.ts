@@ -18,7 +18,7 @@ function sanitizeFileName(name: string): string {
   return safe || "table_export";
 }
 
-export function exportRowsToXlsx(
+export function exportRowsToCsv(
   rows: ExportRow[],
   {
     fileName,
@@ -41,7 +41,11 @@ export function exportRowsToXlsx(
       : [{ Info: emptyMessage }];
 
   const worksheet = XLSX.utils.json_to_sheet(normalizedRows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, `${sanitizeFileName(fileName)}.xlsx`);
+  const csv = XLSX.utils.sheet_to_csv(worksheet, { FS: ",", RS: "\n" });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${sanitizeFileName(fileName)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }

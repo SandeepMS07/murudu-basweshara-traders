@@ -14,7 +14,7 @@ import {
 import { CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { exportRowsToXlsx } from "@/lib/excel/client-export";
+import { exportRowsToCsv } from "@/lib/excel/client-export";
 
 import {
   Table,
@@ -46,6 +46,8 @@ interface DataTableProps<TData, TValue> {
   searchPredicate?: (row: TData, query: string) => boolean;
   rowClassName?: (row: Row<TData>) => string | undefined;
   toolbarRight?: ReactNode;
+  toolbarBelow?: ReactNode;
+  toolbarFarRight?: ReactNode;
   exportFileName?: string;
   showExportButton?: boolean;
   disablePagination?: boolean;
@@ -61,6 +63,8 @@ export function DataTable<TData, TValue>({
   searchPredicate,
   rowClassName,
   toolbarRight,
+  toolbarBelow,
+  toolbarFarRight,
   exportFileName = "table_export",
   showExportButton = true,
   disablePagination = false,
@@ -92,7 +96,7 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  const handleExportXlsx = () => {
+  const handleExportCsv = () => {
     const exportableColumns = table
       .getAllLeafColumns()
       .filter((column) => {
@@ -122,7 +126,7 @@ export function DataTable<TData, TValue>({
     });
 
     const emptyRow = Object.fromEntries(headers.map((header) => [header, ""]));
-    exportRowsToXlsx(rows.length > 0 ? rows : [emptyRow], {
+    exportRowsToCsv(rows.length > 0 ? rows : [emptyRow], {
       fileName: exportFileName,
       sheetName: "Data",
       emptyMessage: "No records found",
@@ -144,7 +148,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       {(searchKey || toolbarRight || showExportButton) && (
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
           {searchKey && (
             <div className="relative w-full xl:max-w-sm xl:flex-none">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
@@ -171,21 +175,25 @@ export function DataTable<TData, TValue>({
             </div>
           )}
           {toolbarRight ? <div className="min-w-0 w-full xl:flex-1">{toolbarRight}</div> : null}
-          {showExportButton ? (
-            <div className="xl:ml-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleExportXlsx}
-                className="h-10 border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-            </div>
-          ) : null}
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+            {showExportButton ? (
+              <div className="xl:ml-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportCsv}
+                  className="h-10 border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
+            ) : null}
+            {toolbarFarRight ? <div className="xl:ml-2">{toolbarFarRight}</div> : null}
+          </div>
         </div>
       )}
+      {toolbarBelow ? <div className="flex w-full">{toolbarBelow}</div> : null}
 
       <div
         ref={scrollContainerRef}
@@ -196,9 +204,12 @@ export function DataTable<TData, TValue>({
         )}
       >
         <Table className="min-w-max">
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-b border-[#252932] bg-[#15171c] hover:bg-[#15171c]">
+              <TableRow
+                key={headerGroup.id}
+                className="border-b border-[#252932] bg-[#15171c] hover:bg-[#15171c]"
+              >
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta as ColumnMeta | undefined;
                   const headerStyle: CSSProperties | undefined = meta?.sticky
@@ -214,7 +225,10 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableHead
                       key={header.id}
-                      className={cn("h-12 border-b border-[#252932] bg-[#15171c] text-zinc-200", meta?.headClassName)}
+                      className={cn(
+                        "h-12 border-b border-[#252932] bg-[#15171c] text-zinc-200",
+                        meta?.headClassName
+                      )}
                       style={headerStyle}
                     >
                       {header.isPlaceholder

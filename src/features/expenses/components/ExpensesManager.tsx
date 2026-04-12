@@ -28,7 +28,7 @@ import {
   ExpenseEmployee,
   ExpenseEntry,
 } from "@/features/expenses/schemas";
-import { exportRowsToXlsx } from "@/lib/excel/client-export";
+import { exportRowsToCsv } from "@/lib/excel/client-export";
 
 export type TabKey = "overview" | "salary" | "vehicle" | "hamali" | "other";
 
@@ -376,7 +376,7 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                 "How Much Paid": row.amount,
               }));
 
-    exportRowsToXlsx(rows, {
+    exportRowsToCsv(rows, {
       fileName: `expenses_${tab}`,
       sheetName: "Data",
       emptyMessage: "No records found",
