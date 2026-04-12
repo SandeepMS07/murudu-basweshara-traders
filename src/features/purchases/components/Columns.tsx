@@ -221,7 +221,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
                       <span className="bill-print-icon"></span>
                       <span>Jagadish</span> <strong>: 7795953398</strong>
                     </div>
-                    <div className="bill-print-info-phone">
+                    <div className="bill-print-info-phone mt-2">
                       <span>Bags</span>{" "}
                       <strong>
                         :{" "}

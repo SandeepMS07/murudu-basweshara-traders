@@ -119,7 +119,7 @@ export default async function BillPrintPage({
               <div className="bill-print-info-phone">
                 <span>Jagadish</span> <strong>: 7795953398</strong>
               </div>
-              <div className="bill-print-info-phone">
+              <div className="bill-print-info-phone mt-2">
                 <span>Bags</span>{" "}
                 <strong>
                   :{" "}
