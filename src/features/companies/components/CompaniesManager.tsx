@@ -720,6 +720,21 @@ function SalesDetailsTable({
     return format(dueDate, "dd-MM-yyyy");
   };
 
+  const getOverdueDays = (sale: Sale) => {
+    const dueDate = getDueDate(sale);
+    if (!dueDate) return null;
+    const dueStart = new Date(
+      dueDate.getFullYear(),
+      dueDate.getMonth(),
+      dueDate.getDate(),
+    );
+    const effectivePending = pendingBySaleId[sale.id] ?? sale.pending_amount;
+    if (effectivePending <= 0) return null;
+    const diffMs = todayStart.getTime() - dueStart.getTime();
+    if (diffMs <= 0) return null;
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  };
+
   const formatDisplayDate = (value: string) => {
     try {
       return format(parseISO(value), "dd-MM-yyyy");
@@ -817,12 +832,15 @@ function SalesDetailsTable({
               <th className="border-b border-[#252932] px-3 py-2 text-left">
                 Due Date
               </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Overdue Days
+              </th>
             </tr>
           </thead>
           <tbody>
             {sales.length === 0 ? (
               <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={10}>
+                <td className="px-3 py-3 text-zinc-500" colSpan={11}>
                   No sales found for this company.
                 </td>
               </tr>
@@ -858,6 +876,9 @@ function SalesDetailsTable({
                   </td>
                   <td className="px-3 py-2">{sale.payment_terms || "-"}</td>
                   <td className="px-3 py-2">{formatDueDate(sale)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {getOverdueDays(sale) ?? "-"}
+                  </td>
                 </tr>
               ))
             )}

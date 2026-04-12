@@ -21,6 +21,16 @@ export default async function PurchasesPage() {
     },
     { bags: 0, weight: 0, amount: 0 },
   );
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const todaysTotals = data.reduce(
+    (acc, purchase) => {
+      if (purchase.date !== todayKey) return acc;
+      acc.bags += purchase.bags;
+      acc.weight += purchase.net_weight;
+      return acc;
+    },
+    { bags: 0, weight: 0 },
+  );
   const averageRate = totals.weight > 0 ? totals.amount / totals.weight : 0;
   const today = new Date();
   const last7Start = addDays(today, -6);
@@ -52,7 +62,7 @@ export default async function PurchasesPage() {
         </Link>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 xl:grid-cols-6">
         <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Total Bags</CardTitle>
@@ -115,6 +125,33 @@ export default async function PurchasesPage() {
                 maximumFractionDigits: 2,
               })}
               /kg
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-zinc-400">Today Bags</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
+              {formatNumberIN(todaysTotals.bags, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-zinc-400">Today Weight</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
+              {formatNumberIN(todaysTotals.weight, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}{" "}
+              kg
             </p>
           </CardContent>
         </Card>
