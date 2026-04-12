@@ -98,8 +98,8 @@ export async function getPurchases(): Promise<Purchase[]> {
   const { data, error } = await supabaseServer
     .from("purchases")
     .select("*")
-    .order("bill_no", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
+    .order("bill_no", { ascending: false, nullsFirst: false })
+    .order("date", { ascending: false });
 
   if (error) {
     throw new Error(`Failed to load purchases: ${error.message}`);

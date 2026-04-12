@@ -76,7 +76,9 @@ function parseVehicleReason(rawReason: string): VehicleFields {
   }
   if (rawReason.startsWith(VEHICLE_REASON_PREFIX)) {
     try {
-      const parsed = JSON.parse(rawReason.slice(VEHICLE_REASON_PREFIX.length)) as Partial<VehicleFields>;
+      const parsed = JSON.parse(
+        rawReason.slice(VEHICLE_REASON_PREFIX.length),
+      ) as Partial<VehicleFields>;
       return {
         vehicleType: parsed.vehicleType?.toString() ?? "",
         vehicleNumber: parsed.vehicleNumber?.toString() ?? "",
@@ -97,7 +99,9 @@ function parseHamaliReason(rawReason: string): { workerCount: string } {
   if (!rawReason) return { workerCount: "" };
   if (rawReason.startsWith(HAMALI_REASON_PREFIX)) {
     try {
-      const parsed = JSON.parse(rawReason.slice(HAMALI_REASON_PREFIX.length)) as {
+      const parsed = JSON.parse(
+        rawReason.slice(HAMALI_REASON_PREFIX.length),
+      ) as {
         workerCount?: string | number;
       };
       return { workerCount: parsed.workerCount?.toString() ?? "" };
@@ -114,7 +118,11 @@ interface ExpensesManagerProps {
   initialTab?: Exclude<TabKey, "overview"> | "overview";
 }
 
-export function ExpensesManager({ employees, expenses, initialTab = "salary" }: ExpensesManagerProps) {
+export function ExpensesManager({
+  employees,
+  expenses,
+  initialTab = "salary",
+}: ExpensesManagerProps) {
   const [isPending, startTransition] = useTransition();
   const tab = initialTab;
   const [employeeList, setEmployeeList] = useState(employees);
@@ -122,8 +130,11 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<ExpenseEntry | null>(null);
-  const [editingEmployee, setEditingEmployee] = useState<ExpenseEmployee | null>(null);
+  const [editingExpense, setEditingExpense] = useState<ExpenseEntry | null>(
+    null,
+  );
+  const [editingEmployee, setEditingEmployee] =
+    useState<ExpenseEmployee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "expense" | "employee";
     id: string;
@@ -141,31 +152,34 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
 
   const employeeMap = useMemo(
     () => new Map(employeeList.map((employee) => [employee.id, employee])),
-    [employeeList]
+    [employeeList],
   );
 
   const salaryRows = useMemo(
     () => expenseList.filter((expense) => expense.category === "salary"),
-    [expenseList]
+    [expenseList],
   );
   const vehicleRows = useMemo(
     () => expenseList.filter((expense) => expense.category === "vehicle"),
-    [expenseList]
+    [expenseList],
   );
   const hamaliRows = useMemo(
     () => expenseList.filter((expense) => expense.category === "hamali"),
-    [expenseList]
+    [expenseList],
   );
   const otherRows = useMemo(
     () => expenseList.filter((expense) => expense.category === "other"),
-    [expenseList]
+    [expenseList],
   );
 
   const employeeLedger = useMemo(() => {
     const grouped = new Map<string, number>();
     for (const row of salaryRows) {
       if (!row.employee_id) continue;
-      grouped.set(row.employee_id, (grouped.get(row.employee_id) ?? 0) + row.amount);
+      grouped.set(
+        row.employee_id,
+        (grouped.get(row.employee_id) ?? 0) + row.amount,
+      );
     }
     return employeeList.map((employee) => ({
       employee,
@@ -251,12 +265,14 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                 })
               : category === "hamali"
                 ? composeHamaliReason(hamaliWorkerCount)
-              : expenseReason,
+                : expenseReason,
           amount,
         };
         if (editingExpense) {
           const updated = await updateExpenseAction(editingExpense.id, payload);
-          setExpenseList((current) => current.map((row) => (row.id === updated.id ? updated : row)));
+          setExpenseList((current) =>
+            current.map((row) => (row.id === updated.id ? updated : row)),
+          );
           toast.success("Expense updated");
         } else {
           const created = await createExpenseAction(payload);
@@ -266,7 +282,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
         setExpenseDialogOpen(false);
         resetExpenseForm();
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to save expense");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save expense",
+        );
       }
     });
   };
@@ -286,12 +304,17 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
     startTransition(async () => {
       try {
         if (editingEmployee) {
-          const updated = await updateExpenseEmployeeAction(editingEmployee.id, {
-            name: employeeName.trim(),
-            is_active: true,
-          });
+          const updated = await updateExpenseEmployeeAction(
+            editingEmployee.id,
+            {
+              name: employeeName.trim(),
+              is_active: true,
+            },
+          );
           setEmployeeList((current) =>
-            current.map((employee) => (employee.id === updated.id ? updated : employee))
+            current.map((employee) =>
+              employee.id === updated.id ? updated : employee,
+            ),
           );
           toast.success("Employee updated");
         } else {
@@ -306,12 +329,18 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
         setEditingEmployee(null);
         setEmployeeDialogOpen(false);
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to save employee");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save employee",
+        );
       }
     });
   };
 
-  const openDeleteDialog = (target: { type: "expense" | "employee"; id: string; label: string }) => {
+  const openDeleteDialog = (target: {
+    type: "expense" | "employee";
+    id: string;
+    label: string;
+  }) => {
     setDeleteTarget(target);
     setDeleteDialogOpen(true);
   };
@@ -322,17 +351,23 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
       try {
         if (deleteTarget.type === "expense") {
           await deleteExpenseAction(deleteTarget.id);
-          setExpenseList((current) => current.filter((row) => row.id !== deleteTarget.id));
+          setExpenseList((current) =>
+            current.filter((row) => row.id !== deleteTarget.id),
+          );
           toast.success("Expense deleted");
         } else {
           await deleteExpenseEmployeeAction(deleteTarget.id);
-          setEmployeeList((current) => current.filter((employee) => employee.id !== deleteTarget.id));
+          setEmployeeList((current) =>
+            current.filter((employee) => employee.id !== deleteTarget.id),
+          );
           toast.success("Employee deleted");
         }
         setDeleteDialogOpen(false);
         setDeleteTarget(null);
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to delete",
+        );
       }
     });
   };
@@ -345,7 +380,8 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
         ? salaryRows.map((row, index) => ({
             "Sl No": index + 1,
             Date: formatDisplayDate(row.expense_date),
-            "Employee Name": employeeMap.get(row.employee_id ?? "")?.name ?? "-",
+            "Employee Name":
+              employeeMap.get(row.employee_id ?? "")?.name ?? "-",
             Amount: row.amount,
           }))
         : tab === "vehicle"
@@ -387,7 +423,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
     <div className="space-y-6">
       {tab === "overview" ? (
         <section className="rounded-xl border border-[#252932] bg-[#111214] p-4">
-          <h3 className="text-base font-semibold text-zinc-100">Expense Summary</h3>
+          <h3 className="text-base font-semibold text-zinc-100">
+            Expense Summary
+          </h3>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <SummaryCard
               title="Salary"
@@ -411,347 +449,404 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
             />
           </div>
           <div className="mt-3 rounded-md border border-[#252932] bg-[#15171c] p-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Grand Total</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+              Grand Total
+            </p>
             <p className="mt-1 text-2xl font-semibold text-[#ff8f6b]">
-              {formatCurrencyINR(expenseList.reduce((acc, row) => acc + row.amount, 0))}
+              {formatCurrencyINR(
+                expenseList.reduce((acc, row) => acc + row.amount, 0),
+                {
+                  maximumFractionDigits: 0,
+                },
+              )}
             </p>
           </div>
         </section>
       ) : null}
 
       {tab !== "overview" ? (
-      <section className="rounded-xl border border-[#252932] bg-[#111214] p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-zinc-100">
-            {tabOptions.find((option) => option.key === tab)?.label}
-          </h2>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleExportCurrentTab}
-              className="border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
-            {tab === "salary" ? (
+        <section className="rounded-xl border border-[#252932] bg-[#111214] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-zinc-100">
+              {tabOptions.find((option) => option.key === tab)?.label}
+            </h2>
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => openEmployeeDialog()}
+                onClick={handleExportCurrentTab}
                 className="border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
               >
-                Add Employee
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
               </Button>
-            ) : null}
-            <Button
-              type="button"
-              onClick={() => openExpenseDialog()}
-              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-            >
-              {expenseButtonLabel[tab]}
-            </Button>
-          </div>
-        </div>
-
-        {tab === "salary" ? (
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {employeeLedger.map(({ employee, paid }) => (
-              <div
-                key={employee.id}
-                className="rounded-md border border-[#252932] bg-[#15171c] p-3"
+              {tab === "salary" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openEmployeeDialog()}
+                  className="border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                >
+                  Add Employee
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                onClick={() => openExpenseDialog()}
+                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">{employee.name}</p>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEmployeeDialog(employee)}
-                      className="h-7 border-[#2a2d34] bg-[#17191f] px-2 text-xs text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() =>
-                        openDeleteDialog({
-                          type: "employee",
-                          id: employee.id,
-                          label: employee.name,
-                        })
-                      }
-                      className="h-7 border border-[#ff6a3d] bg-[#ff6a3d] px-2 text-xs text-white hover:bg-[#ff5a28]"
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-                <p className="mt-1 text-xl font-semibold text-[#ff8f6b]">
-                  {formatCurrencyINR(paid)}
-                </p>
-              </div>
-            ))}
+                {expenseButtonLabel[tab]}
+              </Button>
+            </div>
           </div>
-        ) : null}
 
-        <div className="mt-4 overflow-x-auto rounded-lg border border-[#252932]">
           {tab === "salary" ? (
-            <table className="min-w-full text-sm">
-              <thead className="bg-[#15171c] text-zinc-200">
-                <tr>
-                  <th className="px-3 py-2 text-left">Sl No</th>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">Employee Name</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salaryRows.length ? (
-                  salaryRows.map((row, index) => (
-                    <tr key={row.id} className="border-t border-[#252932] text-zinc-200">
-                      <td className="px-3 py-2">{index + 1}</td>
-                      <td className="px-3 py-2">{formatDisplayDate(row.expense_date)}</td>
-                      <td className="px-3 py-2">{employeeMap.get(row.employee_id ?? "")?.name ?? "-"}</td>
-                      <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openExpenseDialog(row)}
-                            className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() =>
-                              openDeleteDialog({
-                                type: "expense",
-                                id: row.id,
-                                label: `salary entry ${index + 1}`,
-                              })
-                            }
-                            className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
-                          >
-                            Delete
-                          </Button>
-                        </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {employeeLedger.map(({ employee, paid }) => (
+                <div
+                  key={employee.id}
+                  className="rounded-md border border-[#252932] bg-[#15171c] p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">
+                      {employee.name}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEmployeeDialog(employee)}
+                        className="h-7 border-[#2a2d34] bg-[#17191f] px-2 text-xs text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() =>
+                          openDeleteDialog({
+                            type: "employee",
+                            id: employee.id,
+                            label: employee.name,
+                          })
+                        }
+                        className="h-7 border border-[#ff6a3d] bg-[#ff6a3d] px-2 text-xs text-white hover:bg-[#ff5a28]"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xl font-semibold text-[#ff8f6b]">
+                    {formatCurrencyINR(paid)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="mt-4 overflow-x-auto rounded-lg border border-[#252932]">
+            {tab === "salary" ? (
+              <table className="min-w-full text-sm">
+                <thead className="bg-[#15171c] text-zinc-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Sl No</th>
+                    <th className="px-3 py-2 text-left">Date</th>
+                    <th className="px-3 py-2 text-left">Employee Name</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salaryRows.length ? (
+                    salaryRows.map((row, index) => (
+                      <tr
+                        key={row.id}
+                        className="border-t border-[#252932] text-zinc-200"
+                      >
+                        <td className="px-3 py-2">{index + 1}</td>
+                        <td className="px-3 py-2">
+                          {formatDisplayDate(row.expense_date)}
+                        </td>
+                        <td className="px-3 py-2">
+                          {employeeMap.get(row.employee_id ?? "")?.name ?? "-"}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {formatCurrencyINR(row.amount)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openExpenseDialog(row)}
+                              className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() =>
+                                openDeleteDialog({
+                                  type: "expense",
+                                  id: row.id,
+                                  label: `salary entry ${index + 1}`,
+                                })
+                              }
+                              className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-3 py-8 text-center text-zinc-500"
+                      >
+                        No salary entries.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-zinc-500">
-                      No salary entries.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          ) : null}
+                  )}
+                </tbody>
+              </table>
+            ) : null}
 
-          {tab === "vehicle" ? (
-            <table className="min-w-full text-sm">
-              <thead className="bg-[#15171c] text-zinc-200">
-                <tr>
-                  <th className="px-3 py-2 text-left">Sl No</th>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">Vehicle Type</th>
-                  <th className="px-3 py-2 text-left">Vehicle Number</th>
-                  <th className="px-3 py-2 text-left">Reason</th>
-                  <th className="px-3 py-2 text-right">How Much Paid</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vehicleRows.length ? (
-                  vehicleRows.map((row, index) => (
-                    <tr key={row.id} className="border-t border-[#252932] text-zinc-200">
-                      {(() => {
-                        const parsed = parseVehicleReason(row.reason || "");
-                        return (
-                          <>
-                            <td className="px-3 py-2">{index + 1}</td>
-                            <td className="px-3 py-2">{formatDisplayDate(row.expense_date)}</td>
-                            <td className="px-3 py-2">{parsed.vehicleType || "-"}</td>
-                            <td className="px-3 py-2">{parsed.vehicleNumber || "-"}</td>
-                            <td className="px-3 py-2">{parsed.reason || "-"}</td>
-                            <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
-                            <td className="px-3 py-2">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openExpenseDialog(row)}
-                                  className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={() =>
-                                    openDeleteDialog({
-                                      type: "expense",
-                                      id: row.id,
-                                      label: `vehicle entry ${index + 1}`,
-                                    })
-                                  }
-                                  className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </td>
-                          </>
-                        );
-                      })()}
-                    </tr>
-                  ))
-                ) : (
+            {tab === "vehicle" ? (
+              <table className="min-w-full text-sm">
+                <thead className="bg-[#15171c] text-zinc-200">
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center text-zinc-500">
-                      No vehicle expenses.
-                    </td>
+                    <th className="px-3 py-2 text-left">Sl No</th>
+                    <th className="px-3 py-2 text-left">Date</th>
+                    <th className="px-3 py-2 text-left">Vehicle Type</th>
+                    <th className="px-3 py-2 text-left">Vehicle Number</th>
+                    <th className="px-3 py-2 text-left">Reason</th>
+                    <th className="px-3 py-2 text-right">How Much Paid</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          ) : null}
-
-          {tab === "hamali" ? (
-            <table className="min-w-full text-sm">
-              <thead className="bg-[#15171c] text-zinc-200">
-                <tr>
-                  <th className="px-3 py-2 text-left">Sl No</th>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">No of Worker</th>
-                  <th className="px-3 py-2 text-right">How Much Paid</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hamaliRows.length ? (
-                  hamaliRows.map((row, index) => (
-                    <tr key={row.id} className="border-t border-[#252932] text-zinc-200">
-                      {(() => {
-                        const parsed = parseHamaliReason(row.reason || "");
-                        return (
-                          <>
-                            <td className="px-3 py-2">{index + 1}</td>
-                            <td className="px-3 py-2">{formatDisplayDate(row.expense_date)}</td>
-                            <td className="px-3 py-2">{parsed.workerCount || "-"}</td>
-                            <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
-                            <td className="px-3 py-2">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openExpenseDialog(row)}
-                                  className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={() =>
-                                    openDeleteDialog({
-                                      type: "expense",
-                                      id: row.id,
-                                      label: `hamali entry ${index + 1}`,
-                                    })
-                                  }
-                                  className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </td>
-                          </>
-                        );
-                      })()}
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-zinc-500">
-                      No hamali expenses.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          ) : null}
-
-          {tab === "other" ? (
-            <table className="min-w-full text-sm">
-              <thead className="bg-[#15171c] text-zinc-200">
-                <tr>
-                  <th className="px-3 py-2 text-left">Sl No</th>
-                  <th className="px-3 py-2 text-left">Reason</th>
-                  <th className="px-3 py-2 text-right">How Much Paid</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {otherRows.length ? (
-                  otherRows.map((row, index) => (
-                    <tr key={row.id} className="border-t border-[#252932] text-zinc-200">
-                      <td className="px-3 py-2">{index + 1}</td>
-                      <td className="px-3 py-2">{row.reason || "-"}</td>
-                      <td className="px-3 py-2 text-right">{formatCurrencyINR(row.amount)}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openExpenseDialog(row)}
-                            className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() =>
-                              openDeleteDialog({
-                                type: "expense",
-                                id: row.id,
-                                label: `other expense ${index + 1}`,
-                              })
-                            }
-                            className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                </thead>
+                <tbody>
+                  {vehicleRows.length ? (
+                    vehicleRows.map((row, index) => (
+                      <tr
+                        key={row.id}
+                        className="border-t border-[#252932] text-zinc-200"
+                      >
+                        {(() => {
+                          const parsed = parseVehicleReason(row.reason || "");
+                          return (
+                            <>
+                              <td className="px-3 py-2">{index + 1}</td>
+                              <td className="px-3 py-2">
+                                {formatDisplayDate(row.expense_date)}
+                              </td>
+                              <td className="px-3 py-2">
+                                {parsed.vehicleType || "-"}
+                              </td>
+                              <td className="px-3 py-2">
+                                {parsed.vehicleNumber || "-"}
+                              </td>
+                              <td className="px-3 py-2">
+                                {parsed.reason || "-"}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                {formatCurrencyINR(row.amount)}
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openExpenseDialog(row)}
+                                    className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() =>
+                                      openDeleteDialog({
+                                        type: "expense",
+                                        id: row.id,
+                                        label: `vehicle entry ${index + 1}`,
+                                      })
+                                    }
+                                    className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </>
+                          );
+                        })()}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-zinc-500"
+                      >
+                        No vehicle expenses.
                       </td>
                     </tr>
-                  ))
-                ) : (
+                  )}
+                </tbody>
+              </table>
+            ) : null}
+
+            {tab === "hamali" ? (
+              <table className="min-w-full text-sm">
+                <thead className="bg-[#15171c] text-zinc-200">
                   <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-zinc-500">
-                      No other expenses.
-                    </td>
+                    <th className="px-3 py-2 text-left">Sl No</th>
+                    <th className="px-3 py-2 text-left">Date</th>
+                    <th className="px-3 py-2 text-left">No of Worker</th>
+                    <th className="px-3 py-2 text-right">How Much Paid</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          ) : null}
-        </div>
-      </section>
+                </thead>
+                <tbody>
+                  {hamaliRows.length ? (
+                    hamaliRows.map((row, index) => (
+                      <tr
+                        key={row.id}
+                        className="border-t border-[#252932] text-zinc-200"
+                      >
+                        {(() => {
+                          const parsed = parseHamaliReason(row.reason || "");
+                          return (
+                            <>
+                              <td className="px-3 py-2">{index + 1}</td>
+                              <td className="px-3 py-2">
+                                {formatDisplayDate(row.expense_date)}
+                              </td>
+                              <td className="px-3 py-2">
+                                {parsed.workerCount || "-"}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                {formatCurrencyINR(row.amount)}
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openExpenseDialog(row)}
+                                    className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() =>
+                                      openDeleteDialog({
+                                        type: "expense",
+                                        id: row.id,
+                                        label: `hamali entry ${index + 1}`,
+                                      })
+                                    }
+                                    className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </>
+                          );
+                        })()}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-3 py-8 text-center text-zinc-500"
+                      >
+                        No hamali expenses.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            ) : null}
+
+            {tab === "other" ? (
+              <table className="min-w-full text-sm">
+                <thead className="bg-[#15171c] text-zinc-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Sl No</th>
+                    <th className="px-3 py-2 text-left">Reason</th>
+                    <th className="px-3 py-2 text-right">How Much Paid</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {otherRows.length ? (
+                    otherRows.map((row, index) => (
+                      <tr
+                        key={row.id}
+                        className="border-t border-[#252932] text-zinc-200"
+                      >
+                        <td className="px-3 py-2">{index + 1}</td>
+                        <td className="px-3 py-2">{row.reason || "-"}</td>
+                        <td className="px-3 py-2 text-right">
+                          {formatCurrencyINR(row.amount)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openExpenseDialog(row)}
+                              className="h-8 cursor-pointer border-[#2a2d34] bg-[#17191f] px-3 text-zinc-200 hover:bg-[#1d2026] hover:text-zinc-100"
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() =>
+                                openDeleteDialog({
+                                  type: "expense",
+                                  id: row.id,
+                                  label: `other expense ${index + 1}`,
+                                })
+                              }
+                              className="h-8 cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] px-3 text-white hover:bg-[#ff5a28]"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-3 py-8 text-center text-zinc-500"
+                      >
+                        No other expenses.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            ) : null}
+          </div>
+        </section>
       ) : null}
 
       <Dialog
@@ -763,7 +858,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
       >
         <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100">
           <DialogHeader>
-            <DialogTitle>{editingExpense ? "Edit Entry" : expenseButtonLabel[tab]}</DialogTitle>
+            <DialogTitle>
+              {editingExpense ? "Edit Entry" : expenseButtonLabel[tab]}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
             <div>
@@ -778,7 +875,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
             </div>
             {tab === "salary" ? (
               <div>
-                <label className="mb-1 block text-xs text-zinc-400">Employee</label>
+                <label className="mb-1 block text-xs text-zinc-400">
+                  Employee
+                </label>
                 <select
                   value={expenseEmployeeId}
                   onChange={(event) => setExpenseEmployeeId(event.target.value)}
@@ -795,7 +894,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
             ) : null}
             {tab !== "hamali" ? (
               <div>
-                <label className="mb-1 block text-xs text-zinc-400">Reason</label>
+                <label className="mb-1 block text-xs text-zinc-400">
+                  Reason
+                </label>
                 <Input
                   value={expenseReason}
                   onChange={(event) => setExpenseReason(event.target.value)}
@@ -806,7 +907,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
             ) : null}
             {tab === "hamali" ? (
               <div>
-                <label className="mb-1 block text-xs text-zinc-400">No of Worker</label>
+                <label className="mb-1 block text-xs text-zinc-400">
+                  No of Worker
+                </label>
                 <Input
                   type="number"
                   min={1}
@@ -821,7 +924,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
             {tab === "vehicle" ? (
               <>
                 <div>
-                  <label className="mb-1 block text-xs text-zinc-400">Vehicle Type</label>
+                  <label className="mb-1 block text-xs text-zinc-400">
+                    Vehicle Type
+                  </label>
                   <Input
                     value={vehicleType}
                     onChange={(event) => setVehicleType(event.target.value)}
@@ -830,7 +935,9 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-zinc-400">Vehicle Number</label>
+                  <label className="mb-1 block text-xs text-zinc-400">
+                    Vehicle Number
+                  </label>
                   <Input
                     value={vehicleNumber}
                     onChange={(event) => setVehicleNumber(event.target.value)}
@@ -886,10 +993,14 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
       >
         <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100">
           <DialogHeader>
-            <DialogTitle>{editingEmployee ? "Edit Employee" : "Add Employee"}</DialogTitle>
+            <DialogTitle>
+              {editingEmployee ? "Edit Employee" : "Add Employee"}
+            </DialogTitle>
           </DialogHeader>
           <div>
-            <label className="mb-1 block text-xs text-zinc-400">Employee Name</label>
+            <label className="mb-1 block text-xs text-zinc-400">
+              Employee Name
+            </label>
             <Input
               value={employeeName}
               onChange={(event) => setEmployeeName(event.target.value)}
@@ -912,7 +1023,11 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
               disabled={isPending}
               className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
             >
-              {isPending ? "Saving..." : editingEmployee ? "Update Employee" : "Add Employee"}
+              {isPending
+                ? "Saving..."
+                : editingEmployee
+                  ? "Update Employee"
+                  : "Add Employee"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -946,7 +1061,6 @@ export function ExpensesManager({ employees, expenses, initialTab = "salary" }: 
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
@@ -965,17 +1079,23 @@ function SummaryCard({
       <div className="flex items-center justify-between">
         <p className="text-sm text-zinc-400">{title}</p>
         <p className="text-xs text-zinc-500">
-          {formatNumberIN(count, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} entries
+          {formatNumberIN(count, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}{" "}
+          entries
         </p>
       </div>
-      <p className="mt-1 text-xl font-semibold text-[#ff8f6b]">{formatCurrencyINR(amount)}</p>
+      <p className="mt-1 text-xl font-semibold text-[#ff8f6b]">
+        {formatCurrencyINR(amount, { maximumFractionDigits: 0 })}
+      </p>
     </div>
   );
 }
-  const formatDisplayDate = (value: string) => {
-    try {
-      return format(parseISO(value), "dd-MM-yyyy");
-    } catch {
-      return value;
-    }
-  };
+const formatDisplayDate = (value: string) => {
+  try {
+    return format(parseISO(value), "dd-MM-yyyy");
+  } catch {
+    return value;
+  }
+};

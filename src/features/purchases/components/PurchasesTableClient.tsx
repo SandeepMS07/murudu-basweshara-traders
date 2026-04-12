@@ -169,7 +169,6 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
       data={data}
       exportFileName="purchases"
       disablePagination
-      scrollToBottom
       scrollContainerClassName="max-h-[70vh]"
       searchKey="name"
       searchPlaceholder="Filter by name or phone..."

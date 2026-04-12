@@ -145,7 +145,6 @@ export function SalesTableClient({
         data={filteredData}
         exportFileName="sales_overview"
         disablePagination
-        scrollToBottom
         scrollContainerClassName="max-h-[70vh]"
         searchKey="party"
         searchPlaceholder="Filter by party or phone..."

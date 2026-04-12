@@ -82,8 +82,9 @@ export function CompaniesManager({
   const [isPending, startTransition] = useTransition();
 
   const buyerCompanies = useMemo(
-    () => data.filter((company) => company.type === "buyer" && company.is_active),
-    [data]
+    () =>
+      data.filter((company) => company.type === "buyer" && company.is_active),
+    [data],
   );
   const salesByCompany = useMemo(() => {
     const grouped = new Map<string, Sale[]>();
@@ -98,8 +99,13 @@ export function CompaniesManager({
 
   const activeBuyer = useMemo(() => {
     if (buyerCompanies.length === 0) return null;
-    if (activeBuyerId && buyerCompanies.some((company) => company.id === activeBuyerId)) {
-      return buyerCompanies.find((company) => company.id === activeBuyerId) ?? null;
+    if (
+      activeBuyerId &&
+      buyerCompanies.some((company) => company.id === activeBuyerId)
+    ) {
+      return (
+        buyerCompanies.find((company) => company.id === activeBuyerId) ?? null
+      );
     }
     return buyerCompanies[0];
   }, [activeBuyerId, buyerCompanies]);
@@ -110,24 +116,29 @@ export function CompaniesManager({
   }, [activeBuyer, salesByCompany]);
   const activeBuyerPayments = useMemo(() => {
     if (!activeBuyer) return [];
-    return paymentData.filter((payment) => payment.company_id === activeBuyer.id);
+    return paymentData.filter(
+      (payment) => payment.company_id === activeBuyer.id,
+    );
   }, [activeBuyer, paymentData]);
   const activeBuyerSaleIdSet = useMemo(
     () => new Set(activeBuyerSales.map((sale) => sale.id)),
-    [activeBuyerSales]
+    [activeBuyerSales],
   );
   const activeBuyerAllocations = useMemo(
-    () => allocationData.filter((allocation) => activeBuyerSaleIdSet.has(allocation.sale_id)),
-    [activeBuyerSaleIdSet, allocationData]
+    () =>
+      allocationData.filter((allocation) =>
+        activeBuyerSaleIdSet.has(allocation.sale_id),
+      ),
+    [activeBuyerSaleIdSet, allocationData],
   );
   const activeBuyerPending = useMemo(
     () =>
       computeEffectiveSalePending(
         activeBuyerSales,
         activeBuyerPayments,
-        activeBuyerAllocations
+        activeBuyerAllocations,
       ),
-    [activeBuyerAllocations, activeBuyerPayments, activeBuyerSales]
+    [activeBuyerAllocations, activeBuyerPayments, activeBuyerSales],
   );
 
   const submitDraft = () => {
@@ -136,7 +147,7 @@ export function CompaniesManager({
         if (editingId) {
           const updated = await updateCompanyAction(editingId, draft);
           setData((current) =>
-            current.map((item) => (item.id === updated.id ? updated : item))
+            current.map((item) => (item.id === updated.id ? updated : item)),
           );
           toast.success("Company updated");
         } else {
@@ -148,7 +159,9 @@ export function CompaniesManager({
         setEditingId(null);
         setFormOpen(false);
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to save company");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save company",
+        );
       }
     });
   };
@@ -185,8 +198,10 @@ export function CompaniesManager({
         } else {
           setData((current) =>
             current.map((item) =>
-              item.id === id ? { ...item, is_active: false, is_default: false } : item
-            )
+              item.id === id
+                ? { ...item, is_active: false, is_default: false }
+                : item,
+            ),
           );
           toast.info(result.message);
         }
@@ -194,7 +209,9 @@ export function CompaniesManager({
           setDeleteTarget(null);
         }
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete company");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to delete company",
+        );
       }
     });
   };
@@ -219,15 +236,15 @@ export function CompaniesManager({
           </Button>
         </div>
 
-          <div className="mt-3 space-y-3">
-            <div className="overflow-x-auto hide-scrollbar">
-              <div className="inline-flex min-w-max gap-2 whitespace-nowrap">
-                {buyerCompanies.map((company) => (
-                  <button
-                    key={company.id}
-                    type="button"
-                    onClick={() => setActiveBuyerId(company.id)}
-                    className={`rounded-md border px-3 py-2 text-sm transition ${
+        <div className="mt-3 space-y-3">
+          <div className="overflow-x-auto hide-scrollbar">
+            <div className="inline-flex min-w-max gap-2 whitespace-nowrap">
+              {buyerCompanies.map((company) => (
+                <button
+                  key={company.id}
+                  type="button"
+                  onClick={() => setActiveBuyerId(company.id)}
+                  className={`rounded-md border px-3 py-2 text-sm transition ${
                     activeBuyer?.id === company.id
                       ? "border-[#ff6a3d] bg-[#2a1d1a] text-[#ffb39a]"
                       : "border-[#252932] bg-[#15171c] text-zinc-300 hover:text-zinc-100"
@@ -285,24 +302,27 @@ export function CompaniesManager({
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
                   totalAmount={activeBuyerSales.reduce(
                     (sum, sale) => sum + sale.amount,
-                    0
+                    0,
                   )}
                   onCreate={(payment, createdAllocations) => {
                     setPaymentData((current) => [payment, ...current]);
                     if (createdAllocations.length > 0) {
-                      setAllocationData((current) => [...createdAllocations, ...current]);
+                      setAllocationData((current) => [
+                        ...createdAllocations,
+                        ...current,
+                      ]);
                     }
                   }}
-                  onDelete={(paymentId) =>
-                    {
-                      setPaymentData((current) =>
-                        current.filter((payment) => payment.id !== paymentId)
-                      );
-                      setAllocationData((current) =>
-                        current.filter((allocation) => allocation.payment_id !== paymentId)
-                      );
-                    }
-                  }
+                  onDelete={(paymentId) => {
+                    setPaymentData((current) =>
+                      current.filter((payment) => payment.id !== paymentId),
+                    );
+                    setAllocationData((current) =>
+                      current.filter(
+                        (allocation) => allocation.payment_id !== paymentId,
+                      ),
+                    );
+                  }}
                 />
               )}
             </>
@@ -317,7 +337,9 @@ export function CompaniesManager({
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-h-[88vh] overflow-y-auto border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Company" : "Add Company"}</DialogTitle>
+            <DialogTitle>
+              {editingId ? "Edit Company" : "Add Company"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -343,7 +365,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.name}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, name: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -353,7 +378,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.display_name}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, display_name: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    display_name: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -368,7 +396,9 @@ export function CompaniesManager({
                     invoice_prefix: event.target.value.toUpperCase(),
                   }))
                 }
-                placeholder={draft.type === "issuer" ? "Required for issuer" : "Optional"}
+                placeholder={
+                  draft.type === "issuer" ? "Required for issuer" : "Optional"
+                }
               />
             </label>
             <label className="space-y-1 text-sm text-zinc-400">
@@ -377,7 +407,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.code}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, code: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    code: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -387,7 +420,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.phone}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, phone: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    phone: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -397,7 +433,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.email}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, email: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -407,7 +446,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.gstin}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, gstin: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    gstin: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -417,7 +459,10 @@ export function CompaniesManager({
                 className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
                 value={draft.address}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, address: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    address: event.target.value,
+                  }))
                 }
               />
             </label>
@@ -449,7 +494,10 @@ export function CompaniesManager({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
         <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Company?</DialogTitle>
@@ -459,8 +507,8 @@ export function CompaniesManager({
             <span className="font-semibold text-zinc-200">
               {deleteTarget?.display_name || deleteTarget?.name}
             </span>
-            ? If this company has linked sales or invoices, we will deactivate it instead of
-            deleting data.
+            ? If this company has linked sales or invoices, we will deactivate
+            it instead of deleting data.
           </p>
           <DialogFooter>
             <Button
@@ -507,11 +555,21 @@ function CompanyTable({
       <table className="w-full min-w-[980px] border-collapse text-sm text-zinc-200">
         <thead className="bg-[#15171c]">
           <tr>
-            <th className="border-b border-[#252932] px-3 py-2 text-left">Name</th>
-            <th className="border-b border-[#252932] px-3 py-2 text-left">Code</th>
-            <th className="border-b border-[#252932] px-3 py-2 text-left">GSTIN</th>
-            <th className="w-[260px] border-b border-[#252932] px-3 py-2 text-left">Email</th>
-            <th className="w-[360px] border-b border-[#252932] px-3 py-2 text-left">Address</th>
+            <th className="border-b border-[#252932] px-3 py-2 text-left">
+              Name
+            </th>
+            <th className="border-b border-[#252932] px-3 py-2 text-left">
+              Code
+            </th>
+            <th className="border-b border-[#252932] px-3 py-2 text-left">
+              GSTIN
+            </th>
+            <th className="w-[260px] border-b border-[#252932] px-3 py-2 text-left">
+              Email
+            </th>
+            <th className="w-[360px] border-b border-[#252932] px-3 py-2 text-left">
+              Address
+            </th>
             <th className="sticky right-0 z-10 border-b border-l border-[#252932] bg-[#15171c] px-3 py-2 text-right">
               Actions
             </th>
@@ -526,11 +584,17 @@ function CompanyTable({
             </tr>
           ) : (
             data.map((company) => (
-              <tr key={company.id} className="border-b border-[#252932] last:border-b-0">
+              <tr
+                key={company.id}
+                className="border-b border-[#252932] last:border-b-0"
+              >
                 <td className="px-3 py-2">{company.name}</td>
                 <td className="px-3 py-2">{company.code || "-"}</td>
                 <td className="px-3 py-2">{company.gstin || "-"}</td>
-                <td className="max-w-[260px] break-words px-3 py-2 align-top" title={company.email || ""}>
+                <td
+                  className="max-w-[260px] break-words px-3 py-2 align-top"
+                  title={company.email || ""}
+                >
                   {company.email || "-"}
                 </td>
                 <td className="max-w-[360px] whitespace-normal break-words px-3 py-2 align-top">
@@ -578,11 +642,18 @@ function SalesDetailsTable({
 }) {
   const PAGE_SIZE = 8;
   const totalAmount = sales.reduce((sum, sale) => sum + sale.amount, 0);
-  const totalPending = sales.reduce((sum, sale) => sum + (pendingBySaleId[sale.id] ?? sale.pending_amount), 0);
+  const totalPending = sales.reduce(
+    (sum, sale) => sum + (pendingBySaleId[sale.id] ?? sale.pending_amount),
+    0,
+  );
   const totalBags = sales.reduce((sum, sale) => sum + sale.bags, 0);
   const [page, setPage] = useState(1);
   const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
   const totalPages = Math.max(1, Math.ceil(sales.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginatedSales = useMemo(() => {
@@ -605,7 +676,11 @@ function SalesDetailsTable({
   const totalOverduePending = sales.reduce((sum, sale) => {
     const dueDate = getDueDate(sale);
     if (!dueDate) return sum;
-    const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    const dueStart = new Date(
+      dueDate.getFullYear(),
+      dueDate.getMonth(),
+      dueDate.getDate(),
+    );
     if (dueStart.getTime() >= todayStart.getTime()) return sum;
     const pending = pendingBySaleId[sale.id] ?? sale.pending_amount;
     if (pending <= 0) return sum;
@@ -615,11 +690,16 @@ function SalesDetailsTable({
   const getRowDueStatus = (sale: Sale) => {
     const dueDate = getDueDate(sale);
     if (!dueDate) return "unknown" as const;
-    const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    const dueStart = new Date(
+      dueDate.getFullYear(),
+      dueDate.getMonth(),
+      dueDate.getDate(),
+    );
     const effectivePending = pendingBySaleId[sale.id] ?? sale.pending_amount;
     if (effectivePending <= 0) return "cleared" as const;
     if (dueStart.getTime() < todayStart.getTime()) return "overdue" as const;
-    if (dueStart.getTime() === todayStart.getTime()) return "due_today" as const;
+    if (dueStart.getTime() === todayStart.getTime())
+      return "due_today" as const;
     return "upcoming" as const;
   };
 
@@ -677,19 +757,29 @@ function SalesDetailsTable({
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Amount</div>
-          <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalAmount)}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatCurrencyINR(totalAmount, { maximumFractionDigits: 0 })}
+          </div>
         </div>
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Pending</div>
-          <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalPending)}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatCurrencyINR(totalPending, { maximumFractionDigits: 0 })}
+          </div>
         </div>
         <div className="rounded-md border border-[#3b1b1b] bg-[#2a1111]/40 p-2 text-sm">
           <div className="text-zinc-300">Total Overdue</div>
-          <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalOverduePending)}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatCurrencyINR(totalOverduePending, {
+              maximumFractionDigits: 0,
+            })}
+          </div>
         </div>
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Bags</div>
-          <div className="font-semibold text-zinc-100">{formatNumberIN(totalBags, { maximumFractionDigits: 0 })}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatNumberIN(totalBags, { maximumFractionDigits: 0 })}
+          </div>
         </div>
       </div>
 
@@ -697,16 +787,36 @@ function SalesDetailsTable({
         <table className="w-full min-w-[980px] border-collapse text-sm text-zinc-200">
           <thead className="bg-[#15171c]">
             <tr>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Bill No</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Date</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Lorry</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Bags</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Net Wt</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Rate</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Amount</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Pending</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Terms</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Due Date</th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Bill No
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Date
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Lorry
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Bags
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Net Wt
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Rate
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Amount
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Pending
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Terms
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Due Date
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -723,20 +833,28 @@ function SalesDetailsTable({
                   className={`border-b border-[#252932] last:border-b-0 ${getRowClassName(sale)}`}
                 >
                   <td className="px-3 py-2">{sale.bill_number}</td>
-                  <td className="px-3 py-2">{formatDisplayDate(sale.sale_date)}</td>
+                  <td className="px-3 py-2">
+                    {formatDisplayDate(sale.sale_date)}
+                  </td>
                   <td className="px-3 py-2">{sale.lorry_number || "-"}</td>
                   <td className="px-3 py-2 text-right">
                     {formatNumberIN(sale.bags, { maximumFractionDigits: 0 })}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {formatNumberIN(sale.net_weight, { maximumFractionDigits: 2 })}
+                    {formatNumberIN(sale.net_weight, {
+                      maximumFractionDigits: 2,
+                    })}
                   </td>
-                  <td className="px-3 py-2 text-right">{formatCurrencyINR(sale.rate)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {formatCurrencyINR(sale.rate)}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     {formatCurrencyINR(sale.amount)}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {formatCurrencyINR(pendingBySaleId[sale.id] ?? sale.pending_amount)}
+                    {formatCurrencyINR(
+                      pendingBySaleId[sale.id] ?? sale.pending_amount,
+                    )}
                   </td>
                   <td className="px-3 py-2">{sale.payment_terms || "-"}</td>
                   <td className="px-3 py-2">{formatDueDate(sale)}</td>
@@ -753,7 +871,9 @@ function SalesDetailsTable({
           variant="outline"
           size="sm"
           disabled={currentPage <= 1}
-          onClick={() => setPage((current) => Math.max(Math.min(current, totalPages) - 1, 1))}
+          onClick={() =>
+            setPage((current) => Math.max(Math.min(current, totalPages) - 1, 1))
+          }
           className="cursor-pointer border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
         >
           Previous
@@ -766,7 +886,11 @@ function SalesDetailsTable({
           variant="outline"
           size="sm"
           disabled={currentPage >= totalPages}
-          onClick={() => setPage((current) => Math.min(Math.min(current, totalPages) + 1, totalPages))}
+          onClick={() =>
+            setPage((current) =>
+              Math.min(Math.min(current, totalPages) + 1, totalPages),
+            )
+          }
           className="cursor-pointer border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
         >
           Next
@@ -790,14 +914,19 @@ function CompanyPaymentsLedger({
   payments: CompanyPayment[];
   pendingBySaleId: Record<string, number>;
   totalAmount: number;
-  onCreate: (payment: CompanyPayment, allocations: CompanyPaymentAllocation[]) => void;
+  onCreate: (
+    payment: CompanyPayment,
+    allocations: CompanyPaymentAllocation[],
+  ) => void;
   onDelete: (id: string) => void;
 }) {
   const PAGE_SIZE = 8;
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>({});
+  const [allocationInputs, setAllocationInputs] = useState<
+    Record<string, string>
+  >({});
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CompanyPayment | null>(null);
   const [page, setPage] = useState(1);
@@ -811,15 +940,18 @@ function CompanyPaymentsLedger({
 
   const totalReceived = useMemo(
     () => payments.reduce((sum, payment) => sum + payment.amount, 0),
-    [payments]
+    [payments],
   );
   const saleAllocationRows = useMemo(
     () =>
       sales.map((sale) => {
-        const remaining = Math.max(pendingBySaleId[sale.id] ?? sale.pending_amount, 0);
+        const remaining = Math.max(
+          pendingBySaleId[sale.id] ?? sale.pending_amount,
+          0,
+        );
         return { sale, remaining };
       }),
-    [pendingBySaleId, sales]
+    [pendingBySaleId, sales],
   );
   const remaining = Math.max(totalAmount - totalReceived, 0);
 
@@ -841,13 +973,21 @@ function CompanyPaymentsLedger({
         if (!Number.isFinite(value) || value <= 0) return null;
         return { sale_id: row.sale.id, amount: value, max: row.remaining };
       })
-      .filter((item): item is { sale_id: string; amount: number; max: number } => !!item);
-    const totalAllocated = allocationsPayload.reduce((sum, item) => sum + item.amount, 0);
+      .filter(
+        (item): item is { sale_id: string; amount: number; max: number } =>
+          !!item,
+      );
+    const totalAllocated = allocationsPayload.reduce(
+      (sum, item) => sum + item.amount,
+      0,
+    );
     if (totalAllocated > parsedAmount) {
       toast.error("Allocated total cannot exceed payment amount");
       return;
     }
-    const invalidAllocation = allocationsPayload.find((item) => item.amount > item.max);
+    const invalidAllocation = allocationsPayload.find(
+      (item) => item.amount > item.max,
+    );
     if (invalidAllocation) {
       toast.error("Allocation exceeds remaining pending for one or more bills");
       return;
@@ -872,7 +1012,9 @@ function CompanyPaymentsLedger({
         setPaymentDialogOpen(false);
         toast.success("Payment added");
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to add payment");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to add payment",
+        );
       }
     });
   };
@@ -887,7 +1029,9 @@ function CompanyPaymentsLedger({
         }
         toast.success("Payment deleted");
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete payment");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to delete payment",
+        );
       }
     });
   };
@@ -897,7 +1041,9 @@ function CompanyPaymentsLedger({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-200">Payment Ledger</h3>
         <div className="flex items-center gap-3">
-          <div className="text-xs text-zinc-400">Entries: {payments.length}</div>
+          <div className="text-xs text-zinc-400">
+            Entries: {payments.length}
+          </div>
           <Button
             type="button"
             disabled={isPending}
@@ -912,15 +1058,21 @@ function CompanyPaymentsLedger({
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Total Amount</div>
-          <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalAmount)}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatCurrencyINR(totalAmount, { maximumFractionDigits: 0 })}
+          </div>
         </div>
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Received</div>
-          <div className="font-semibold text-zinc-100">{formatCurrencyINR(totalReceived)}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatCurrencyINR(totalReceived, { maximumFractionDigits: 0 })}
+          </div>
         </div>
         <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
           <div className="text-zinc-500">Remaining</div>
-          <div className="font-semibold text-zinc-100">{formatCurrencyINR(remaining)}</div>
+          <div className="font-semibold text-zinc-100">
+            {formatCurrencyINR(remaining, { maximumFractionDigits: 0 })}
+          </div>
         </div>
       </div>
 
@@ -928,10 +1080,18 @@ function CompanyPaymentsLedger({
         <table className="w-full min-w-[720px] border-collapse text-sm text-zinc-200">
           <thead className="bg-[#15171c]">
             <tr>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Date</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Amount</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">Note</th>
-              <th className="border-b border-[#252932] px-3 py-2 text-right">Actions</th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Date
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Amount
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Note
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-right">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -943,9 +1103,14 @@ function CompanyPaymentsLedger({
               </tr>
             ) : (
               paginatedPayments.map((payment) => (
-                <tr key={payment.id} className="border-b border-[#252932] last:border-b-0">
+                <tr
+                  key={payment.id}
+                  className="border-b border-[#252932] last:border-b-0"
+                >
                   <td className="px-3 py-2">{payment.paid_on}</td>
-                  <td className="px-3 py-2 text-right">{formatCurrencyINR(payment.amount)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {formatCurrencyINR(payment.amount)}
+                  </td>
                   <td className="px-3 py-2">{payment.note || "-"}</td>
                   <td className="px-3 py-2 text-right">
                     <Button
@@ -972,7 +1137,9 @@ function CompanyPaymentsLedger({
           variant="outline"
           size="sm"
           disabled={currentPage <= 1}
-          onClick={() => setPage((current) => Math.max(Math.min(current, totalPages) - 1, 1))}
+          onClick={() =>
+            setPage((current) => Math.max(Math.min(current, totalPages) - 1, 1))
+          }
           className="cursor-pointer border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
         >
           Previous
@@ -985,7 +1152,11 @@ function CompanyPaymentsLedger({
           variant="outline"
           size="sm"
           disabled={currentPage >= totalPages}
-          onClick={() => setPage((current) => Math.min(Math.min(current, totalPages) + 1, totalPages))}
+          onClick={() =>
+            setPage((current) =>
+              Math.min(Math.min(current, totalPages) + 1, totalPages),
+            )
+          }
           className="cursor-pointer border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
         >
           Next
@@ -1019,15 +1190,23 @@ function CompanyPaymentsLedger({
               onChange={(event) => setNote(event.target.value)}
             />
             <div className="rounded-md border border-[#252932] bg-[#14161b] p-3">
-              <div className="mb-2 text-sm font-medium text-zinc-200">Allocate To Bills (Optional)</div>
+              <div className="mb-2 text-sm font-medium text-zinc-200">
+                Allocate To Bills (Optional)
+              </div>
               <div className="space-y-2">
                 {saleAllocationRows.length === 0 ? (
-                  <div className="text-xs text-zinc-500">No sales available for allocation.</div>
+                  <div className="text-xs text-zinc-500">
+                    No sales available for allocation.
+                  </div>
                 ) : (
                   saleAllocationRows.map((row) => (
-                    <div key={row.sale.id} className="grid grid-cols-12 items-center gap-2 text-xs">
+                    <div
+                      key={row.sale.id}
+                      className="grid grid-cols-12 items-center gap-2 text-xs"
+                    >
                       <div className="col-span-4 text-zinc-300">
-                        Bill {row.sale.bill_number} • Pending {formatCurrencyINR(row.remaining)}
+                        Bill {row.sale.bill_number} • Pending{" "}
+                        {formatCurrencyINR(row.remaining)}
                       </div>
                       <div className="col-span-8">
                         <Input
@@ -1074,7 +1253,10 @@ function CompanyPaymentsLedger({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
         <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Payment?</DialogTitle>

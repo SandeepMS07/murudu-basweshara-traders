@@ -98,7 +98,11 @@ export default async function SalesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatNumberIN(totals.netWeight)} kg
+              {formatNumberIN(totals.netWeight, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })}{" "}
+              kg
             </p>
           </CardContent>
         </Card>
@@ -108,7 +112,7 @@ export default async function SalesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatCurrencyINR(totals.amount)}
+              {formatCurrencyINR(totals.amount, { maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>
@@ -118,7 +122,7 @@ export default async function SalesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatCurrencyINR(totals.pending)}
+              {formatCurrencyINR(totals.pending, { maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>
@@ -128,7 +132,7 @@ export default async function SalesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatCurrencyINR(totals.received)}
+              {formatCurrencyINR(totals.received, { maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>

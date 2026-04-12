@@ -201,9 +201,8 @@ export async function getSales(filters?: SalesFilters): Promise<Sale[]> {
   let query = supabaseServer
     .from("sales")
     .select("*")
-    .order("sl_no", { ascending: true, nullsFirst: false })
-    .order("sale_date", { ascending: true })
-    .order("bill_number", { ascending: true });
+    .order("sale_date", { ascending: false })
+    .order("bill_number", { ascending: false });
 
   if (filters?.buyerCompanyId) {
     query = query.eq("sale_company_id", filters.buyerCompanyId);
