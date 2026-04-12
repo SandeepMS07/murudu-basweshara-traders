@@ -117,8 +117,16 @@ export default async function BillPrintPage({
                 <span>Harish Putta</span> <strong>: 9019800731</strong>
               </div>
               <div className="bill-print-info-phone">
-                <span className="bill-print-icon"></span>
                 <span>Jagadish</span> <strong>: 7795953398</strong>
+              </div>
+              <div className="bill-print-info-phone">
+                <span>Bags</span>{" "}
+                <strong>
+                  :{" "}
+                  {formatNumberIN(purchase?.bags ?? 0, {
+                    maximumFractionDigits: 0,
+                  })}
+                </strong>
               </div>
             </div>
             <div className="bill-print-info-right">
