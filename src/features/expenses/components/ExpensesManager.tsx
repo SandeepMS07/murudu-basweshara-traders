@@ -786,6 +786,7 @@ export function ExpensesManager({
                 <thead className="bg-[#15171c] text-zinc-200">
                   <tr>
                     <th className="px-3 py-2 text-left">Sl No</th>
+                    <th className="px-3 py-2 text-left">Date</th>
                     <th className="px-3 py-2 text-left">Reason</th>
                     <th className="px-3 py-2 text-right">How Much Paid</th>
                     <th className="px-3 py-2 text-right">Actions</th>
@@ -799,6 +800,9 @@ export function ExpensesManager({
                         className="border-t border-[#252932] text-zinc-200"
                       >
                         <td className="px-3 py-2">{index + 1}</td>
+                        <td className="px-3 py-2">
+                          {formatDisplayDate(row.expense_date)}
+                        </td>
                         <td className="px-3 py-2">{row.reason || "-"}</td>
                         <td className="px-3 py-2 text-right">
                           {formatCurrencyINR(row.amount)}
@@ -835,7 +839,7 @@ export function ExpensesManager({
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-3 py-8 text-center text-zinc-500"
                       >
                         No other expenses.

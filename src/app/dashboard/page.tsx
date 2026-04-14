@@ -6,48 +6,43 @@ import { getPurchases } from "@/features/purchases/service/purchase.service";
 import { getSales } from "@/features/sales/service/sale.service";
 import { PurchaseTrendChart } from "@/features/dashboard/components/PurchaseTrendChart";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { getFinancialYearBounds } from "@/lib/financial-year";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
   const purchases = await getPurchases();
   const sales = await getSales();
+  const nowIst = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+  const { start: fyStart, end: fyEnd } = getFinancialYearBounds(nowIst);
+  const scopedPurchases = purchases.filter(
+    (p) => p.date >= fyStart && p.date <= fyEnd
+  );
+  const scopedSales = sales.filter(
+    (s) => s.sale_date >= fyStart && s.sale_date <= fyEnd
+  );
 
-  const getFinancialYearBoundsIST = () => {
-    const nowIst = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-    );
-    const year = nowIst.getFullYear();
-    const month = nowIst.getMonth();
-    const startYear = month >= 3 ? year : year - 1;
-    const start = `${startYear}-04-01`;
-    const end = `${startYear + 1}-04-01`;
-    return { start, end };
-  };
-
-  const { start: fyStart, end: fyEnd } = getFinancialYearBoundsIST();
-  const fyPurchases = purchases.filter((p) => p.date >= fyStart && p.date < fyEnd);
-  const fySales = sales.filter((s) => s.sale_date >= fyStart && s.sale_date < fyEnd);
-
-  const totalPurchasesAmount = fyPurchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const totalSalesAmount = fySales.reduce((acc, s) => acc + (s.amount || 0), 0);
-  const totalSalesPending = fySales.reduce((acc, s) => acc + (s.pending_amount || 0), 0);
-  const totalPurchasedBags = fyPurchases.reduce((acc, p) => acc + Number(p.bags || 0), 0);
-  const totalSoldBags = fySales.reduce((acc, s) => acc + Number(s.bags || 0), 0);
+  const totalPurchasesAmount = scopedPurchases.reduce((acc, p) => acc + (p.final_total || 0), 0);
+  const totalSalesAmount = scopedSales.reduce((acc, s) => acc + (s.amount || 0), 0);
+  const totalSalesPending = scopedSales.reduce((acc, s) => acc + (s.pending_amount || 0), 0);
+  const totalPurchasedBags = scopedPurchases.reduce((acc, p) => acc + Number(p.bags || 0), 0);
+  const totalSoldBags = scopedSales.reduce((acc, s) => acc + Number(s.bags || 0), 0);
   const stockBags = totalPurchasedBags - totalSoldBags;
-  const totalPurchasedNetWeight = fyPurchases.reduce((acc, p) => acc + Number(p.net_weight || 0), 0);
-  const totalSoldNetWeight = fySales.reduce((acc, s) => acc + Number(s.net_weight || 0), 0);
+  const totalPurchasedNetWeight = scopedPurchases.reduce((acc, p) => acc + Number(p.net_weight || 0), 0);
+  const totalSoldNetWeight = scopedSales.reduce((acc, s) => acc + Number(s.net_weight || 0), 0);
   const stockWeight = totalPurchasedNetWeight - totalSoldNetWeight;
-  const rtgsAmount = fyPurchases
+  const rtgsAmount = scopedPurchases
     .filter((p) => p.payment_through === "RTGS")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const upiAmount = fyPurchases
+  const upiAmount = scopedPurchases
     .filter((p) => p.payment_through === "UPI")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const pendingAmount = fyPurchases
+  const pendingAmount = scopedPurchases
     .filter((p) => p.payment_through === "none")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
   const byDate = new Map<string, number>();
-  for (const p of fyPurchases) {
+  for (const p of scopedPurchases) {
     byDate.set(p.date, (byDate.get(p.date) || 0) + p.final_total);
   }
   const trend = [...byDate.entries()]
@@ -56,7 +51,7 @@ export default async function DashboardPage() {
     .slice(-10);
 
   const salesByDate = new Map<string, number>();
-  for (const sale of fySales) {
+  for (const sale of scopedSales) {
     salesByDate.set(sale.sale_date, (salesByDate.get(sale.sale_date) || 0) + sale.amount);
   }
   const salesTrend = [...salesByDate.entries()]
@@ -83,7 +78,7 @@ export default async function DashboardPage() {
     { pending: number; overdue: number }
   >();
 
-  for (const sale of fySales) {
+  for (const sale of scopedSales) {
     const party = (sale.party || "Unknown").trim() || "Unknown";
     const pending = sale.pending_amount || 0;
     const dueDate = getDueDate(sale.sale_date, sale.payment_terms);
@@ -108,7 +103,9 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-6 text-zinc-100">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-zinc-500">Welcome back, {user.email} ({user.role})</p>
+          <p className="text-zinc-500">
+            Welcome back, {user.email} ({user.role})
+          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -129,7 +126,7 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium text-zinc-400">Total Sales</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#ff8f6b]">{fySales.length}</div>
+              <div className="text-2xl font-bold text-[#ff8f6b]">{scopedSales.length}</div>
               <p className="text-xs text-zinc-500">Entries in BILL</p>
             </CardContent>
           </Card>
@@ -299,7 +296,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatNumberIN(
-                  fyPurchases.reduce((acc, p) => acc + p.bags, 0) / Math.max(fyPurchases.length, 1),
+                  scopedPurchases.reduce((acc, p) => acc + p.bags, 0) /
+                    Math.max(scopedPurchases.length, 1),
                   { minimumFractionDigits: 0, maximumFractionDigits: 0 }
                 )}
               </div>
@@ -312,7 +310,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatNumberIN(
-                  fyPurchases.reduce((acc, p) => acc + p.net_weight, 0) / Math.max(fyPurchases.length, 1),
+                  scopedPurchases.reduce((acc, p) => acc + p.net_weight, 0) /
+                    Math.max(scopedPurchases.length, 1),
                   { minimumFractionDigits: 0, maximumFractionDigits: 0 }
                 )}
               </div>
@@ -325,7 +324,8 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-[#ff8f6b]">
                 {formatCurrencyINR(
-                  fyPurchases.reduce((acc, p) => acc + p.rate, 0) / Math.max(fyPurchases.length, 1),
+                  scopedPurchases.reduce((acc, p) => acc + p.rate, 0) /
+                    Math.max(scopedPurchases.length, 1),
                   { maximumFractionDigits: 0 }
                 )}
               </div>

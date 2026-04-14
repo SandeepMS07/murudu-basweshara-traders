@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { createPurchaseColumns } from "@/features/purchases/components/Columns";
@@ -8,9 +10,11 @@ import { Purchase, PaymentMethod } from "@/features/purchases/schemas";
 import { updatePurchasePaymentThroughAction } from "@/app/purchases/actions";
 import { toast } from "sonner";
 import { formatCurrencyINR } from "@/lib/number-format";
+import { Button } from "@/components/ui/button";
 
 interface PurchasesTableClientProps {
   data: Purchase[];
+  addPurchaseHref?: string;
 }
 
 const paymentRowStyles: Record<PaymentMethod, string> = {
@@ -27,7 +31,7 @@ const paymentBadgeStyles: Record<PaymentMethod, string> = {
   none: "border-[#4b5563]/45 bg-[#2a2f3a]/40 text-[#d1d5db]",
 };
 
-export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
+export function PurchasesTableClient({ data, addPurchaseHref }: PurchasesTableClientProps) {
   const [, startTransition] = useTransition();
   const [paymentMethodOverrides, setPaymentMethodOverrides] = useState<
     Record<string, PaymentMethod>
@@ -185,8 +189,9 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
           (!!queryDigits && normalizedPhone.includes(queryDigits))
         );
       }}
-      toolbarRight={
-        <div className="w-full p-0 xl:ml-auto xl:flex xl:justify-end">
+      toolbarRight={null}
+      toolbarBelow={
+        <div className="flex w-full">
           <div className="flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible xl:pb-0">
             {(["RTGS", "UPI", "CASH", "none"] as const).map((method) => (
               <div
@@ -204,6 +209,16 @@ export function PurchasesTableClient({ data }: PurchasesTableClientProps) {
             ))}
           </div>
         </div>
+      }
+      toolbarFarRight={
+        addPurchaseHref ? (
+          <Link href={addPurchaseHref} className="w-full sm:w-auto">
+            <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Purchase
+            </Button>
+          </Link>
+        ) : null
       }
       rowClassName={(row) => {
         const method = paymentMethods[row.original.id] ?? "none";

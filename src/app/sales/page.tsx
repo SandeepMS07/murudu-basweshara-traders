@@ -4,6 +4,7 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { getSales } from "@/features/sales/service/sale.service";
 import { SalesTableClient } from "@/features/sales/components/SalesTableClient";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { getFinancialYearBounds } from "@/lib/financial-year";
 import {
   getCompanies,
   getCompanyPaymentAllocations,
@@ -14,6 +15,22 @@ import { computeEffectiveSalePending } from "@/features/companies/lib/payment-al
 export default async function SalesPage() {
   await requireAuth();
   const sales = await getSales();
+  const nowIst = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+  const { start: fyStart, end: fyEnd } = getFinancialYearBounds(nowIst);
+  const lastFyReference = new Date(
+    nowIst.getFullYear() - 1,
+    nowIst.getMonth(),
+    nowIst.getDate()
+  );
+  const { start: lastFyStart } = getFinancialYearBounds(lastFyReference);
+  const scopedSales = sales.filter(
+    (sale) => sale.sale_date >= fyStart && sale.sale_date <= fyEnd
+  );
+  const tableSales = sales.filter(
+    (sale) => sale.sale_date >= lastFyStart && sale.sale_date <= fyEnd
+  );
   const [
     buyerCompaniesResult,
     issuerCompaniesResult,
@@ -54,7 +71,7 @@ export default async function SalesPage() {
   let totalAmount = 0;
   let totalReceived = 0;
 
-  for (const sale of sales) {
+  for (const sale of scopedSales) {
     totalNetWeight += sale.net_weight;
     totalAmount += sale.amount;
   }
@@ -65,10 +82,11 @@ export default async function SalesPage() {
 
   const pendingBySaleId =
     companyPayments.length > 0 || allocations.length > 0
-      ? computeEffectiveSalePending(sales, companyPayments, allocations).pendingBySaleId
+      ? computeEffectiveSalePending(scopedSales, companyPayments, allocations)
+          .pendingBySaleId
       : {};
   let effectivePendingTotal = 0;
-  for (const sale of sales) {
+  for (const sale of scopedSales) {
     effectivePendingTotal += pendingBySaleId[sale.id] ?? sale.pending_amount;
   }
 
@@ -79,6 +97,12 @@ export default async function SalesPage() {
     pending: effectivePendingTotal,
   };
 
+  const tablePendingBySaleId =
+    companyPayments.length > 0 || allocations.length > 0
+      ? computeEffectiveSalePending(tableSales, companyPayments, allocations)
+          .pendingBySaleId
+      : {};
+
   return (
     <AppShell>
       <div className="mb-3 grid grid-cols-2 gap-3 xl:grid-cols-5">
@@ -88,7 +112,7 @@ export default async function SalesPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-2xl font-semibold text-[#ff8f6b] sm:text-3xl">
-              {formatNumberIN(sales.length, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              {formatNumberIN(scopedSales.length, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
           </CardContent>
         </Card>
@@ -139,10 +163,10 @@ export default async function SalesPage() {
       </div>
 
       <SalesTableClient
-        data={sales}
+        data={tableSales}
         buyerCompanies={buyerCompanies}
         issuerCompanies={activeIssuerCompanies}
-        pendingBySaleId={pendingBySaleId}
+        pendingBySaleId={tablePendingBySaleId}
         addSaleHref="/sales/new"
       />
     </AppShell>
