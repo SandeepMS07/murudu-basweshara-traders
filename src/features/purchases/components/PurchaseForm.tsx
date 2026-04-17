@@ -41,6 +41,18 @@ interface PurchaseFormProps {
   initialData?: Purchase;
   nextBillNo?: number;
   linkedBillNo?: number;
+  entityLabel?: string;
+  listHref?: string;
+  createAction?: (data: z.infer<typeof purchaseSchema>) => Promise<unknown>;
+  updateAction?: (
+    id: string,
+    data: z.infer<typeof purchaseSchema>
+  ) => Promise<unknown>;
+  checkBillNoAvailabilityAction?: (
+    billNo: number,
+    billDate: string,
+    excludeId?: string
+  ) => Promise<boolean>;
 }
 type PurchaseFormValues = z.input<typeof purchaseSchema>;
 const BAG_LESS_PER_BAG = 6;
@@ -79,7 +91,16 @@ function splitMobileNumber(input: string | undefined): {
   return { countryCode: matchedCountry.code, mobile: mobilePart };
 }
 
-export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: PurchaseFormProps) {
+export function PurchaseForm({
+  initialData,
+  nextBillNo,
+  linkedBillNo,
+  entityLabel = "Purchase",
+  listHref = "/purchases",
+  createAction = createPurchaseAction,
+  updateAction = updatePurchaseAction,
+  checkBillNoAvailabilityAction = checkPurchaseBillNoAvailabilityAction,
+}: PurchaseFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!initialData;
@@ -193,18 +214,20 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
       });
 
       if (isEditing && initialData?.id) {
-        await updatePurchaseAction(initialData.id, payload);
-        toast.success("Purchase Updated");
-        router.replace("/purchases");
+        await updateAction(initialData.id, payload);
+        toast.success(`${entityLabel} Updated`);
+        router.replace(listHref);
       } else {
-        await createPurchaseAction(payload);
-        toast.success("Purchase Created");
-        router.replace("/purchases");
+        await createAction(payload);
+        toast.success(`${entityLabel} Created`);
+        router.replace(listHref);
       }
       return;
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Failed to save purchase";
+        error instanceof Error
+          ? error.message
+          : `Failed to save ${entityLabel.toLowerCase()}`;
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -223,7 +246,7 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
         setBillNoChecking(true);
         // Debounced availability check with sequence guard prevents stale API responses
         // from overriding the latest user input state.
-        const available = await checkPurchaseBillNoAvailabilityAction(
+        const available = await checkBillNoAvailabilityAction(
           candidate,
           dateForCheck,
           isEditing ? initialData?.id : undefined
@@ -250,13 +273,22 @@ export function PurchaseForm({ initialData, nextBillNo, linkedBillNo }: Purchase
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [billNo, billDate, form, initialData?.id, isEditing]);
+  }, [
+    billNo,
+    billDate,
+    form,
+    initialData?.id,
+    isEditing,
+    checkBillNoAvailabilityAction,
+  ]);
 
   return (
     <Card className="mx-auto w-full max-w-6xl gap-0 py-0 border border-[#1f2229] bg-[#111214] text-zinc-100 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
       <CardHeader className="space-y-0 border-b border-[#252932] bg-[#15171c] py-2.5">
         <CardTitle className="text-lg text-zinc-100">
-          {isEditing ? "Update Purchase Details" : "New Purchase Details"}
+          {isEditing
+            ? `Update ${entityLabel} Details`
+            : `New ${entityLabel} Details`}
         </CardTitle>
         <p className="text-xs text-zinc-500">Fill the required fields.</p>
       </CardHeader>

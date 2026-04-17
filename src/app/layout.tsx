@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "MB Groups",
-  description: "MB Groups purchase, sales, billing, and expense management.",
+  description: "MB Groups purchase, bilty, sales, billing, and expense management.",
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }],
     shortcut: [{ url: "/icon.png", type: "image/png" }],

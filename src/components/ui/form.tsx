@@ -39,27 +39,12 @@ const FormField = <
   )
 }
 
-type FormItemContextValue = {
-  id: string
-}
-
-const FormItemContext = React.createContext<FormItemContextValue>(
-  {} as FormItemContextValue
-)
-
 function FormItem({ className, ...props }: React.ComponentProps<"div">) {
-  const id = React.useId()
-
-  return (
-    <FormItemContext.Provider value={{ id }}>
-      <div data-slot="form-item" className={cn("space-y-2", className)} {...props} />
-    </FormItemContext.Provider>
-  )
+  return <div data-slot="form-item" className={cn("space-y-2", className)} {...props} />
 }
 
 function useFormField() {
   const fieldContext = React.useContext(FormFieldContext)
-  const itemContext = React.useContext(FormItemContext)
   const { getFieldState, formState } = useFormContext()
 
   const fieldState = getFieldState(fieldContext.name, formState)
@@ -68,7 +53,8 @@ function useFormField() {
     throw new Error("useFormField must be used within <FormField>")
   }
 
-  const baseId = itemContext.id
+  const normalizedName = String(fieldContext.name).replace(/[^a-zA-Z0-9_-]/g, "-")
+  const baseId = `form-item-${normalizedName}`
 
   return {
     name: fieldContext.name,

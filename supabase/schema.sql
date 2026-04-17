@@ -76,6 +76,81 @@ alter table public.purchases add column if not exists bag_avg numeric(12,2) not 
 alter table public.purchases add column if not exists payment_through text not null default 'none' check (payment_through in ('RTGS', 'UPI', 'none'));
 alter table public.purchases add column if not exists payment_date date;
 
+create table if not exists public.bilty (
+  id text primary key,
+  bill_no bigint,
+  date date not null,
+  party text not null default '',
+  name text not null default '',
+  place text not null default '',
+  mob text not null default '',
+  bags numeric(12,2) not null default 0,
+  weight numeric(12,2) not null default 0,
+  less_percent numeric(6,2) not null default 0,
+  rate numeric(12,2) not null default 0,
+  bag_less numeric(12,2) not null default 0,
+  add_amount numeric(12,2) not null default 0,
+  cash_paid numeric(12,2) not null default 0,
+  upi_paid numeric(12,2) not null default 0,
+  source text not null check (source in ('manual', 'app')) default 'app',
+  payment_through text not null check (payment_through in ('RTGS', 'UPI', 'none')) default 'none',
+  less_weight numeric(12,2) not null default 0,
+  net_weight numeric(12,2) not null default 0,
+  amount numeric(14,2) not null default 0,
+  final_total numeric(14,2) not null default 0,
+  bag_avg numeric(12,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create sequence if not exists public.bilty_bill_no_seq start with 1 increment by 1;
+
+alter table public.bilty
+  add column if not exists bill_no bigint;
+
+alter table public.bilty
+  alter column bill_no set default nextval('public.bilty_bill_no_seq');
+
+with ranked_bilty as (
+  select id, row_number() over (order by created_at asc, id asc) as rn
+  from public.bilty
+  where bill_no is null
+)
+update public.bilty b
+set bill_no = r.rn
+from ranked_bilty r
+where b.id = r.id;
+
+do $$
+declare
+  max_bilty_bill_no bigint;
+begin
+  select coalesce(max(bill_no), 0) into max_bilty_bill_no from public.bilty;
+  if max_bilty_bill_no = 0 then
+    perform setval('public.bilty_bill_no_seq', 1, false);
+  else
+    perform setval('public.bilty_bill_no_seq', max_bilty_bill_no, true);
+  end if;
+end $$;
+
+create unique index if not exists idx_bilty_bill_no_unique on public.bilty (bill_no);
+
+alter table public.bilty add column if not exists name text not null default '';
+alter table public.bilty add column if not exists party text not null default '';
+alter table public.bilty add column if not exists place text not null default '';
+alter table public.bilty add column if not exists mob text not null default '';
+alter table public.bilty add column if not exists bags numeric(12,2) not null default 0;
+alter table public.bilty add column if not exists bag_avg numeric(12,2) not null default 0;
+alter table public.bilty add column if not exists payment_through text not null default 'none' check (payment_through in ('RTGS', 'UPI', 'none'));
+alter table public.bilty add column if not exists payment_date date;
+
+create table if not exists public.bilty_parties (
+  id text primary key,
+  name text not null unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.bills (
   id text primary key,
   bill_no bigint,
@@ -186,6 +261,9 @@ create table if not exists public.company_invoice_counters (
   last_seq bigint not null default 0,
   updated_at timestamptz not null default now()
 );
+
+create unique index if not exists idx_company_invoice_counters_issuer_company_id_unique
+  on public.company_invoice_counters (issuer_company_id);
 
 create table if not exists public.company_payments (
   id text primary key,
@@ -396,7 +474,7 @@ declare
 begin
   insert into public.company_invoice_counters (issuer_company_id, last_seq, updated_at)
   values (p_issuer_company_id, 1, now())
-  on conflict (issuer_company_id)
+  on conflict on constraint company_invoice_counters_pkey
   do update
     set last_seq = public.company_invoice_counters.last_seq + 1,
         updated_at = now()
@@ -405,6 +483,9 @@ begin
   return v_next;
 end;
 $$;
+
+create unique index if not exists idx_users_email_unique
+  on public.users (email);
 
 insert into public.users (email, password_hash, role)
 values

@@ -1,13 +1,15 @@
 # PB Manager
 
-PB Manager is a [Next.js](https://nextjs.org) app for managing purchases, generating bills, and printing invoice copies.  
+PB Manager is a [Next.js](https://nextjs.org) app for managing purchases, bilty, generating bills, and printing invoice copies.  
 Data is stored in Supabase (Postgres).
 
 ## Features
 
 - Login/logout with role-based access (`admin`, `operator`)
 - Purchases CRUD
+- Bilty CRUD
 - Bill generation from purchases (idempotent: one purchase -> one bill id)
+- Bill generation from bilty (idempotent: one bilty -> one bill id)
 - Invoice preview in dialog
 - Print invoice flow (A4 layout, dual copy print)
 - Bills list with `Bill For`, `Due Date`, `Status`, `View Bill`
@@ -45,6 +47,7 @@ SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 This creates:
 - `users`
 - `purchases`
+- `bilty`
 - `bills`
 
 and seeds default users:

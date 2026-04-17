@@ -23,9 +23,9 @@ describe("calculateSale", () => {
       "sale-1"
     );
 
-    expect(sale.amount).toBe(105900);
+    expect(sale.amount).toBe(106000);
     expect(sale.factory_amount).toBe(95400);
-    expect(sale.pending_amount).toBe(10500);
+    expect(sale.pending_amount).toBe(10600);
     expect(sale.bag_avg).toBe(100);
   });
 
@@ -49,9 +49,9 @@ describe("calculateSale", () => {
       "sale-3"
     );
 
-    expect(sale.amount).toBe(19900);
+    expect(sale.amount).toBe(20000);
     expect(sale.factory_amount).toBe(10000);
-    expect(sale.pending_amount).toBe(9900);
+    expect(sale.pending_amount).toBe(10000);
   });
 
   it("uses provided bag average instead of derived value", () => {

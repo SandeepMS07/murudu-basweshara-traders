@@ -37,6 +37,15 @@ const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
   {
+    name: "Bilty",
+    href: "/bilty",
+    icon: Truck,
+    children: [
+      { name: "Overview", href: "/bilty", icon: LayoutList },
+      { name: "Parties", href: "/bilty/parties", icon: Building2 },
+    ],
+  },
+  {
     name: "Sales",
     href: "/sales",
     icon: HandCoins,
@@ -212,7 +221,10 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               {item.children && expandedSections[item.href] ? (
                 <div className="relative ml-8 mt-1 border-l border-[#2a2d34] pl-3">
                   {item.children.map((child) => {
-                    const childActive = pathname.startsWith(child.href);
+                    const childActive =
+                      child.href === item.href
+                        ? pathname === child.href
+                        : pathname.startsWith(child.href);
                     const ChildIcon = child.icon;
                     return (
                       <Link

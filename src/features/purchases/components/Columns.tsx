@@ -24,11 +24,61 @@ import {
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
 
-function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
+type PurchaseColumnsConfig = {
+  entityLabelSingular?: string;
+  editHrefBase?: string;
+  nameHeaderLabel?: string;
+  nameAccessorKey?: string;
+  showPlaceColumn?: boolean;
+  showMobColumn?: boolean;
+  deleteAction?: (id: string) => Promise<void>;
+  generateBillAction?: (id: string) => Promise<{ id: string }>;
+  deleteSuccessMessage?: string;
+  deleteErrorMessage?: string;
+  generateBillSuccessMessage?: string;
+  generateBillErrorMessage?: string;
+  deleteDialogTitle?: string;
+  deleteDialogDescription?: string;
+  generateBillDialogTitle?: string;
+  generateBillDialogDescription?: string;
+  billIdPrefix?: string;
+};
+
+const defaultPurchaseColumnsConfig: Required<Pick<
+  PurchaseColumnsConfig,
+  "entityLabelSingular" | "editHrefBase" | "deleteSuccessMessage" | "deleteErrorMessage" | "generateBillSuccessMessage" | "generateBillErrorMessage" | "deleteDialogTitle" | "deleteDialogDescription" | "generateBillDialogTitle" | "generateBillDialogDescription" | "billIdPrefix"
+>> & PurchaseColumnsConfig = {
+  entityLabelSingular: "Purchase",
+  editHrefBase: "/purchases",
+  nameHeaderLabel: "NAME",
+  nameAccessorKey: "name",
+  showPlaceColumn: true,
+  showMobColumn: true,
+  deleteSuccessMessage: "Purchase deleted",
+  deleteErrorMessage: "Failed to delete purchase",
+  generateBillSuccessMessage: "Bill generated from purchase",
+  generateBillErrorMessage: "Failed to generate bill",
+  deleteDialogTitle: "Delete Purchase",
+  deleteDialogDescription:
+    "Are you sure you want to delete this purchase? This action cannot be undone.",
+  generateBillDialogTitle: "Generate Bill",
+  generateBillDialogDescription:
+    "Preview the invoice below, then click Generate Bill.",
+  billIdPrefix: "PUR_BILL_",
+};
+
+function PurchaseActionsCell({
+  purchase,
+  config,
+}: {
+  purchase: Purchase;
+  config: PurchaseColumnsConfig;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
+  const mergedConfig = { ...defaultPurchaseColumnsConfig, ...config };
   const previewBillNumber = String(purchase.bill_no || "-");
   const isManual = purchase.source === "manual";
   const billToPhone = stripIndiaCountryCode(purchase.mob);
@@ -52,13 +102,15 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const confirmDelete = () => {
     startTransition(async () => {
       try {
-        await deletePurchaseAction(purchase.id);
-        toast.success("Purchase deleted");
+        await (mergedConfig.deleteAction ?? deletePurchaseAction)(purchase.id);
+        toast.success(mergedConfig.deleteSuccessMessage);
         setConfirmOpen(false);
         router.refresh();
       } catch (error: unknown) {
         const message =
-          error instanceof Error ? error.message : "Failed to delete purchase";
+          error instanceof Error
+            ? error.message
+            : mergedConfig.deleteErrorMessage;
         toast.error(message);
       }
     });
@@ -71,7 +123,9 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   const confirmGenerateBill = () => {
     startTransition(async () => {
       try {
-        const bill = await generateBillFromPurchaseAction(purchase.id);
+        const bill = await (
+          mergedConfig.generateBillAction ?? generateBillFromPurchaseAction
+        )(purchase.id);
         const printUrl = `/bills/${bill.id}/print?pid=${purchase.id}&_ts=${Date.now()}`;
 
         // Keep user on the same page and print using a hidden iframe.
@@ -89,12 +143,14 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
           iframe.remove();
         }, 60000);
 
-        toast.success("Bill generated from purchase");
+        toast.success(mergedConfig.generateBillSuccessMessage);
         setGenerateOpen(false);
         router.refresh();
       } catch (error: unknown) {
         const message =
-          error instanceof Error ? error.message : "Failed to generate bill";
+          error instanceof Error
+            ? error.message
+            : mergedConfig.generateBillErrorMessage;
         toast.error(message);
       }
     });
@@ -103,7 +159,7 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
   return (
     <>
       <div className="flex justify-end gap-1 pr-2">
-        <Link href={`/purchases/${purchase.id}/edit`}>
+        <Link href={`${mergedConfig.editHrefBase}/${purchase.id}/edit`}>
           <Button
             variant="ghost"
             size="icon"
@@ -143,10 +199,11 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
           className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
         >
           <DialogHeader>
-            <DialogTitle className="text-zinc-100">Delete Purchase</DialogTitle>
+            <DialogTitle className="text-zinc-100">
+              {mergedConfig.deleteDialogTitle}
+            </DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Are you sure you want to delete this purchase? This action cannot
-              be undone.
+              {mergedConfig.deleteDialogDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
@@ -178,9 +235,11 @@ function PurchaseActionsCell({ purchase }: { purchase: Purchase }) {
           className="flex max-h-[92vh] w-[88vw] flex-col border border-[#2a2d34] bg-[#15171c] text-zinc-100 shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:max-w-[980px]"
         >
           <DialogHeader>
-            <DialogTitle className="text-zinc-100">Generate Bill</DialogTitle>
+            <DialogTitle className="text-zinc-100">
+              {mergedConfig.generateBillDialogTitle}
+            </DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Preview the invoice below, then click Generate Bill.
+              {mergedConfig.generateBillDialogDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-auto rounded-md border border-[#2a2d34] bg-[#1b1e24] p-3">
@@ -414,6 +473,23 @@ export interface PurchaseColumnOptions {
   paymentDateById: Record<string, string | null>;
   onPaymentMethodChange: (purchaseId: string, method: PaymentMethod) => void;
   onPaymentDateChange: (purchaseId: string, date: string | null) => void;
+  entityLabelSingular?: string;
+  editHrefBase?: string;
+  nameHeaderLabel?: string;
+  nameAccessorKey?: string;
+  showPlaceColumn?: boolean;
+  showMobColumn?: boolean;
+  deleteAction?: (id: string) => Promise<void>;
+  generateBillAction?: (id: string) => Promise<{ id: string }>;
+  deleteSuccessMessage?: string;
+  deleteErrorMessage?: string;
+  generateBillSuccessMessage?: string;
+  generateBillErrorMessage?: string;
+  deleteDialogTitle?: string;
+  deleteDialogDescription?: string;
+  generateBillDialogTitle?: string;
+  generateBillDialogDescription?: string;
+  billIdPrefix?: string;
 }
 
 const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [
@@ -431,6 +507,7 @@ export function createPurchaseColumns(
     paymentDateById,
     onPaymentMethodChange,
     onPaymentDateChange,
+    ...config
   } = options;
 
   return [
@@ -440,8 +517,8 @@ export function createPurchaseColumns(
       cell: ({ row }) => row.original.bill_no || "-",
     },
     {
-      accessorKey: "name",
-      header: "NAME",
+      accessorKey: (config.nameAccessorKey ?? "name") as "name",
+      header: config.nameHeaderLabel ?? "NAME",
     },
     {
       accessorKey: "date",
@@ -455,14 +532,22 @@ export function createPurchaseColumns(
         }
       },
     },
-    {
-      accessorKey: "place",
-      header: "PLACE",
-    },
-    {
-      accessorKey: "mob",
-      header: "MOB",
-    },
+    ...(config.showPlaceColumn === false
+      ? []
+      : [
+          {
+            accessorKey: "place",
+            header: "PLACE",
+          },
+        ]),
+    ...(config.showMobColumn === false
+      ? []
+      : [
+          {
+            accessorKey: "mob",
+            header: "MOB",
+          },
+        ]),
     {
       accessorKey: "bags",
       header: "BAGS",
@@ -653,7 +738,7 @@ export function createPurchaseColumns(
       header: "ACTIONS",
       cell: ({ row }) => {
         const purchase = row.original;
-        return <PurchaseActionsCell purchase={purchase} />;
+        return <PurchaseActionsCell purchase={purchase} config={config} />;
       },
       meta: {
         sticky: true,

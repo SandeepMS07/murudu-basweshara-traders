@@ -5,20 +5,19 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
-import { createPurchaseColumns } from "@/features/purchases/components/Columns";
-import { Purchase, PaymentMethod } from "@/features/purchases/schemas";
-import { updatePurchasePaymentThroughAction } from "@/app/purchases/actions";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatCurrencyINR } from "@/lib/number-format";
-import { Button } from "@/components/ui/button";
+import { type PaymentMethod } from "@/features/purchases/schemas";
+import { type Bilty } from "@/features/bilty/schemas";
+import {
+  createBiltyColumns,
+} from "@/features/bilty/components/Columns";
+import { updateBiltyPaymentThroughAction } from "@/app/bilty/actions";
 
-interface PurchasesTableClientProps {
-  data: Purchase[];
+interface BiltysTableClientProps {
+  data: Bilty[];
   addHref?: string;
-  addButtonLabel?: string;
-  exportFileName?: string;
-  columnsFactory?: typeof createPurchaseColumns;
-  updatePaymentThroughAction?: typeof updatePurchasePaymentThroughAction;
 }
 
 const paymentRowStyles: Record<PaymentMethod, string> = {
@@ -35,14 +34,7 @@ const paymentBadgeStyles: Record<PaymentMethod, string> = {
   none: "border-[#4b5563]/45 bg-[#2a2f3a]/40 text-[#d1d5db]",
 };
 
-export function PurchasesTableClient({
-  data,
-  addHref,
-  addButtonLabel = "Add Purchase",
-  exportFileName = "purchases",
-  columnsFactory = createPurchaseColumns,
-  updatePaymentThroughAction = updatePurchasePaymentThroughAction,
-}: PurchasesTableClientProps) {
+export function BiltysTableClient({ data, addHref = "/bilty/add" }: BiltysTableClientProps) {
   const [, startTransition] = useTransition();
   const [paymentMethodOverrides, setPaymentMethodOverrides] = useState<
     Record<string, PaymentMethod>
@@ -54,9 +46,9 @@ export function PurchasesTableClient({
   const paymentMethods = useMemo(
     () =>
       Object.fromEntries(
-        data.map((purchase) => [
-          purchase.id,
-          paymentMethodOverrides[purchase.id] ?? purchase.payment_through ?? "none",
+        data.map((bilty) => [
+          bilty.id,
+          paymentMethodOverrides[bilty.id] ?? bilty.payment_through ?? "none",
         ])
       ) as Record<string, PaymentMethod>,
     [data, paymentMethodOverrides]
@@ -65,18 +57,18 @@ export function PurchasesTableClient({
   const paymentDates = useMemo(
     () =>
       Object.fromEntries(
-        data.map((purchase) => [
-          purchase.id,
-          paymentDateOverrides[purchase.id] ?? purchase.payment_date ?? null,
+        data.map((bilty) => [
+          bilty.id,
+          paymentDateOverrides[bilty.id] ?? bilty.payment_date ?? null,
         ])
       ) as Record<string, string | null>,
     [data, paymentDateOverrides]
   );
 
   const handlePaymentMethodChange = useCallback(
-    (purchaseId: string, method: PaymentMethod) => {
-      const previous = paymentMethods[purchaseId] ?? "none";
-      const previousDate = paymentDates[purchaseId] ?? null;
+    (biltyId: string, method: PaymentMethod) => {
+      const previous = paymentMethods[biltyId] ?? "none";
+      const previousDate = paymentDates[biltyId] ?? null;
       const nextDate =
         method === "none"
           ? null
@@ -84,16 +76,16 @@ export function PurchasesTableClient({
 
       setPaymentMethodOverrides((current) => ({
         ...current,
-        [purchaseId]: method,
+        [biltyId]: method,
       }));
       setPaymentDateOverrides((current) => ({
         ...current,
-        [purchaseId]: nextDate,
+        [biltyId]: nextDate,
       }));
 
       startTransition(async () => {
         try {
-          await updatePaymentThroughAction(purchaseId, method, nextDate);
+          await updateBiltyPaymentThroughAction(biltyId, method, nextDate);
         } catch (error: unknown) {
           const message =
             error instanceof Error
@@ -102,33 +94,33 @@ export function PurchasesTableClient({
           toast.error(message);
           setPaymentMethodOverrides((current) => ({
             ...current,
-            [purchaseId]: previous,
+            [biltyId]: previous,
           }));
           setPaymentDateOverrides((current) => ({
             ...current,
-            [purchaseId]: previousDate,
+            [biltyId]: previousDate,
           }));
         }
       });
     },
-    [paymentDates, paymentMethods, startTransition, updatePaymentThroughAction]
+    [paymentDates, paymentMethods, startTransition]
   );
 
   const handlePaymentDateChange = useCallback(
-    (purchaseId: string, paymentDate: string | null) => {
-      const currentMethod = paymentMethods[purchaseId] ?? "none";
+    (biltyId: string, paymentDate: string | null) => {
+      const currentMethod = paymentMethods[biltyId] ?? "none";
       if (currentMethod === "none") return;
-      const previousDate = paymentDates[purchaseId] ?? null;
+      const previousDate = paymentDates[biltyId] ?? null;
 
       setPaymentDateOverrides((current) => ({
         ...current,
-        [purchaseId]: paymentDate,
+        [biltyId]: paymentDate,
       }));
 
       startTransition(async () => {
         try {
-          await updatePaymentThroughAction(
-            purchaseId,
+          await updateBiltyPaymentThroughAction(
+            biltyId,
             currentMethod,
             paymentDate
           );
@@ -140,29 +132,23 @@ export function PurchasesTableClient({
           toast.error(message);
           setPaymentDateOverrides((current) => ({
             ...current,
-            [purchaseId]: previousDate,
+            [biltyId]: previousDate,
           }));
         }
       });
     },
-    [paymentDates, paymentMethods, startTransition, updatePaymentThroughAction]
+    [paymentDates, paymentMethods, startTransition]
   );
 
   const columns = useMemo(
     () =>
-      columnsFactory({
+      createBiltyColumns({
         paymentMethodById: paymentMethods,
         paymentDateById: paymentDates,
         onPaymentMethodChange: handlePaymentMethodChange,
         onPaymentDateChange: handlePaymentDateChange,
       }),
-    [
-      paymentDates,
-      paymentMethods,
-      handlePaymentMethodChange,
-      handlePaymentDateChange,
-      columnsFactory,
-    ]
+    [paymentDates, paymentMethods, handlePaymentMethodChange, handlePaymentDateChange]
   );
 
   const paymentLegend = useMemo(() => {
@@ -173,10 +159,10 @@ export function PurchasesTableClient({
       none: { count: 0, amount: 0 },
     };
 
-    data.forEach((purchase) => {
-      const method = paymentMethods[purchase.id] ?? purchase.payment_through ?? "none";
+    data.forEach((bilty) => {
+      const method = paymentMethods[bilty.id] ?? bilty.payment_through ?? "none";
       summary[method].count += 1;
-      summary[method].amount += purchase.final_total;
+      summary[method].amount += bilty.final_total;
     });
 
     return summary;
@@ -186,20 +172,15 @@ export function PurchasesTableClient({
     <DataTable
       columns={columns}
       data={data}
-      exportFileName={exportFileName}
+      exportFileName="bilty"
       disablePagination
       scrollContainerClassName="max-h-[70vh]"
-      searchKey="name"
-      searchPlaceholder="Filter by name or phone..."
-      searchPredicate={(purchase, query) => {
-        const normalizedName = (purchase.name || "").toLowerCase();
-        const normalizedPhone = (purchase.mob || "").replace(/\D/g, "");
-        const queryDigits = query.replace(/\D/g, "");
-
-        return (
-          normalizedName.includes(query) ||
-          (!!queryDigits && normalizedPhone.includes(queryDigits))
-        );
+      searchKey="party"
+      searchPlaceholder="Filter by party..."
+      searchPredicate={(bilty, query) => {
+        const row = bilty as Bilty;
+        const normalizedParty = (row.party || row.name || "").toLowerCase();
+        return normalizedParty.includes(query);
       }}
       toolbarRight={null}
       toolbarBelow={
@@ -227,7 +208,7 @@ export function PurchasesTableClient({
           <Link href={addHref} className="w-full sm:w-auto">
             <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              {addButtonLabel}
+              Add Bilty
             </Button>
           </Link>
         ) : null

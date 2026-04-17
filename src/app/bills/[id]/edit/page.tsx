@@ -40,6 +40,13 @@ export default async function EditBillPage({
     }
   }
 
+  if (id.startsWith("BILTY_BILL_")) {
+    const biltyId = id.slice("BILTY_BILL_".length);
+    if (biltyId) {
+      redirect(`/bilty/${biltyId}/edit`);
+    }
+  }
+
   return (
     <AppShell>
       <div className="mb-6">

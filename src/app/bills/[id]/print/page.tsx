@@ -4,9 +4,9 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { getBillById } from "@/features/bills/service/bill.service";
 import { BillPrintAuto } from "@/features/bills/components/BillPrintAuto";
 import { getPurchaseById } from "@/features/purchases/service/purchase.service";
+import { getBiltyById } from "@/features/bilty/service/bilty.service";
 import { Bill } from "@/features/bills/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
-import { stripIndiaCountryCode } from "@/lib/phone-format";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,21 +23,23 @@ export default async function BillPrintPage({
   const { pid, preview } = (await searchParams) || {};
   const previewMode = preview === "1";
   const purchase = pid ? await getPurchaseById(pid) : null;
+  const bilty = !purchase && pid ? await getBiltyById(pid) : null;
+  const sourceRecord = purchase ?? bilty;
   let bill: Bill | null = await getBillById(id);
 
-  if (!bill && previewMode && purchase) {
+  if (!bill && previewMode && sourceRecord) {
     bill = {
       id,
       bill_no: 0,
-      bill_date: purchase.date,
-      net_weight: purchase.net_weight,
-      rate: purchase.rate,
+      bill_date: sourceRecord.date,
+      net_weight: sourceRecord.net_weight,
+      rate: sourceRecord.rate,
       freight: 0,
       payment_term_days: 0,
       source: "app",
-      amount: purchase.amount,
-      final_amount: purchase.final_total,
-      due_date: purchase.date,
+      amount: sourceRecord.amount,
+      final_amount: sourceRecord.final_total,
+      due_date: sourceRecord.date,
     };
   }
 
@@ -52,17 +54,17 @@ export default async function BillPrintPage({
     printDate = bill.bill_date;
   }
 
-  const weight = purchase?.weight ?? bill.net_weight;
-  const lessWeight = purchase?.less_weight ?? 0;
+  const weight = sourceRecord?.weight ?? bill.net_weight;
+  const lessWeight = sourceRecord?.less_weight ?? 0;
   const netWeight = bill.net_weight;
   const rate = bill.rate;
   const displayRate = rate;
   const lineAmount = bill.amount;
-  const summaryAmount = purchase ? purchase.amount : bill.amount;
-  const summaryLess = purchase ? purchase.bag_less : bill.freight;
-  const summaryCash = purchase ? purchase.cash_paid : 0;
-  const summaryExtra = purchase ? purchase.add_amount : 0;
-  const summaryTotal = purchase ? purchase.final_total : bill.final_amount;
+  const summaryAmount = sourceRecord ? sourceRecord.amount : bill.amount;
+  const summaryLess = sourceRecord ? sourceRecord.bag_less : bill.freight;
+  const summaryCash = sourceRecord ? sourceRecord.cash_paid : 0;
+  const summaryExtra = sourceRecord ? sourceRecord.add_amount : 0;
+  const summaryTotal = sourceRecord ? sourceRecord.final_total : bill.final_amount;
   const summaryTotalText = formatCurrencyINR(summaryTotal, {
     maximumFractionDigits: 0,
   });
@@ -73,12 +75,13 @@ export default async function BillPrintPage({
         ? "bill-print-total-value-md"
         : "";
   const billNumber =
-    purchase?.bill_no && purchase.bill_no > 0
-      ? String(purchase.bill_no)
+    sourceRecord?.bill_no && sourceRecord.bill_no > 0
+      ? String(sourceRecord.bill_no)
       : bill.bill_no > 0
         ? String(bill.bill_no)
         : "AUTO";
-  const billToPhone = stripIndiaCountryCode(purchase?.mob);
+  const sourceParty = (sourceRecord as { party?: string } | null)?.party;
+  const redirectTo = purchase ? "/purchases" : "/bilty";
   const copies = previewMode ? [1] : [1, 2];
   const rootClassName = `bill-print-root bill-print-preview${
     previewMode ? " bill-print-inline-preview" : ""
@@ -86,7 +89,7 @@ export default async function BillPrintPage({
 
   return (
     <main className={rootClassName}>
-      {!previewMode ? <BillPrintAuto redirectTo="/purchases" /> : null}
+      {!previewMode ? <BillPrintAuto redirectTo={redirectTo} /> : null}
       {copies.map((copy) => (
         <section className="bill-print-copy" key={copy}>
           <header className="bill-print-header">
@@ -112,18 +115,11 @@ export default async function BillPrintPage({
               <div className="bill-print-yard">APMC Yard</div>
               <div>Honnali</div>
 
-              <div className="bill-print-info-phone">
-                <span className="bill-print-icon"></span>
-                <span>Harish Putta</span> <strong>: 9019800731</strong>
-              </div>
-              <div className="bill-print-info-phone">
-                <span>Jagadish</span> <strong>: 7795953398</strong>
-              </div>
               <div className="bill-print-info-phone mt-2">
                 <span>Bags</span>{" "}
                 <strong>
                   :{" "}
-                  {formatNumberIN(purchase?.bags ?? 0, {
+                  {formatNumberIN(sourceRecord?.bags ?? 0, {
                     maximumFractionDigits: 0,
                   })}
                 </strong>
@@ -136,15 +132,8 @@ export default async function BillPrintPage({
               </div>
               <div className="bill-print-kv">
                 <span className="bill-print-icon">◼</span>
-                <span>BILL TO:</span> <strong>{purchase?.name || "-"}</strong>
-              </div>
-              <div className="bill-print-kv">
-                <span className="bill-print-icon">◼</span>
-                <span>PHONE:</span> <strong>{billToPhone}</strong>
-              </div>
-              <div className="bill-print-kv">
-                <span className="bill-print-icon">◉</span>
-                <span>PLACE:</span> <strong>{purchase?.place || "-"}</strong>
+                <span>PARTY:</span>{" "}
+                <strong>{sourceParty || sourceRecord?.name || "-"}</strong>
               </div>
             </div>
           </section>
