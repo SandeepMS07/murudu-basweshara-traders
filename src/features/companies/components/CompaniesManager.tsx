@@ -1185,11 +1185,11 @@ function CompanyPaymentsLedger({
       </div>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Payment</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid max-h-[calc(90vh-11rem)] grid-cols-1 gap-3 overflow-y-auto pr-1">
             <Input
               type="date"
               className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
@@ -1214,7 +1214,7 @@ function CompanyPaymentsLedger({
               <div className="mb-2 text-sm font-medium text-zinc-200">
                 Allocate To Bills (Optional)
               </div>
-              <div className="space-y-2">
+              <div className="max-h-[38vh] space-y-2 overflow-y-auto pr-1 sm:max-h-72">
                 {saleAllocationRows.length === 0 ? (
                   <div className="text-xs text-zinc-500">
                     No sales available for allocation.
