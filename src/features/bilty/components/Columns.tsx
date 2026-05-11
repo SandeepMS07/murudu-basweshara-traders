@@ -1,21 +1,26 @@
 "use client";
 
+import { type ColumnDef } from "@tanstack/react-table";
 import {
   createPurchaseColumns,
   type PurchaseColumnOptions,
 } from "@/features/purchases/components/Columns";
+import { type Bilty } from "@/features/bilty/schemas";
 import {
   deleteBiltyAction,
   generateBillFromBiltyAction,
 } from "@/app/bilty/actions";
 
-export function createBiltyColumns(options: PurchaseColumnOptions) {
+export function createBiltyColumns(
+  options: PurchaseColumnOptions,
+): ColumnDef<Bilty>[] {
   return createPurchaseColumns({
     ...options,
     nameHeaderLabel: "PARTY",
     nameAccessorKey: "party",
     showPlaceColumn: false,
     showMobColumn: false,
+    showBagLessColumn: false,
     editHrefBase: "/bilty",
     deleteAction: deleteBiltyAction,
     generateBillAction: generateBillFromBiltyAction,
@@ -30,5 +35,5 @@ export function createBiltyColumns(options: PurchaseColumnOptions) {
     generateBillDialogDescription:
       "Preview the invoice below, then click Generate Bill.",
     billIdPrefix: "BILTY_BILL_",
-  });
+  }) as unknown as ColumnDef<Bilty>[];
 }

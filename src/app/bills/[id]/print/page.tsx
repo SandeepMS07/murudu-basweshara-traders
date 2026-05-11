@@ -61,7 +61,10 @@ export default async function BillPrintPage({
   const displayRate = rate;
   const lineAmount = bill.amount;
   const summaryAmount = sourceRecord ? sourceRecord.amount : bill.amount;
-  const summaryLess = sourceRecord ? sourceRecord.bag_less : bill.freight;
+  const summaryLess =
+    sourceRecord && "bag_less" in sourceRecord
+      ? sourceRecord.bag_less
+      : bill.freight;
   const summaryCash = sourceRecord ? sourceRecord.cash_paid : 0;
   const summaryExtra = sourceRecord ? sourceRecord.add_amount : 0;
   const summaryTotal = sourceRecord ? sourceRecord.final_total : bill.final_amount;

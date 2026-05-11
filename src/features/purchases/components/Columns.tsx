@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { PaymentMethod, Purchase } from "@/features/purchases/schemas";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, ReceiptText, Trash2 } from "lucide-react";
@@ -31,6 +31,7 @@ type PurchaseColumnsConfig = {
   nameAccessorKey?: string;
   showPlaceColumn?: boolean;
   showMobColumn?: boolean;
+  showBagLessColumn?: boolean;
   deleteAction?: (id: string) => Promise<void>;
   generateBillAction?: (id: string) => Promise<{ id: string }>;
   deleteSuccessMessage?: string;
@@ -54,6 +55,7 @@ const defaultPurchaseColumnsConfig: Required<Pick<
   nameAccessorKey: "name",
   showPlaceColumn: true,
   showMobColumn: true,
+  showBagLessColumn: true,
   deleteSuccessMessage: "Purchase deleted",
   deleteErrorMessage: "Failed to delete purchase",
   generateBillSuccessMessage: "Bill generated from purchase",
@@ -401,7 +403,7 @@ function PurchaseActionsCell({
                       <tr>
                         <td>BAG LESS</td>
                         <td>
-                          {formatCurrencyINR(purchase.bag_less, {
+                          {formatCurrencyINR(purchase.bag_less ?? 0, {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0,
                           })}
@@ -479,6 +481,7 @@ export interface PurchaseColumnOptions {
   nameAccessorKey?: string;
   showPlaceColumn?: boolean;
   showMobColumn?: boolean;
+  showBagLessColumn?: boolean;
   deleteAction?: (id: string) => Promise<void>;
   generateBillAction?: (id: string) => Promise<{ id: string }>;
   deleteSuccessMessage?: string;
@@ -614,17 +617,21 @@ export function createPurchaseColumns(
         });
       },
     },
-    {
-      accessorKey: "bag_less",
-      header: "LESS",
-      cell: ({ row }) => {
-        const amount = Number(row.getValue("bag_less"));
-        return formatCurrencyINR(amount, {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        });
-      },
-    },
+    ...(config.showBagLessColumn === false
+      ? []
+      : [
+          {
+            accessorKey: "bag_less",
+            header: "LESS",
+            cell: (context: CellContext<Purchase, unknown>) => {
+              const amount = Number(context.row.getValue("bag_less"));
+              return formatCurrencyINR(amount, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              });
+            },
+          },
+        ]),
     {
       accessorKey: "add_amount",
       header: "ADD",
