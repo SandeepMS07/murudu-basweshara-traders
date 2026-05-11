@@ -43,6 +43,8 @@ type PurchaseColumnsConfig = {
   generateBillDialogTitle?: string;
   generateBillDialogDescription?: string;
   billIdPrefix?: string;
+  documentLabel?: string;
+  sourceTypeLabel?: string;
 };
 
 const defaultPurchaseColumnsConfig: Required<Pick<
@@ -67,6 +69,8 @@ const defaultPurchaseColumnsConfig: Required<Pick<
   generateBillDialogDescription:
     "Preview the invoice below, then click Generate Bill.",
   billIdPrefix: "PUR_BILL_",
+  documentLabel: "ESTIMATION INVOICE",
+  sourceTypeLabel: "PURCHASE",
 };
 
 function PurchaseActionsCell({
@@ -261,7 +265,7 @@ function PurchaseActionsCell({
                     </div>
                     <div className="bill-print-invoice-box">
                       <div className="bill-print-invoice-label">
-                        ESTIMATION INVOICE
+                        {mergedConfig.documentLabel}
                       </div>
                       <div className="bill-print-invoice-number">
                         {previewBillNumber}
@@ -296,6 +300,11 @@ function PurchaseActionsCell({
                     <div className="bill-print-kv">
                       <span className="bill-print-icon">◼</span>
                       <span>DATE:</span> <strong>{purchase.date}</strong>
+                    </div>
+                    <div className="bill-print-kv">
+                      <span className="bill-print-icon">◼</span>
+                      <span>TYPE:</span>{" "}
+                      <strong>{mergedConfig.sourceTypeLabel}</strong>
                     </div>
                     <div className="bill-print-kv">
                       <span className="bill-print-icon">◼</span>
@@ -493,6 +502,8 @@ export interface PurchaseColumnOptions {
   generateBillDialogTitle?: string;
   generateBillDialogDescription?: string;
   billIdPrefix?: string;
+  documentLabel?: string;
+  sourceTypeLabel?: string;
 }
 
 const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [

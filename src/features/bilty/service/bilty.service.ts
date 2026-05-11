@@ -89,8 +89,20 @@ function toBilty(row: BiltyRow): Bilty {
     final_total: n(row.final_total),
     bag_avg: n(row.bag_avg),
     name: party,
-    place: "",
-    mob: "",
+    place: row.place ?? "",
+    mob: row.mob ?? "",
+  };
+}
+
+function withPartyFallback(
+  bilty: Bilty,
+  partyDetails?: { place?: string | null; mob?: string | null } | null
+): Bilty {
+  if (!partyDetails) return bilty;
+  return {
+    ...bilty,
+    place: bilty.place?.trim() ? bilty.place : (partyDetails.place ?? ""),
+    mob: bilty.mob?.trim() ? bilty.mob : (partyDetails.mob ?? ""),
   };
 }
 
@@ -397,16 +409,33 @@ export async function getNextBiltyBillNoPreview(billDate?: string): Promise<numb
 }
 
 export async function getBiltys(): Promise<Bilty[]> {
-  const { data, error } = await supabaseServer
-    .from("bilty")
-    .select("*")
-    .order("bill_no", { ascending: false, nullsFirst: false })
-    .order("date", { ascending: false });
+  const [{ data, error }, partiesResult] = await Promise.all([
+    supabaseServer
+      .from("bilty")
+      .select("*")
+      .order("bill_no", { ascending: false, nullsFirst: false })
+      .order("date", { ascending: false }),
+    supabaseServer.from("bilty_parties").select("name, place, mob"),
+  ]);
 
   if (error) {
     throw new Error(`Failed to load bilty records: ${error.message}`);
   }
-  return (data as BiltyRow[]).map(toBilty);
+  if (partiesResult.error) {
+    throw new Error(`Failed to load bilty party details: ${partiesResult.error.message}`);
+  }
+
+  const partyByName = new Map(
+    (partiesResult.data as Array<{ name: string; place: string | null; mob: string | null }>).map(
+      (party) => [party.name.trim().toLowerCase(), party]
+    )
+  );
+
+  return (data as BiltyRow[]).map((row) => {
+    const bilty = toBilty(row);
+    const key = (bilty.party || bilty.name || "").trim().toLowerCase();
+    return withPartyFallback(bilty, partyByName.get(key));
+  });
 }
 
 export async function getBiltyById(id: string): Promise<Bilty | null> {
@@ -419,8 +448,23 @@ export async function getBiltyById(id: string): Promise<Bilty | null> {
   if (error) {
     throw new Error(`Failed to load bilty: ${error.message}`);
   }
+  if (!data) return null;
+  const bilty = toBilty(data as BiltyRow);
+  if (bilty.place?.trim() && bilty.mob?.trim()) return bilty;
 
-  return data ? toBilty(data as BiltyRow) : null;
+  const { data: partyData, error: partyError } = await supabaseServer
+    .from("bilty_parties")
+    .select("name, place, mob")
+    .eq("name", bilty.party || bilty.name)
+    .maybeSingle();
+  if (partyError && partyError.code !== "PGRST116") {
+    throw new Error(`Failed to load bilty party details: ${partyError.message}`);
+  }
+
+  return withPartyFallback(
+    bilty,
+    (partyData as { place?: string | null; mob?: string | null } | null) ?? null
+  );
 }
 
 export async function isBiltyBillNoAvailable(
@@ -460,7 +504,7 @@ export async function createBilty(input: BiltyInput): Promise<Bilty> {
   if (!normalizedParty) {
     throw new Error("Party is required");
   }
-  await upsertBiltyPartyByName(normalizedParty);
+  const partyDetails = await upsertBiltyPartyByName(normalizedParty);
 
   const calculated = calculateBilty(
     { ...input, party: normalizedParty, source: "app" },
@@ -472,8 +516,8 @@ export async function createBilty(input: BiltyInput): Promise<Bilty> {
     date: calculated.date,
     party: calculated.party,
     name: calculated.party,
-    place: "",
-    mob: "",
+    place: partyDetails?.place ?? "",
+    mob: partyDetails?.mob ?? "",
     bags: calculated.bags,
     weight: calculated.weight,
     less_percent: calculated.less_percent,
@@ -524,7 +568,7 @@ export async function updateBilty(id: string, input: BiltyInput): Promise<Bilty>
   if (!normalizedParty) {
     throw new Error("Party is required");
   }
-  await upsertBiltyPartyByName(normalizedParty);
+  const partyDetails = await upsertBiltyPartyByName(normalizedParty);
 
   const calculated = calculateBilty(
     { ...input, party: normalizedParty, source: existing.source },
@@ -535,8 +579,8 @@ export async function updateBilty(id: string, input: BiltyInput): Promise<Bilty>
     date: calculated.date,
     party: calculated.party,
     name: calculated.party,
-    place: "",
-    mob: "",
+    place: partyDetails?.place ?? "",
+    mob: partyDetails?.mob ?? "",
     bags: calculated.bags,
     weight: calculated.weight,
     less_percent: calculated.less_percent,

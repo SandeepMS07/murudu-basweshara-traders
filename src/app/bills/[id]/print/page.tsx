@@ -4,9 +4,10 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { getBillById } from "@/features/bills/service/bill.service";
 import { BillPrintAuto } from "@/features/bills/components/BillPrintAuto";
 import { getPurchaseById } from "@/features/purchases/service/purchase.service";
-import { getBiltyById } from "@/features/bilty/service/bilty.service";
+import { getBiltyById, getBiltyParties } from "@/features/bilty/service/bilty.service";
 import { Bill } from "@/features/bills/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { stripIndiaCountryCode } from "@/lib/phone-format";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,6 +25,14 @@ export default async function BillPrintPage({
   const previewMode = preview === "1";
   const purchase = pid ? await getPurchaseById(pid) : null;
   const bilty = !purchase && pid ? await getBiltyById(pid) : null;
+  const biltyParty =
+    !purchase && bilty
+      ? (await getBiltyParties()).find(
+          (party) =>
+            party.name.trim().toLowerCase() ===
+            (bilty.party || bilty.name || "").trim().toLowerCase(),
+        ) ?? null
+      : null;
   const sourceRecord = purchase ?? bilty;
   let bill: Bill | null = await getBillById(id);
 
@@ -84,7 +93,15 @@ export default async function BillPrintPage({
         ? String(bill.bill_no)
         : "AUTO";
   const sourceParty = (sourceRecord as { party?: string } | null)?.party;
+  const billToName = sourceParty || sourceRecord?.name || "-";
+  const billToPhoneRaw =
+    sourceRecord?.mob || (biltyParty?.mob ?? "");
+  const billToPlace =
+    sourceRecord?.place || (biltyParty?.place ?? "");
+  const billToPhone = stripIndiaCountryCode(billToPhoneRaw);
   const redirectTo = purchase ? "/purchases" : "/bilty";
+  const documentLabel = "ESTIMATION INVOICE";
+  const sourceTypeLabel = purchase ? "PURCHASE" : "BILTY";
   const copies = previewMode ? [1] : [1, 2];
   const rootClassName = `bill-print-root bill-print-preview${
     previewMode ? " bill-print-inline-preview" : ""
@@ -104,12 +121,12 @@ export default async function BillPrintPage({
                   className="bill-print-logo-image"
                 />
               </div>
-              <div className="bill-print-invoice-box">
-                <div className="bill-print-invoice-label">
-                  ESTIMATION INVOICE
-                </div>
-                <div className="bill-print-invoice-number">{billNumber}</div>
-              </div>
+                    <div className="bill-print-invoice-box">
+                      <div className="bill-print-invoice-label">
+                        {documentLabel}
+                      </div>
+                      <div className="bill-print-invoice-number">{billNumber}</div>
+                    </div>
             </div>
           </header>
 
@@ -135,8 +152,22 @@ export default async function BillPrintPage({
               </div>
               <div className="bill-print-kv">
                 <span className="bill-print-icon">◼</span>
-                <span>PARTY:</span>{" "}
-                <strong>{sourceParty || sourceRecord?.name || "-"}</strong>
+                <span>TYPE:</span> <strong>{sourceTypeLabel}</strong>
+              </div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◼</span>
+                <span>BILL TO:</span>{" "}
+                <strong>{billToName}</strong>
+              </div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◼</span>
+                <span>PHONE:</span>{" "}
+                <strong>{billToPhone || "-"}</strong>
+              </div>
+              <div className="bill-print-kv">
+                <span className="bill-print-icon">◉</span>
+                <span>PLACE:</span>{" "}
+                <strong>{billToPlace || "-"}</strong>
               </div>
             </div>
           </section>

@@ -35,5 +35,7 @@ export function createBiltyColumns(
     generateBillDialogDescription:
       "Preview the invoice below, then click Generate Bill.",
     billIdPrefix: "BILTY_BILL_",
+    documentLabel: "ESTIMATION INVOICE",
+    sourceTypeLabel: "BILTY",
   }) as unknown as ColumnDef<Bilty>[];
 }
