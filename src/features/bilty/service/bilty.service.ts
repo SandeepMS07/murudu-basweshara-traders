@@ -2,6 +2,8 @@ import {
   type Bilty,
   type BiltyInput,
   type BiltyParty,
+  type BiltyPartyPayment,
+  type BiltyPartyPaymentInput,
   type PaymentMethod,
 } from "../schemas";
 import { calculateBilty } from "../utils/calculations";
@@ -39,6 +41,20 @@ type BiltyRow = {
 type BiltyPartyRow = {
   id: string;
   name: string;
+  place: string | null;
+  mob: string | null;
+};
+
+type BiltyPartyPaymentRow = {
+  id: string;
+  party_id: string;
+  paid_on: string;
+  amount: number | string;
+  payment_mode: "none" | "cash" | "rtgs" | null;
+  rtgs_name: string | null;
+  note: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 function n(value: number | string | null | undefined): number {
@@ -61,7 +77,6 @@ function toBilty(row: BiltyRow): Bilty {
     weight: n(row.weight),
     less_percent: n(row.less_percent),
     rate: n(row.rate),
-    bag_less: n(row.bag_less),
     add_amount: n(row.add_amount),
     cash_paid: n(row.cash_paid),
     upi_paid: n(row.upi_paid),
@@ -87,13 +102,29 @@ function toBiltyParty(row: BiltyPartyRow): BiltyParty {
   return {
     id: row.id,
     name: row.name,
+    place: row.place ?? "",
+    mob: row.mob ?? "",
+  };
+}
+
+function toBiltyPartyPayment(row: BiltyPartyPaymentRow): BiltyPartyPayment {
+  return {
+    id: row.id,
+    party_id: row.party_id,
+    paid_on: row.paid_on,
+    amount: n(row.amount),
+    payment_mode: row.payment_mode ?? "none",
+    rtgs_name: row.rtgs_name ?? "",
+    note: row.note ?? "",
+    created_at: row.created_at ?? undefined,
+    updated_at: row.updated_at ?? undefined,
   };
 }
 
 export async function getBiltyParties(): Promise<BiltyParty[]> {
   const { data, error } = await supabaseServer
     .from("bilty_parties")
-    .select("id, name")
+    .select("id, name, place, mob")
     .order("name", { ascending: true });
 
   if (error) {
@@ -106,7 +137,7 @@ export async function getBiltyParties(): Promise<BiltyParty[]> {
 export async function getBiltyPartyById(id: string): Promise<BiltyParty | null> {
   const { data, error } = await supabaseServer
     .from("bilty_parties")
-    .select("id, name")
+    .select("id, name, place, mob")
     .eq("id", id)
     .maybeSingle();
 
@@ -117,13 +148,18 @@ export async function getBiltyPartyById(id: string): Promise<BiltyParty | null> 
   return data ? toBiltyParty(data as BiltyPartyRow) : null;
 }
 
-export async function upsertBiltyPartyByName(name: string): Promise<BiltyParty | null> {
+export async function upsertBiltyPartyByName(
+  name: string,
+  details?: { place?: string; mob?: string }
+): Promise<BiltyParty | null> {
   const normalized = normalizeParty(name);
+  const normalizedPlace = (details?.place ?? "").trim();
+  const normalizedMob = (details?.mob ?? "").trim();
   if (!normalized) return null;
 
   const { data: existing, error: existingError } = await supabaseServer
     .from("bilty_parties")
-    .select("id, name")
+    .select("id, name, place, mob")
     .eq("name", normalized)
     .maybeSingle();
 
@@ -132,6 +168,23 @@ export async function upsertBiltyPartyByName(name: string): Promise<BiltyParty |
   }
 
   if (existing) {
+    if (normalizedPlace || normalizedMob) {
+      const { data: updated, error: updateError } = await supabaseServer
+        .from("bilty_parties")
+        .update({
+          place: normalizedPlace || (existing.place ?? ""),
+          mob: normalizedMob || (existing.mob ?? ""),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("id, name, place, mob")
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update bilty party details: ${updateError.message}`);
+      }
+      return toBiltyParty(updated as BiltyPartyRow);
+    }
     return toBiltyParty(existing as BiltyPartyRow);
   }
 
@@ -140,16 +193,18 @@ export async function upsertBiltyPartyByName(name: string): Promise<BiltyParty |
     .insert({
       id: crypto.randomUUID(),
       name: normalized,
+      place: normalizedPlace,
+      mob: normalizedMob,
       updated_at: new Date().toISOString(),
     })
-    .select("id, name")
+    .select("id, name, place, mob")
     .single();
 
   if (error) {
     if (error.code === "23505") {
       const { data: retryData, error: retryError } = await supabaseServer
         .from("bilty_parties")
-        .select("id, name")
+        .select("id, name, place, mob")
         .eq("name", normalized)
         .maybeSingle();
 
@@ -183,6 +238,139 @@ export async function deleteBiltyParty(id: string): Promise<void> {
 
   if (error) {
     throw new Error(`Failed to delete bilty party: ${error.message}`);
+  }
+}
+
+export async function updateBiltyParty(
+  id: string,
+  name: string,
+  place?: string,
+  mob?: string
+): Promise<BiltyParty> {
+  const user = await requireAuth();
+  if (user.role !== "admin" && user.role !== "operator") {
+    throw new Error("Forbidden");
+  }
+
+  const existing = await getBiltyPartyById(id);
+  if (!existing) {
+    throw new Error("Party not found");
+  }
+
+  const normalized = normalizeParty(name);
+  const normalizedPlace = (place ?? "").trim();
+  const normalizedMob = (mob ?? "").trim();
+  if (!normalized) {
+    throw new Error("Party name is required");
+  }
+  if (!normalizedPlace) {
+    throw new Error("Place is required");
+  }
+  if (!normalizedMob) {
+    throw new Error("Mobile number is required");
+  }
+
+  const { data, error } = await supabaseServer
+    .from("bilty_parties")
+    .update({
+      name: normalized,
+      place: normalizedPlace,
+      mob: normalizedMob,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("id, name, place, mob")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Party name already exists");
+    }
+    throw new Error(`Failed to update bilty party: ${error.message}`);
+  }
+
+  if (existing.name !== normalized) {
+    const { error: biltyUpdateError } = await supabaseServer
+      .from("bilty")
+      .update({
+        party: normalized,
+        name: normalized,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("party", existing.name);
+
+    if (biltyUpdateError) {
+      throw new Error(`Party renamed but bilty rows update failed: ${biltyUpdateError.message}`);
+    }
+  }
+
+  return toBiltyParty(data as BiltyPartyRow);
+}
+
+export async function getBiltyPartyPayments(partyId?: string): Promise<BiltyPartyPayment[]> {
+  await requireAuth();
+  let query = supabaseServer
+    .from("bilty_party_payments")
+    .select("*")
+    .order("paid_on", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (partyId) {
+    query = query.eq("party_id", partyId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`Failed to load bilty party payments: ${error.message}`);
+  }
+
+  return (data as BiltyPartyPaymentRow[]).map(toBiltyPartyPayment);
+}
+
+export async function createBiltyPartyPayment(
+  input: BiltyPartyPaymentInput
+): Promise<BiltyPartyPayment> {
+  const user = await requireAuth();
+  if (user.role !== "admin" && user.role !== "operator") {
+    throw new Error("Forbidden");
+  }
+
+  const payload = {
+    id: input.id ?? crypto.randomUUID(),
+    party_id: input.party_id,
+    paid_on: input.paid_on,
+    amount: input.amount,
+    payment_mode: input.payment_mode,
+    rtgs_name: input.payment_mode === "rtgs" ? input.rtgs_name : "",
+    note: input.note || "",
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseServer
+    .from("bilty_party_payments")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create bilty party payment: ${error.message}`);
+  }
+
+  return toBiltyPartyPayment(data as BiltyPartyPaymentRow);
+}
+
+export async function deleteBiltyPartyPayment(id: string): Promise<void> {
+  const user = await requireAuth();
+  if (user.role !== "admin" && user.role !== "operator") {
+    throw new Error("Forbidden");
+  }
+
+  const { error } = await supabaseServer
+    .from("bilty_party_payments")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    throw new Error(`Failed to delete bilty party payment: ${error.message}`);
   }
 }
 
@@ -290,7 +478,7 @@ export async function createBilty(input: BiltyInput): Promise<Bilty> {
     weight: calculated.weight,
     less_percent: calculated.less_percent,
     rate: calculated.rate,
-    bag_less: calculated.bag_less,
+    bag_less: 0,
     add_amount: calculated.add_amount,
     cash_paid: calculated.cash_paid,
     upi_paid: calculated.upi_paid,
@@ -353,7 +541,7 @@ export async function updateBilty(id: string, input: BiltyInput): Promise<Bilty>
     weight: calculated.weight,
     less_percent: calculated.less_percent,
     rate: calculated.rate,
-    bag_less: calculated.bag_less,
+    bag_less: 0,
     add_amount: calculated.add_amount,
     cash_paid: calculated.cash_paid,
     upi_paid: calculated.upi_paid,

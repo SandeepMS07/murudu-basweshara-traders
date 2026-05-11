@@ -8,8 +8,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatCurrencyINR } from "@/lib/number-format";
-import { type PaymentMethod } from "@/features/purchases/schemas";
-import { type Bilty } from "@/features/bilty/schemas";
+import { type Bilty, type PaymentMethod } from "@/features/bilty/schemas";
 import {
   createBiltyColumns,
 } from "@/features/bilty/components/Columns";

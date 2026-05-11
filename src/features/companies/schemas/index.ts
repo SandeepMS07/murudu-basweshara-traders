@@ -36,6 +36,8 @@ export const companyPaymentSchema = z.object({
   company_id: z.string().trim().min(1, "Company id is required"),
   paid_on: z.string().trim().min(1, "Payment date is required"),
   amount: z.coerce.number().positive("Amount must be greater than zero"),
+  payment_mode: z.enum(["none", "cash", "rtgs"]).default("none"),
+  rtgs_name: z.string().trim().default(""),
   note: z.string().trim().default(""),
   allocations: z
     .array(
@@ -45,6 +47,14 @@ export const companyPaymentSchema = z.object({
       })
     )
     .default([]),
+}).superRefine((value, ctx) => {
+  if (value.payment_mode === "rtgs" && value.rtgs_name.trim().length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "RTGS name is required for RTGS mode",
+      path: ["rtgs_name"],
+    });
+  }
 });
 
 export type CompanyPaymentInput = z.infer<typeof companyPaymentSchema>;
@@ -60,6 +70,8 @@ export interface CompanyPayment {
   company_id: string;
   paid_on: string;
   amount: number;
+  payment_mode: "none" | "cash" | "rtgs";
+  rtgs_name: string;
   note: string;
   created_at?: string;
   updated_at?: string;

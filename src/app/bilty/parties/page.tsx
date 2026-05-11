@@ -3,8 +3,16 @@ export const dynamic = "force-dynamic";
 import { AppShell } from "@/components/layout/AppShell";
 import { requireAuth } from "@/features/auth/lib/session";
 import { BiltyPartiesManager } from "@/features/bilty/components/BiltyPartiesManager";
-import { type BiltyParty } from "@/features/bilty/schemas";
-import { getBiltyParties } from "@/features/bilty/service/bilty.service";
+import {
+  type Bilty,
+  type BiltyParty,
+  type BiltyPartyPayment,
+} from "@/features/bilty/schemas";
+import {
+  getBiltyParties,
+  getBiltyPartyPayments,
+  getBiltys,
+} from "@/features/bilty/service/bilty.service";
 
 export default async function BiltyPartiesPage() {
   const user = await requireAuth();
@@ -25,10 +33,27 @@ export default async function BiltyPartiesPage() {
   }
 
   let parties: BiltyParty[] = [];
+  let biltys: Bilty[] = [];
+  let payments: BiltyPartyPayment[] = [];
   let loadError: string | null = null;
 
   try {
-    parties = await getBiltyParties();
+    [parties, biltys] = await Promise.all([getBiltyParties(), getBiltys()]);
+
+    try {
+      payments = await getBiltyPartyPayments();
+    } catch (paymentError: unknown) {
+      const paymentMessage =
+        paymentError instanceof Error ? paymentError.message : "";
+      if (
+        paymentMessage.includes("bilty_party_payments") ||
+        paymentMessage.includes("schema cache")
+      ) {
+        payments = [];
+      } else {
+        throw paymentError;
+      }
+    }
   } catch (error: unknown) {
     loadError = error instanceof Error ? error.message : "Failed to load bilty parties";
   }
@@ -59,7 +84,7 @@ export default async function BiltyPartiesPage() {
         <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Bilty Parties</h1>
         <p className="text-zinc-500">Manage the party master used in bilty entries.</p>
       </div>
-      <BiltyPartiesManager parties={parties} />
+      <BiltyPartiesManager parties={parties} biltys={biltys} payments={payments} />
     </AppShell>
   );
 }

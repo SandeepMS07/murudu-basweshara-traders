@@ -7,6 +7,25 @@ import {
   updateBilty,
 } from "@/features/bilty/service/bilty.service";
 
+function toErrorResponse(error: unknown, fallbackMessage: string) {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+
+  if (message === "Forbidden") {
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
+  if (message === "Bilty not found" || message === "Not found") {
+    return NextResponse.json({ error: message }, { status: 404 });
+  }
+  if (message === "Bill number already exists") {
+    return NextResponse.json({ error: message }, { status: 409 });
+  }
+  if (message === "Party is required") {
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -49,10 +68,7 @@ export async function PATCH(
     return NextResponse.json({ bilty }, { status: 200 });
   } catch (error) {
     console.error("Update bilty error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return toErrorResponse(error, "Failed to update bilty");
   }
 }
 
@@ -76,9 +92,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Deleted successfully" }, { status: 200 });
   } catch (error) {
     console.error("Delete bilty error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return toErrorResponse(error, "Failed to delete bilty");
   }
 }

@@ -60,7 +60,7 @@ export default async function BiltyPage() {
     },
     { bags: 0, weight: 0, amount: 0 },
   );
-  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const todayKey = format(nowIst, "yyyy-MM-dd");
   const todaysTotals = scopedData.reduce(
     (acc, bilty) => {
       if (bilty.date !== todayKey) return acc;
@@ -71,8 +71,7 @@ export default async function BiltyPage() {
     { bags: 0, weight: 0 },
   );
   const averageRate = totals.weight > 0 ? totals.amount / totals.weight : 0;
-  const today = new Date();
-  const last7Start = addDays(today, -6);
+  const last7Start = addDays(nowIst, -6);
   const last7 = scopedData.filter(
     (bilty) => bilty.date >= format(last7Start, "yyyy-MM-dd"),
   );

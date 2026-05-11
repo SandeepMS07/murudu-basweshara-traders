@@ -34,6 +34,8 @@ type CompanyPaymentRow = {
   company_id: string;
   paid_on: string;
   amount: number | string;
+  payment_mode: "none" | "cash" | "rtgs" | null;
+  rtgs_name: string | null;
   note: string | null;
   created_at?: string;
   updated_at?: string;
@@ -76,6 +78,8 @@ function toCompanyPayment(row: CompanyPaymentRow): CompanyPayment {
     company_id: row.company_id,
     paid_on: row.paid_on,
     amount: typeof row.amount === "number" ? row.amount : Number(row.amount || 0),
+    payment_mode: row.payment_mode ?? "none",
+    rtgs_name: row.rtgs_name ?? "",
     note: row.note ?? "",
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -453,6 +457,8 @@ export async function createCompanyPayment(
     company_id: input.company_id,
     paid_on: input.paid_on,
     amount: input.amount,
+    payment_mode: input.payment_mode,
+    rtgs_name: input.payment_mode === "rtgs" ? input.rtgs_name : "",
     note: input.note || "",
     updated_at: new Date().toISOString(),
   };

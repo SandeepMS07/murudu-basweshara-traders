@@ -147,9 +147,29 @@ alter table public.bilty add column if not exists payment_date date;
 create table if not exists public.bilty_parties (
   id text primary key,
   name text not null unique,
+  place text not null default '',
+  mob text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.bilty_parties add column if not exists place text not null default '';
+alter table public.bilty_parties add column if not exists mob text not null default '';
+
+create table if not exists public.bilty_party_payments (
+  id text primary key,
+  party_id text not null references public.bilty_parties(id) on delete cascade,
+  paid_on date not null,
+  amount numeric(14,2) not null default 0,
+  payment_mode text not null check (payment_mode in ('none', 'cash', 'rtgs')) default 'none',
+  rtgs_name text not null default '',
+  note text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_bilty_party_payments_party_id on public.bilty_party_payments (party_id);
+create index if not exists idx_bilty_party_payments_paid_on on public.bilty_party_payments (paid_on desc);
 
 create table if not exists public.bills (
   id text primary key,
@@ -270,6 +290,8 @@ create table if not exists public.company_payments (
   company_id text not null references public.companies(id) on delete cascade,
   paid_on date not null,
   amount numeric(14,2) not null default 0,
+  payment_mode text not null check (payment_mode in ('none', 'cash', 'rtgs')) default 'none',
+  rtgs_name text not null default '',
   note text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -277,6 +299,15 @@ create table if not exists public.company_payments (
 
 create index if not exists idx_company_payments_company_id on public.company_payments (company_id);
 create index if not exists idx_company_payments_paid_on on public.company_payments (paid_on desc);
+alter table public.company_payments
+  add column if not exists payment_mode text not null default 'none';
+alter table public.company_payments
+  add column if not exists rtgs_name text not null default '';
+alter table public.company_payments
+  drop constraint if exists company_payments_payment_mode_check;
+alter table public.company_payments
+  add constraint company_payments_payment_mode_check
+  check (payment_mode in ('none', 'cash', 'rtgs'));
 
 create table if not exists public.company_payment_allocations (
   id text primary key,

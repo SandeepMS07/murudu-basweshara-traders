@@ -26,6 +26,7 @@ import {
 import {
   checkBiltyBillNoAvailabilityAction,
   createBiltyAction,
+  createBiltyPartyAction,
   updateBiltyAction,
 } from "@/app/bilty/actions";
 import { formatCurrencyINR } from "@/lib/number-format";
@@ -38,7 +39,6 @@ interface BiltyFormProps {
 }
 
 type BiltyFormValues = z.input<typeof biltySchema>;
-const BAG_LESS_PER_BAG = 6;
 
 export function BiltyForm({
   initialData,
@@ -48,6 +48,10 @@ export function BiltyForm({
 }: BiltyFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAddingParty, setIsAddingParty] = useState(false);
+  const [localPartyOptions, setLocalPartyOptions] = useState<string[]>(partyOptions);
+  const [partyPlace, setPartyPlace] = useState("");
+  const [partyMob, setPartyMob] = useState("");
   const isEditing = !!initialData;
   const form = useForm<BiltyFormValues>({
     resolver: zodResolver(biltySchema),
@@ -66,7 +70,6 @@ export function BiltyForm({
           weight: initialData.weight,
           less_percent: initialData.less_percent,
           rate: initialData.rate,
-          bag_less: initialData.bag_less,
           add_amount: initialData.add_amount,
           cash_paid: initialData.cash_paid,
           upi_paid: initialData.upi_paid,
@@ -80,9 +83,8 @@ export function BiltyForm({
           party: "",
           bags: 0,
           weight: 0,
-          less_percent: 3,
+          less_percent: 0.5,
           rate: 0,
-          bag_less: 0,
           add_amount: 0,
           cash_paid: 0,
           upi_paid: 0,
@@ -95,31 +97,19 @@ export function BiltyForm({
   const { watch } = form;
   const billNo = watch("bill_no");
   const billDate = watch("date");
-  const party = watch("party");
   const weight = watch("weight");
   const bags = watch("bags");
   const lessPercent = watch("less_percent");
   const rate = watch("rate");
-  const bagLess = watch("bag_less");
   const addAmount = watch("add_amount");
-  const cashPaid = watch("cash_paid");
-  const upiPaid = watch("upi_paid");
-
-  useEffect(() => {
-    const computedBagLess = Number(((bags || 0) * BAG_LESS_PER_BAG).toFixed(2));
-    form.setValue("bag_less", computedBagLess, { shouldValidate: true });
-  }, [bags, form]);
 
   const lessWeight = ((weight || 0) * (lessPercent || 0)) / 100;
   const netWeight = (weight || 0) - lessWeight;
   const amount = Number(((netWeight * (rate || 0)) / 100).toFixed(2));
   const finalTotal = Number(
     (
-      amount -
-      (bagLess || 0) +
-      (addAmount || 0) -
-      (cashPaid || 0) -
-      (upiPaid || 0)
+      amount +
+      (addAmount || 0)
     ).toFixed(2)
   );
   const bagAvg = (bags || 0) > 0 ? netWeight / (bags || 1) : 0;
@@ -137,12 +127,55 @@ export function BiltyForm({
     setBillNoText((prev) => (prev === nextValue ? prev : nextValue));
   }, [billNo]);
 
+  useEffect(() => {
+    setLocalPartyOptions(partyOptions);
+  }, [partyOptions]);
+
+  async function handleAddParty() {
+    const rawParty = form.getValues("party");
+    const candidate = rawParty?.trim() ?? "";
+    const place = partyPlace.trim();
+    const mob = partyMob.trim();
+    if (!candidate) {
+      toast.error("Enter a party name first");
+      return;
+    }
+    if (!place) {
+      toast.error("Enter place for party");
+      return;
+    }
+    if (!mob) {
+      toast.error("Enter mobile number for party");
+      return;
+    }
+
+    setIsAddingParty(true);
+    try {
+      const created = await createBiltyPartyAction(candidate, place, mob);
+      form.setValue("party", created.name, { shouldValidate: true });
+      setLocalPartyOptions((current) =>
+        current.includes(created.name) ? current : [...current, created.name]
+      );
+      setPartyPlace("");
+      setPartyMob("");
+      toast.success("Party added");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to add party";
+      toast.error(message);
+    } finally {
+      setIsAddingParty(false);
+    }
+  }
+
   async function onSubmit(values: BiltyFormValues) {
     setIsLoading(true);
     try {
       const payload = biltySchema.parse({
         ...values,
         party: values.party.trim(),
+        cash_paid: 0,
+        upi_paid: 0,
         payment_date: values.payment_date ?? initialData?.payment_date ?? null,
         payment_through: values.payment_through ?? initialData?.payment_through ?? "none",
       });
@@ -284,22 +317,49 @@ export function BiltyForm({
                       <FormLabel>Party</FormLabel>
                       <FormControl>
                         <div className="space-y-1.5">
-                          <Input
-                            {...field}
-                            list="bilty-party-options"
-                            placeholder="Search or add party"
-                            className={fieldClassName}
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              {...field}
+                              list="bilty-party-options"
+                              placeholder="Search existing party or type new"
+                              className={fieldClassName}
+                            />
+                            <Button
+                              type="button"
+                              onClick={handleAddParty}
+                              disabled={isAddingParty}
+                              className="h-10 border border-[#2a2d34] bg-[#1b1e24] px-4 text-zinc-100 hover:bg-[#23262e]"
+                            >
+                              {isAddingParty ? "Adding..." : "Add"}
+                            </Button>
+                          </div>
                           <datalist id="bilty-party-options">
-                            {partyOptions.map((option) => (
+                            {localPartyOptions.map((option) => (
                               <option key={option} value={option} />
                             ))}
                           </datalist>
                         </div>
                       </FormControl>
                       <p className="text-xs text-zinc-500">
-                        Select from suggestions or type a new party name. New names are saved automatically.
+                        Select from suggestions or type a new name, then click Add.
                       </p>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <Input
+                          value={partyPlace}
+                          placeholder="Place for new party"
+                          className={fieldClassName}
+                          onChange={(event) => setPartyPlace(event.target.value)}
+                        />
+                        <Input
+                          value={partyMob}
+                          inputMode="numeric"
+                          placeholder="Mobile for new party"
+                          className={fieldClassName}
+                          onChange={(event) =>
+                            setPartyMob(event.target.value.replace(/\D/g, "").slice(0, 10))
+                          }
+                        />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -380,7 +440,7 @@ export function BiltyForm({
                             {...field}
                             value={
                               field.value === undefined
-                                ? 3
+                                ? 0.5
                                 : field.value === 0
                                   ? ""
                                   : field.value
@@ -422,34 +482,7 @@ export function BiltyForm({
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bag_less"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bag Less Amount (Auto: Bags * 6)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
-                            ₹
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Auto calculated"
-                            className={`${fieldClassName} pl-7`}
-                            {...field}
-                            value={field.value === 0 ? "" : field.value}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </FormControl>
+                      <p className="text-xs text-zinc-500">Enter rate for 100 kg.</p>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -469,62 +502,6 @@ export function BiltyForm({
                             type="number"
                             step="0.01"
                             placeholder="Enter add amount"
-                            className={`${fieldClassName} pl-7`}
-                            {...field}
-                            value={field.value === 0 ? "" : field.value}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="cash_paid"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cash Paid</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
-                            ₹
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Enter cash paid"
-                            className={`${fieldClassName} pl-7`}
-                            {...field}
-                            value={field.value === 0 ? "" : field.value}
-                            onChange={(e) =>
-                              field.onChange(parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="upi_paid"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>UPI Paid</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">
-                            ₹
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Enter UPI paid"
                             className={`${fieldClassName} pl-7`}
                             {...field}
                             value={field.value === 0 ? "" : field.value}

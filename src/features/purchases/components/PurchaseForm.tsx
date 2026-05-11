@@ -551,6 +551,7 @@ export function PurchaseForm({
                         </span>
                       </div>
                     </FormControl>
+                    <p className="text-xs text-zinc-500">Enter rate for 100 kg.</p>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -40,6 +40,8 @@ const navItems = [
     name: "Bilty",
     href: "/bilty",
     icon: Truck,
+    badge: "DEV",
+    badgeDevOnly: true,
     children: [
       { name: "Overview", href: "/bilty", icon: LayoutList },
       { name: "Parties", href: "/bilty/parties", icon: Building2 },
@@ -74,6 +76,7 @@ type SidebarProps = {
 };
 
 export function Sidebar({ className, onNavigate }: SidebarProps) {
+  const isProduction = process.env.NODE_ENV === "production";
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -192,6 +195,13 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span className="truncate">{item.name}</span>
+                  {"badge" in item &&
+                  item.badge &&
+                  !("badgeDevOnly" in item && item.badgeDevOnly && isProduction) ? (
+                    <span className="ml-2 rounded border border-[#7a4a22] bg-[#3a2417] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#ffb792]">
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </Link>
                 {item.children ? (
                   <button

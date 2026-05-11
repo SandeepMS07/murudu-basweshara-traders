@@ -2,16 +2,25 @@
 
 import {
   createBilty,
+  createBiltyPartyPayment,
   getBiltyById,
   getBiltyParties,
+  getBiltyPartyPayments,
   deleteBilty,
   deleteBiltyParty,
+  deleteBiltyPartyPayment,
+  updateBiltyParty,
   updateBilty,
   updateBiltyPaymentThrough,
   isBiltyBillNoAvailable,
   upsertBiltyPartyByName,
 } from "@/features/bilty/service/bilty.service";
-import { biltySchema, type BiltyInput } from "@/features/bilty/schemas";
+import {
+  biltyPartyPaymentSchema,
+  biltySchema,
+  type BiltyInput,
+  type BiltyPartyPaymentInput,
+} from "@/features/bilty/schemas";
 import { type PaymentMethod } from "@/features/bilty/schemas";
 import { upsertBillById } from "@/features/bills/service/bill.service";
 
@@ -66,8 +75,12 @@ export async function getBiltyPartiesAction() {
   return getBiltyParties();
 }
 
-export async function createBiltyPartyAction(name: string) {
-  const party = await upsertBiltyPartyByName(name);
+export async function createBiltyPartyAction(
+  name: string,
+  place?: string,
+  mob?: string
+) {
+  const party = await upsertBiltyPartyByName(name, { place, mob });
   if (!party) {
     throw new Error("Party name is required");
   }
@@ -76,4 +89,26 @@ export async function createBiltyPartyAction(name: string) {
 
 export async function deleteBiltyPartyAction(id: string) {
   return deleteBiltyParty(id);
+}
+
+export async function updateBiltyPartyAction(
+  id: string,
+  name: string,
+  place?: string,
+  mob?: string
+) {
+  return updateBiltyParty(id, name, place, mob);
+}
+
+export async function getBiltyPartyPaymentsAction(partyId?: string) {
+  return getBiltyPartyPayments(partyId);
+}
+
+export async function createBiltyPartyPaymentAction(data: BiltyPartyPaymentInput) {
+  const parsed = biltyPartyPaymentSchema.parse(data);
+  return createBiltyPartyPayment(parsed);
+}
+
+export async function deleteBiltyPartyPaymentAction(id: string) {
+  return deleteBiltyPartyPayment(id);
 }

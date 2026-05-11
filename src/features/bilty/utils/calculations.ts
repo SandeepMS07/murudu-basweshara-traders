@@ -8,9 +8,7 @@ export function calculateBilty(input: BiltyInput, id: string): Bilty {
   const less_weight = round2((input.weight * input.less_percent) / 100);
   const net_weight = round2(input.weight - less_weight);
   const amount = round2((net_weight * input.rate) / 100);
-  const final_total = round2(
-    amount - input.bag_less + input.add_amount - input.cash_paid - input.upi_paid
-  );
+  const final_total = round2(amount + input.add_amount - input.cash_paid - input.upi_paid);
   const bag_avg = round2(input.bags > 0 ? net_weight / input.bags : 0);
 
   return {

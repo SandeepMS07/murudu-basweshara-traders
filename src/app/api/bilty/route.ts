@@ -3,6 +3,22 @@ import { getCurrentUser } from "@/features/auth/lib/session";
 import { biltySchema } from "@/features/bilty/schemas";
 import { createBilty, getBiltys } from "@/features/bilty/service/bilty.service";
 
+function toErrorResponse(error: unknown, fallbackMessage: string) {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+
+  if (message === "Forbidden") {
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
+  if (message === "Bill number already exists") {
+    return NextResponse.json({ error: message }, { status: 409 });
+  }
+  if (message === "Party is required") {
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+}
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
@@ -33,9 +49,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ bilty }, { status: 201 });
   } catch (error) {
     console.error("Create bilty error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return toErrorResponse(error, "Failed to create bilty");
   }
 }

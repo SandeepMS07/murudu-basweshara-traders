@@ -13,7 +13,6 @@ describe("calculateBilty", () => {
         weight: 2500,
         less_percent: 3,
         rate: 21,
-        bag_less: 150,
         add_amount: 75,
         cash_paid: 100,
         upi_paid: 50,
@@ -27,7 +26,7 @@ describe("calculateBilty", () => {
     expect(bilty.less_weight).toBe(75);
     expect(bilty.net_weight).toBe(2425);
     expect(bilty.amount).toBe(509.25);
-    expect(bilty.final_total).toBe(284.25);
+    expect(bilty.final_total).toBe(434.25);
     expect(bilty.bag_avg).toBe(97);
   });
 });

@@ -14,7 +14,6 @@ export const biltySchema = z.object({
   weight: z.number().min(0, "Weight must be positive"),
   less_percent: z.number().min(0).max(100).default(0),
   rate: z.number().min(0, "Rate must be positive"),
-  bag_less: z.number().min(0).default(0),
   add_amount: z.number().min(0).default(0),
   cash_paid: z.number().min(0).default(0),
   upi_paid: z.number().min(0).default(0),
@@ -40,4 +39,40 @@ export interface Bilty extends BiltyInput {
 export interface BiltyParty {
   id: string;
   name: string;
+  place: string;
+  mob: string;
+}
+
+export const biltyPartyPaymentSchema = z
+  .object({
+    id: z.string().optional(),
+    party_id: z.string().trim().min(1, "Party is required"),
+    paid_on: z.string().trim().min(1, "Payment date is required"),
+    amount: z.coerce.number().positive("Amount must be greater than zero"),
+    payment_mode: z.enum(["none", "cash", "rtgs"]).default("none"),
+    rtgs_name: z.string().trim().default(""),
+    note: z.string().trim().default(""),
+  })
+  .superRefine((value, ctx) => {
+    if (value.payment_mode === "rtgs" && value.rtgs_name.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "RTGS name is required for RTGS mode",
+        path: ["rtgs_name"],
+      });
+    }
+  });
+
+export type BiltyPartyPaymentInput = z.infer<typeof biltyPartyPaymentSchema>;
+
+export interface BiltyPartyPayment {
+  id: string;
+  party_id: string;
+  paid_on: string;
+  amount: number;
+  payment_mode: "none" | "cash" | "rtgs";
+  rtgs_name: string;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
 }
