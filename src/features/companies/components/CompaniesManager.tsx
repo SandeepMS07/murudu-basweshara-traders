@@ -20,13 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -304,7 +297,9 @@ export function CompaniesManager({
               ) : (
                 <CompanyPaymentsLedger
                   companyId={activeBuyer.id}
+                  sales={activeBuyerSales}
                   payments={activeBuyerPayments}
+                  pendingBySaleId={activeBuyerPending.pendingBySaleId}
                   totalAmount={activeBuyerSales.reduce(
                     (sum, sale) => sum + sale.amount,
                     0,
@@ -928,13 +923,17 @@ function SalesDetailsTable({
 
 function CompanyPaymentsLedger({
   companyId,
+  sales,
   payments,
+  pendingBySaleId,
   totalAmount,
   onCreate,
   onDelete,
 }: {
   companyId: string;
+  sales: Sale[];
   payments: CompanyPayment[];
+  pendingBySaleId: Record<string, number>;
   totalAmount: number;
   onCreate: (
     payment: CompanyPayment,
@@ -945,9 +944,10 @@ function CompanyPaymentsLedger({
   const PAGE_SIZE = 8;
   const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [amount, setAmount] = useState("");
-  const [paymentMode, setPaymentMode] = useState<"none" | "cash" | "rtgs">("none");
-  const [rtgsName, setRtgsName] = useState("");
   const [note, setNote] = useState("");
+  const [allocationInputs, setAllocationInputs] = useState<
+    Record<string, string>
+  >({});
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CompanyPayment | null>(null);
   const [page, setPage] = useState(1);
@@ -963,6 +963,17 @@ function CompanyPaymentsLedger({
     () => payments.reduce((sum, payment) => sum + payment.amount, 0),
     [payments],
   );
+  const saleAllocationRows = useMemo(
+    () =>
+      sales.map((sale) => {
+        const remaining = Math.max(
+          pendingBySaleId[sale.id] ?? sale.pending_amount,
+          0,
+        );
+        return { sale, remaining };
+      }),
+    [pendingBySaleId, sales],
+  );
   const remaining = Math.max(totalAmount - totalReceived, 0);
 
   const createPayment = () => {
@@ -975,8 +986,31 @@ function CompanyPaymentsLedger({
       toast.error("Payment amount must be greater than zero");
       return;
     }
-    if (paymentMode === "rtgs" && !rtgsName.trim()) {
-      toast.error("RTGS name is required");
+    const allocationsPayload = saleAllocationRows
+      .map((row) => {
+        const raw = allocationInputs[row.sale.id];
+        if (!raw) return null;
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value <= 0) return null;
+        return { sale_id: row.sale.id, amount: value, max: row.remaining };
+      })
+      .filter(
+        (item): item is { sale_id: string; amount: number; max: number } =>
+          !!item,
+      );
+    const totalAllocated = allocationsPayload.reduce(
+      (sum, item) => sum + item.amount,
+      0,
+    );
+    if (totalAllocated > parsedAmount) {
+      toast.error("Allocated total cannot exceed payment amount");
+      return;
+    }
+    const invalidAllocation = allocationsPayload.find(
+      (item) => item.amount > item.max,
+    );
+    if (invalidAllocation) {
+      toast.error("Allocation exceeds remaining pending for one or more bills");
       return;
     }
 
@@ -986,16 +1020,16 @@ function CompanyPaymentsLedger({
           company_id: companyId,
           paid_on: date,
           amount: parsedAmount,
-          payment_mode: paymentMode,
-          rtgs_name: paymentMode === "rtgs" ? rtgsName.trim() : "",
           note,
-          allocations: [],
+          allocations: allocationsPayload.map((item) => ({
+            sale_id: item.sale_id,
+            amount: item.amount,
+          })),
         });
         onCreate(created.payment, created.allocations);
         setAmount("");
-        setPaymentMode("none");
-        setRtgsName("");
         setNote("");
+        setAllocationInputs({});
         setPaymentDialogOpen(false);
         toast.success("Payment added");
       } catch (error: unknown) {
@@ -1074,12 +1108,6 @@ function CompanyPaymentsLedger({
                 Amount
               </th>
               <th className="border-b border-[#252932] px-3 py-2 text-left">
-                Mode
-              </th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">
-                RTGS Name
-              </th>
-              <th className="border-b border-[#252932] px-3 py-2 text-left">
                 Note
               </th>
               <th className="border-b border-[#252932] px-3 py-2 text-right">
@@ -1090,7 +1118,7 @@ function CompanyPaymentsLedger({
           <tbody>
             {payments.length === 0 ? (
               <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={6}>
+                <td className="px-3 py-3 text-zinc-500" colSpan={4}>
                   No payments added yet.
                 </td>
               </tr>
@@ -1104,8 +1132,6 @@ function CompanyPaymentsLedger({
                   <td className="px-3 py-2 text-right">
                     {formatCurrencyINR(payment.amount)}
                   </td>
-                  <td className="px-3 py-2 uppercase">{payment.payment_mode}</td>
-                  <td className="px-3 py-2">{payment.rtgs_name || "-"}</td>
                   <td className="px-3 py-2">{payment.note || "-"}</td>
                   <td className="px-3 py-2 text-right">
                     <Button
@@ -1159,78 +1185,71 @@ function CompanyPaymentsLedger({
       </div>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Payment</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 gap-3">
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Payment Date
-              </p>
-              <Input
-                type="date"
-                className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Amount
-              </p>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="Enter amount"
-                className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Mode Of Payment
-              </p>
-              <Select
-                value={paymentMode}
-                onValueChange={(value) =>
-                  setPaymentMode(value as "none" | "cash" | "rtgs")
-                }
-              >
-                <SelectTrigger className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100">
-                  <SelectValue placeholder="Select mode" />
-                </SelectTrigger>
-                <SelectContent className="border-[#2a2d34] bg-[#14161b] text-zinc-100">
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="rtgs">RTGS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {paymentMode === "rtgs" ? (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                  RTGS Name
-                </p>
-                <Input
-                  placeholder="Enter RTGS name"
-                  className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
-                  value={rtgsName}
-                  onChange={(event) => setRtgsName(event.target.value)}
-                />
+          <div className="grid max-h-[calc(90vh-11rem)] grid-cols-1 gap-3 overflow-y-auto pr-1">
+            <Input
+              type="date"
+              className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="Amount"
+              className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+            />
+            <Input
+              placeholder="Note (optional)"
+              className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+            <div className="rounded-md border border-[#252932] bg-[#14161b] p-3">
+              <div className="mb-2 text-sm font-medium text-zinc-200">
+                Allocate To Bills (Optional)
               </div>
-            ) : null}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Note
-              </p>
-              <Input
-                placeholder="Note (optional)"
-                className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-              />
+              <div className="max-h-[38vh] space-y-2 overflow-y-auto pr-1 sm:max-h-72">
+                {saleAllocationRows.length === 0 ? (
+                  <div className="text-xs text-zinc-500">
+                    No sales available for allocation.
+                  </div>
+                ) : (
+                  saleAllocationRows.map((row) => (
+                    <div
+                      key={row.sale.id}
+                      className="grid grid-cols-12 items-center gap-2 text-xs"
+                    >
+                      <div className="col-span-4 text-zinc-300">
+                        Bill {row.sale.bill_number} • Pending{" "}
+                        {formatCurrencyINR(row.remaining)}
+                      </div>
+                      <div className="col-span-8">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max={row.remaining}
+                          placeholder="Allocate amount"
+                          className="h-9 border-[#2a2d34] bg-[#111214] text-zinc-100"
+                          value={allocationInputs[row.sale.id] ?? ""}
+                          onChange={(event) =>
+                            setAllocationInputs((current) => ({
+                              ...current,
+                              [row.sale.id]: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>

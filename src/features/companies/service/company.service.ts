@@ -503,8 +503,19 @@ export async function createCompanyPayment(
 
 export async function deleteCompanyPayment(id: string): Promise<void> {
   await assertAdminAccess();
-  const { error } = await supabaseServer.from("company_payments").delete().eq("id", id);
-  if (error) {
-    throw new Error(`Failed to delete company payment: ${error.message}`);
+  const { error: allocationsError } = await supabaseServer
+    .from("company_payment_allocations")
+    .delete()
+    .eq("payment_id", id);
+  if (allocationsError) {
+    throw new Error(`Failed to delete payment allocations: ${allocationsError.message}`);
+  }
+
+  const { error: paymentError } = await supabaseServer
+    .from("company_payments")
+    .delete()
+    .eq("id", id);
+  if (paymentError) {
+    throw new Error(`Failed to delete company payment: ${paymentError.message}`);
   }
 }
