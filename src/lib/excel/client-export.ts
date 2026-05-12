@@ -49,3 +49,62 @@ export function exportRowsToCsv(
   link.click();
   URL.revokeObjectURL(link.href);
 }
+
+export function exportWorkbookToXlsx(
+  sheets: Array<{
+    name: string;
+    rows: ExportRow[];
+    columnWidths?: number[];
+    autoFilter?: boolean;
+  }>,
+  {
+    fileName,
+    emptyMessage = "No records found",
+  }: {
+    fileName: string;
+    emptyMessage?: string;
+  }
+) {
+  const workbook = XLSX.utils.book_new();
+
+  const normalizedSheets =
+    sheets.length > 0
+      ? sheets
+      : [{ name: "Data", rows: [{ Info: emptyMessage }] as ExportRow[], autoFilter: true }];
+
+  for (const sheet of normalizedSheets) {
+    const normalizedRows =
+      sheet.rows.length > 0
+        ? sheet.rows.map((row) =>
+            Object.fromEntries(
+              Object.entries(row).map(([key, value]) => [key, normalizeCellValue(value)])
+            )
+          )
+        : [{ Info: emptyMessage }];
+
+    const worksheet = XLSX.utils.json_to_sheet(normalizedRows);
+    if (sheet.columnWidths && sheet.columnWidths.length > 0) {
+      worksheet["!cols"] = sheet.columnWidths.map((wch) => ({ wch }));
+    }
+    if (sheet.autoFilter !== false) {
+      const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1:A1");
+      if (range.e.r >= range.s.r && range.e.c >= range.s.c) {
+        worksheet["!autofilter"] = { ref: XLSX.utils.encode_range(range) };
+      }
+    }
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name.slice(0, 31) || "Sheet");
+  }
+
+  const xlsxBytes = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+  const blob = new Blob([xlsxBytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${sanitizeFileName(fileName)}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}

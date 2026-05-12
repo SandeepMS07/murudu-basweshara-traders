@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
-import { exportRowsToCsv } from "@/lib/excel/client-export";
+import { exportWorkbookToXlsx } from "@/lib/excel/client-export";
 
 type CompanyDraft = {
   type: "issuer" | "buyer";
@@ -295,6 +295,7 @@ export function CompaniesManager({
                 <SalesDetailsTable
                   companyName={activeBuyer.display_name || activeBuyer.name}
                   sales={activeBuyerSales}
+                  payments={activeBuyerPayments}
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
                 />
               ) : (
@@ -639,10 +640,12 @@ function CompanyTable({
 function SalesDetailsTable({
   companyName,
   sales,
+  payments,
   pendingBySaleId,
 }: {
   companyName: string;
   sales: Sale[];
+  payments: CompanyPayment[];
   pendingBySaleId: Record<string, number>;
 }) {
   const PAGE_SIZE = 8;
@@ -749,23 +752,106 @@ function SalesDetailsTable({
   };
 
   const handleExportCompanySales = () => {
-    const rows = sales.map((sale) => ({
-      Company: companyName,
-      "Bill No": sale.bill_number,
-      Date: sale.sale_date,
-      Party: sale.party,
-      Bags: sale.bags,
-      "Net Weight": sale.net_weight,
-      Rate: sale.rate,
-      Amount: sale.amount,
-      Pending: pendingBySaleId[sale.id] ?? sale.pending_amount,
-      "Due Date": formatDueDate(sale),
-    }));
-    exportRowsToCsv(rows.length > 0 ? rows : [{ Company: companyName }], {
-      fileName: `sales-company-${companyName.replace(/\s+/g, "-").toLowerCase()}`,
-      sheetName: "Company Sales",
-      emptyMessage: "No company sales found",
+    const totalReceived = payments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    );
+    const totalPendingSummary = sales.reduce(
+      (sum, sale) => sum + (pendingBySaleId[sale.id] ?? sale.pending_amount),
+      0,
+    );
+    const totalAmountSummary = sales.reduce((sum, sale) => sum + sale.amount, 0);
+
+    const summaryRows = [
+      { Metric: "Company", Value: companyName },
+      { Metric: "Total Sales Amount", Value: totalAmountSummary },
+      { Metric: "Total Received", Value: totalReceived },
+      { Metric: "Total Pending", Value: totalPendingSummary },
+      { Metric: "No. of Sales Records", Value: sales.length },
+      { Metric: "No. of Payment Entries", Value: payments.length },
+      {
+        Metric: "Exported On",
+        Value: format(new Date(), "dd-MM-yyyy HH:mm"),
+      },
+    ];
+
+    const today = new Date();
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+    const sortedSales = [...sales].sort((a, b) =>
+      b.sale_date.localeCompare(a.sale_date),
+    );
+    const saleRows = sortedSales.map((sale) => {
+      const dueDate = getDueDate(sale);
+      const pending = pendingBySaleId[sale.id] ?? sale.pending_amount;
+      const dueStart = dueDate
+        ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+        : null;
+      const status =
+        pending <= 0
+          ? "Cleared"
+          : dueStart && dueStart.getTime() < todayStart.getTime()
+            ? "Overdue"
+            : dueStart && dueStart.getTime() === todayStart.getTime()
+              ? "Due Today"
+              : "Upcoming";
+
+      return {
+        "Bill No": sale.bill_number,
+        "Sale Date": formatDisplayDate(sale.sale_date),
+        Party: sale.party,
+        Lorry: sale.lorry_number || "-",
+        Bags: sale.bags,
+        "Net Weight (kg)": sale.net_weight,
+        "Rate (/kg)": sale.rate,
+        Amount: sale.amount,
+        Pending: pending,
+        "Due Date": dueDate ? format(dueDate, "dd-MM-yyyy") : "-",
+        Status: status,
+        "Payment Terms": sale.payment_terms || "-",
+      };
     });
+
+    let runningBalance = totalAmountSummary;
+    const paymentRows = [...payments]
+      .sort((a, b) => b.paid_on.localeCompare(a.paid_on))
+      .map((payment) => {
+        runningBalance -= payment.amount;
+        return {
+          "Payment Date": formatDisplayDate(payment.paid_on),
+          Amount: payment.amount,
+          "Running Balance": Math.max(runningBalance, 0),
+          Note: payment.note || "-",
+          "Payment ID": payment.id,
+        };
+      });
+
+    exportWorkbookToXlsx(
+      [
+        {
+          name: "Summary",
+          rows: summaryRows,
+          columnWidths: [24, 24],
+        },
+        {
+          name: "Sales Details",
+          rows: saleRows,
+          columnWidths: [10, 12, 20, 14, 8, 14, 10, 12, 12, 12, 12, 16],
+        },
+        {
+          name: "Payment Ledger",
+          rows: paymentRows,
+          columnWidths: [14, 12, 16, 28, 40],
+        },
+      ],
+      {
+      fileName: `company-report-${companyName.replace(/\s+/g, "-").toLowerCase()}`,
+      emptyMessage: "No company data found",
+      }
+    );
   };
 
   return (
@@ -782,7 +868,7 @@ function SalesDetailsTable({
             className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
           >
             <Download className="mr-2 h-4 w-4" />
-            Export
+            Export Report
           </Button>
         </div>
       </div>
