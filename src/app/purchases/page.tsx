@@ -9,15 +9,61 @@ import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { addDays, format } from "date-fns";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 
-export default async function PurchasesPage() {
+type PurchasesPageProps = {
+  searchParams?: Promise<{ fy?: string }>;
+};
+
+function parseSelectedFinancialYear(value: string | undefined | null) {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{4})-(\d{4})$/);
+  if (!match) return null;
+  const startYear = Number(match[1]);
+  const endYear = Number(match[2]);
+  if (!Number.isFinite(startYear) || endYear !== startYear + 1) return null;
+
+  return {
+    startYear,
+    label: `${startYear}-${endYear}`,
+    start: `${startYear}-04-01`,
+    end: `${endYear}-03-31`,
+  };
+}
+
+export default async function PurchasesPage({
+  searchParams,
+}: PurchasesPageProps) {
   await requireAuth();
+  const params = (await searchParams) || {};
   const data = await getPurchases();
   const nowIst = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
   );
-  const { start: fyStart, end: fyEnd } = getFinancialYearBounds(nowIst);
+  const currentFy = getFinancialYearBounds(nowIst);
+  const currentFyStartYear = Number(currentFy.start.slice(0, 4));
+  const selectedFy = parseSelectedFinancialYear(params.fy);
+  const fyStart = selectedFy?.start ?? currentFy.start;
+  const fyEnd = selectedFy?.end ?? currentFy.end;
+  const selectedFyLabel =
+    selectedFy?.label ?? `${currentFyStartYear}-${currentFyStartYear + 1}`;
+
+  const firstFyStartYear = data.reduce((minYear, purchase) => {
+    const [yearPart, monthPart] = purchase.date.split("-");
+    const year = Number(yearPart);
+    const month = Number(monthPart);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return minYear;
+    const purchaseFyStartYear = month >= 4 ? year : year - 1;
+    return Math.min(minYear, purchaseFyStartYear);
+  }, currentFyStartYear);
+  const fyOptions: string[] = [];
+  for (let year = currentFyStartYear; year >= firstFyStartYear; year -= 1) {
+    fyOptions.push(`${year}-${year + 1}`);
+  }
+  if (!fyOptions.includes(selectedFyLabel)) {
+    fyOptions.unshift(selectedFyLabel);
+  }
+
   const scopedData = data.filter(
-    (purchase) => purchase.date >= fyStart && purchase.date <= fyEnd
+    (purchase) => purchase.date >= fyStart && purchase.date <= fyEnd,
   );
   const totals = scopedData.reduce(
     (acc, purchase) => {
@@ -28,7 +74,7 @@ export default async function PurchasesPage() {
     },
     { bags: 0, weight: 0, amount: 0 },
   );
-  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const todayKey = format(nowIst, "yyyy-MM-dd");
   const todaysTotals = scopedData.reduce(
     (acc, purchase) => {
       if (purchase.date !== todayKey) return acc;
@@ -39,8 +85,7 @@ export default async function PurchasesPage() {
     { bags: 0, weight: 0 },
   );
   const averageRate = totals.weight > 0 ? totals.amount / totals.weight : 0;
-  const today = new Date();
-  const last7Start = addDays(today, -6);
+  const last7Start = addDays(nowIst, -6);
   const last7 = scopedData.filter(
     (purchase) => purchase.date >= format(last7Start, "yyyy-MM-dd"),
   );
@@ -54,6 +99,31 @@ export default async function PurchasesPage() {
   );
   const last7AverageRate =
     last7Totals.weight > 0 ? last7Totals.amount / last7Totals.weight : 0;
+
+  const fyControl = (
+    <form method="get" className="flex items-center gap-1.5">
+      <select
+        id="fy"
+        name="fy"
+        defaultValue={selectedFyLabel}
+        className="h-10 min-w-[120px] rounded-md border border-[#2a2d34] bg-[#14161b] px-2.5 text-sm text-zinc-100 outline-none focus:border-[#ff8f6b]/50"
+        aria-label="Financial year"
+      >
+        {fyOptions.map((fy) => (
+          <option key={fy} value={fy}>
+            {fy}
+          </option>
+        ))}
+      </select>
+      <button
+        type="submit"
+        className="h-10 rounded-md border border-[#2a2d34] bg-[#17191f] px-2.5 text-sm text-zinc-100 hover:bg-[#1d2026]"
+      >
+        Apply
+      </button>
+    </form>
+  );
+
   return (
     <AppShell>
       <div className="mb-2 grid grid-cols-2 gap-3 sm:mb-3 xl:grid-cols-6">
@@ -155,7 +225,11 @@ export default async function PurchasesPage() {
         </Card>
       </div>
 
-      <PurchasesTableClient data={scopedData} addHref="/purchases/new" />
+      <PurchasesTableClient
+        data={scopedData}
+        addHref="/purchases/new"
+        fyControl={fyControl}
+      />
     </AppShell>
   );
 }

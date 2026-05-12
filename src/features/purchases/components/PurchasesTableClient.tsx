@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { ReactNode } from "react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { createPurchaseColumns } from "@/features/purchases/components/Columns";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 
 interface PurchasesTableClientProps {
   data: Purchase[];
+  fyControl?: ReactNode;
   addHref?: string;
   addButtonLabel?: string;
   exportFileName?: string;
@@ -37,6 +39,7 @@ const paymentBadgeStyles: Record<PaymentMethod, string> = {
 
 export function PurchasesTableClient({
   data,
+  fyControl,
   addHref,
   addButtonLabel = "Add Purchase",
   exportFileName = "purchases",
@@ -203,7 +206,7 @@ export function PurchasesTableClient({
       }}
       toolbarRight={null}
       toolbarBelow={
-        <div className="flex w-full">
+        <div className="flex w-full items-start justify-between gap-2">
           <div className="flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible xl:pb-0">
             {(["RTGS", "UPI", "CASH", "none"] as const).map((method) => (
               <div
@@ -220,17 +223,20 @@ export function PurchasesTableClient({
               </div>
             ))}
           </div>
+          {fyControl ? <div className="shrink-0">{fyControl}</div> : null}
         </div>
       }
       toolbarFarRight={
-        addHref ? (
-          <Link href={addHref} className="w-full sm:w-auto">
-            <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              {addButtonLabel}
-            </Button>
-          </Link>
-        ) : null
+        <div className="flex w-full flex-col items-stretch gap-2 sm:items-end">
+          {addHref ? (
+            <Link href={addHref} className="w-full sm:w-auto">
+              <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                {addButtonLabel}
+              </Button>
+            </Link>
+          ) : null}
+        </div>
       }
       rowClassName={(row) => {
         const method = paymentMethods[row.original.id] ?? "none";

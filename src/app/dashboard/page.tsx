@@ -64,7 +64,18 @@ export default async function DashboardPage() {
     (acc, s) => acc + Number(s.bags || 0),
     0,
   );
-  const stockBags = totalPurchasedBags - totalSoldBags;
+  const openingStockRowsFromFy2025 = purchases.filter(
+    (p) =>
+      p.date >= "2025-04-01" &&
+      p.date <= "2026-03-31" &&
+      [1, 2].includes(Number(p.bill_no)),
+  );
+  const openingStockBagsFromFy2025 = openingStockRowsFromFy2025.reduce(
+    (acc, p) => acc + Number(p.bags || 0),
+    0,
+  );
+  const stockBags =
+    totalPurchasedBags - totalSoldBags + openingStockBagsFromFy2025;
   const purchasedWeightFromPurchases = scopedPurchases.reduce(
     (acc, p) => acc + Number(p.net_weight || 0),
     0,
@@ -79,7 +90,12 @@ export default async function DashboardPage() {
     (acc, s) => acc + Number(s.net_weight || 0),
     0,
   );
-  const stockWeight = totalPurchasedNetWeight - totalSoldNetWeight;
+  const openingStockWeightFromFy2025 = openingStockRowsFromFy2025.reduce(
+    (acc, p) => acc + Number(p.net_weight || 0),
+    0,
+  );
+  const stockWeight =
+    totalPurchasedNetWeight - totalSoldNetWeight + openingStockWeightFromFy2025;
   const rtgsAmount = scopedPurchases
     .filter((p) => p.payment_through === "RTGS")
     .reduce((acc, p) => acc + (p.final_total || 0), 0);
@@ -180,11 +196,11 @@ export default async function DashboardPage() {
                 })}
               </div>
               <p className="mt-2 text-xs text-zinc-500">
-                from purchases{" "}
+                purchases{" "}
                 {formatCurrencyINR(purchaseAmountFromPurchases, {
                   maximumFractionDigits: 0,
                 })}{" "}
-                | from bilty{" "}
+                | bilty{" "}
                 {formatCurrencyINR(purchaseAmountFromBilty, {
                   maximumFractionDigits: 0,
                 })}
@@ -228,6 +244,12 @@ export default async function DashboardPage() {
                   maximumFractionDigits: 0,
                 })}
               </p>
+              <p className="mt-1 text-[11px] text-zinc-500">
+                + last FY (2025-26):{" "}
+                {formatNumberIN(openingStockBagsFromFy2025, {
+                  maximumFractionDigits: 0,
+                })}
+              </p>
             </CardContent>
           </Card>
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
@@ -245,12 +267,19 @@ export default async function DashboardPage() {
                 kg
               </div>
               <p className="mt-2 text-xs text-zinc-500">
-                from purchases{" "}
+                purchases{" "}
                 {formatNumberIN(purchasedWeightFromPurchases, {
                   maximumFractionDigits: 0,
                 })}{" "}
-                kg | from bilty{" "}
+                kg | bilty{" "}
                 {formatNumberIN(purchasedWeightFromBilty, {
+                  maximumFractionDigits: 0,
+                })}{" "}
+                kg
+              </p>
+              <p className="mt-1 text-[11px] text-zinc-500">
+                + last FY (2025-26):{" "}
+                {formatNumberIN(openingStockWeightFromFy2025, {
                   maximumFractionDigits: 0,
                 })}{" "}
                 kg
