@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ import {
   updateBiltyPartyAction,
 } from "@/app/bilty/actions";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { exportRowsToCsv } from "@/lib/excel/client-export";
 
 interface BiltyPartiesManagerProps {
   parties: BiltyParty[];
@@ -57,7 +58,7 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
   const [detailsTab, setDetailsTab] = useState<"purchases" | "ledger">("purchases");
   const [paidOn, setPaidOn] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [amount, setAmount] = useState("");
-  const [paymentMode, setPaymentMode] = useState<"" | "none" | "cash" | "rtgs">("");
+  const [paymentMode, setPaymentMode] = useState<"" | "none" | "cash" | "upi" | "rtgs">("");
   const [rtgsName, setRtgsName] = useState("");
   const [note, setNote] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -249,6 +250,25 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
     });
   };
 
+  const handleExportPartyPurchases = () => {
+    if (!activeParty) return;
+    const rows = activePartyBiltys.map((row) => ({
+      "Party Name": activeParty.name,
+      "Bill No": row.bill_no,
+      Date: row.date,
+      Bags: row.bags,
+      "Net Weight": row.net_weight,
+      Rate: row.rate,
+      "Final Amount": row.final_total,
+      Payment: row.payment_through,
+    }));
+    exportRowsToCsv(rows.length > 0 ? rows : [{ "Party Name": activeParty.name }], {
+      fileName: `bilty-party-${activeParty.name.replace(/\s+/g, "-").toLowerCase()}`,
+      sheetName: "Party Purchases",
+      emptyMessage: "No party records found",
+    });
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-[#1f2229] bg-[#111214] shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
@@ -394,7 +414,19 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
         <CardContent className="p-4">
           {detailsTab === "purchases" ? (
             <section className="space-y-3 rounded-md border border-[#252932] bg-[#111214] p-3">
-              <h3 className="text-sm font-semibold text-zinc-200">Purchase Details</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-200">Purchase Details</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPartyPurchases}
+                  className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </div>
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <div className="rounded-md border border-[#252932] bg-[#15171c] p-2 text-sm">
                   <div className="text-zinc-500">Total Bags</div>
@@ -651,7 +683,7 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
             />
             <Select
               value={paymentMode}
-              onValueChange={(value) => setPaymentMode(value as "" | "none" | "cash" | "rtgs")}
+              onValueChange={(value) => setPaymentMode(value as "" | "none" | "cash" | "upi" | "rtgs")}
             >
               <SelectTrigger className="h-10 w-full border-[#2a2d34] bg-[#14161b] text-zinc-100">
                 <SelectValue placeholder="Select payment mode" />
@@ -659,6 +691,7 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
               <SelectContent className="border-[#2a2d34] bg-[#14161b] text-zinc-100">
                 <SelectItem value="none">None</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="upi">UPI</SelectItem>
                 <SelectItem value="rtgs">RTGS</SelectItem>
               </SelectContent>
             </Select>

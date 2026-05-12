@@ -50,7 +50,7 @@ type BiltyPartyPaymentRow = {
   party_id: string;
   paid_on: string;
   amount: number | string;
-  payment_mode: "none" | "cash" | "rtgs" | null;
+  payment_mode: "none" | "cash" | "upi" | "rtgs" | null;
   rtgs_name: string | null;
   note: string | null;
   created_at?: string | null;

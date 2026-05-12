@@ -33,15 +33,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const navItems = [
+type NavItem = {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+  badgeDevOnly?: boolean;
+  children?: NavItem[];
+};
+
+const navItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Purchases", href: "/purchases", icon: ShoppingCart },
   {
     name: "Bilty",
     href: "/bilty",
     icon: Truck,
-    badge: "DEV",
-    badgeDevOnly: true,
     children: [
       { name: "Overview", href: "/bilty", icon: LayoutList },
       { name: "Parties", href: "/bilty/parties", icon: Building2 },
@@ -195,9 +202,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                 >
                   <Icon className="h-5 w-5 shrink-0" />
                   <span className="truncate">{item.name}</span>
-                  {"badge" in item &&
-                  item.badge &&
-                  !("badgeDevOnly" in item && item.badgeDevOnly && isProduction) ? (
+                  {item.badge && !(item.badgeDevOnly && isProduction) ? (
                     <span className="ml-2 rounded border border-[#7a4a22] bg-[#3a2417] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#ffb792]">
                       {item.badge}
                     </span>

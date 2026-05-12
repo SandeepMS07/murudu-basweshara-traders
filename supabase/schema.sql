@@ -161,7 +161,7 @@ create table if not exists public.bilty_party_payments (
   party_id text not null references public.bilty_parties(id) on delete cascade,
   paid_on date not null,
   amount numeric(14,2) not null default 0,
-  payment_mode text not null check (payment_mode in ('none', 'cash', 'rtgs')) default 'none',
+  payment_mode text not null check (payment_mode in ('none', 'cash', 'upi', 'rtgs')) default 'none',
   rtgs_name text not null default '',
   note text not null default '',
   created_at timestamptz not null default now(),
@@ -170,6 +170,13 @@ create table if not exists public.bilty_party_payments (
 
 create index if not exists idx_bilty_party_payments_party_id on public.bilty_party_payments (party_id);
 create index if not exists idx_bilty_party_payments_paid_on on public.bilty_party_payments (paid_on desc);
+alter table public.bilty_party_payments
+  add column if not exists payment_mode text not null default 'none';
+alter table public.bilty_party_payments
+  drop constraint if exists bilty_party_payments_payment_mode_check;
+alter table public.bilty_party_payments
+  add constraint bilty_party_payments_payment_mode_check
+  check (payment_mode in ('none', 'cash', 'upi', 'rtgs'));
 
 create table if not exists public.bills (
   id text primary key,

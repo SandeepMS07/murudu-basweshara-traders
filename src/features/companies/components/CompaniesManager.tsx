@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { addDays, format, isValid, parseISO } from "date-fns";
+import { Download } from "lucide-react";
 
 import {
   Company,
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
+import { exportRowsToCsv } from "@/lib/excel/client-export";
 
 type CompanyDraft = {
   type: "issuer" | "buyer";
@@ -291,6 +293,7 @@ export function CompaniesManager({
 
               {detailsTab === "sales" ? (
                 <SalesDetailsTable
+                  companyName={activeBuyer.display_name || activeBuyer.name}
                   sales={activeBuyerSales}
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
                 />
@@ -634,9 +637,11 @@ function CompanyTable({
 }
 
 function SalesDetailsTable({
+  companyName,
   sales,
   pendingBySaleId,
 }: {
+  companyName: string;
   sales: Sale[];
   pendingBySaleId: Record<string, number>;
 }) {
@@ -743,11 +748,43 @@ function SalesDetailsTable({
     }
   };
 
+  const handleExportCompanySales = () => {
+    const rows = sales.map((sale) => ({
+      Company: companyName,
+      "Bill No": sale.bill_number,
+      Date: sale.sale_date,
+      Party: sale.party,
+      Bags: sale.bags,
+      "Net Weight": sale.net_weight,
+      Rate: sale.rate,
+      Amount: sale.amount,
+      Pending: pendingBySaleId[sale.id] ?? sale.pending_amount,
+      "Due Date": formatDueDate(sale),
+    }));
+    exportRowsToCsv(rows.length > 0 ? rows : [{ Company: companyName }], {
+      fileName: `sales-company-${companyName.replace(/\s+/g, "-").toLowerCase()}`,
+      sheetName: "Company Sales",
+      emptyMessage: "No company sales found",
+    });
+  };
+
   return (
     <section className="space-y-3 rounded-md border border-[#252932] bg-[#111214] p-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-200">Sale Details</h3>
-        <div className="text-xs text-zinc-400">Records: {sales.length}</div>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-zinc-400">Records: {sales.length}</div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportCompanySales}
+            className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
