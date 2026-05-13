@@ -16,6 +16,7 @@ import {
   Truck,
   Hand,
   ReceiptText,
+  Package,
   LayoutList,
   ChevronDown,
   ChevronRight,
@@ -61,6 +62,17 @@ const navItems: NavItem[] = [
     children: [
       { name: "Overview", href: "/sales", icon: HandCoins },
       { name: "Companies", href: "/companies", icon: Building2 },
+    ],
+  },
+  {
+    name: "Gunny Bags",
+    href: "/gunny",
+    icon: Package,
+    badge: "DEV",
+    badgeDevOnly: true,
+    children: [
+      { name: "Overview", href: "/gunny", icon: LayoutList },
+      { name: "Sellers", href: "/gunny/sellers", icon: Building2 },
     ],
   },
   {

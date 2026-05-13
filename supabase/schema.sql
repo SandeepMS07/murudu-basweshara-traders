@@ -351,6 +351,84 @@ create table if not exists public.expenses (
 create index if not exists idx_expenses_category on public.expenses (category);
 create index if not exists idx_expenses_expense_date on public.expenses (expense_date desc);
 create index if not exists idx_expenses_employee_id on public.expenses (employee_id);
+alter table public.expenses
+  drop constraint if exists expenses_category_check;
+alter table public.expenses
+  add constraint expenses_category_check
+  check (category in ('salary', 'vehicle', 'hamali', 'other'));
+
+create table if not exists public.gunny_sellers (
+  id text primary key,
+  name text not null unique,
+  place text not null default '',
+  mob text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.gunny_bags (
+  id text primary key,
+  bill_no bigint not null,
+  date date not null,
+  seller text not null default '',
+  bags numeric(12,2) not null default 0,
+  rate numeric(12,2) not null default 0,
+  amount numeric(14,2) not null default 0,
+  paid_amount numeric(14,2) not null default 0,
+  payment_mode text not null default 'none' check (payment_mode in ('none', 'cash', 'upi', 'rtgs')),
+  upi_number text not null default '',
+  rtgs_name text not null default '',
+  note text not null default '',
+  source text not null default 'app' check (source in ('manual', 'app')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.gunny_bags
+  add column if not exists upi_number text not null default '';
+
+alter table public.gunny_bags
+  add column if not exists rtgs_name text not null default '';
+
+create index if not exists idx_gunny_bags_bill_no on public.gunny_bags (bill_no desc);
+create index if not exists idx_gunny_bags_date on public.gunny_bags (date desc);
+create index if not exists idx_gunny_bags_seller on public.gunny_bags (seller);
+
+create table if not exists public.gunny_seller_payments (
+  id text primary key,
+  seller_id text not null references public.gunny_sellers(id) on delete cascade,
+  paid_on date not null,
+  amount numeric(14,2) not null default 0,
+  payment_mode text not null default 'none' check (payment_mode in ('none', 'cash', 'upi', 'rtgs')),
+  upi_number text not null default '',
+  rtgs_name text not null default '',
+  note text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.gunny_seller_payments
+  add column if not exists upi_number text not null default '';
+
+alter table public.gunny_seller_payments
+  add column if not exists rtgs_name text not null default '';
+
+create index if not exists idx_gunny_seller_payments_seller_id on public.gunny_seller_payments (seller_id);
+create index if not exists idx_gunny_seller_payments_paid_on on public.gunny_seller_payments (paid_on desc);
+
+create table if not exists public.gunny_payment_allocations (
+  id text primary key,
+  payment_id text not null references public.gunny_seller_payments(id) on delete cascade,
+  record_id text not null references public.gunny_bags(id) on delete cascade,
+  amount numeric(14,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_gunny_payment_allocations_payment_id
+  on public.gunny_payment_allocations (payment_id);
+create index if not exists idx_gunny_payment_allocations_record_id
+  on public.gunny_payment_allocations (record_id);
 
 -- Backward-compatible migration for older installs where the counter table
 -- used `company_id` instead of `issuer_company_id`.
