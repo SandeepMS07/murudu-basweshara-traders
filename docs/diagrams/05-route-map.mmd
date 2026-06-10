@@ -1,0 +1,16 @@
+flowchart TD
+    root["/"] -->|authed| dash["/dashboard"]
+    root -->|guest| login["/login"]
+    dash --> pur["/purchases<br/>+ /new, /[id]/edit, /all"]
+    dash --> bil["/bilty<br/>+ /add, /[id]/edit, /parties"]
+    dash --> sal["/sales<br/>+ /new, /[id]/edit"]
+    sal --> inv["/sales/invoices<br/>+ /[id]/print"]
+    sal --> comp["/companies"]
+    dash --> gun["/gunny<br/>+ /add, /[id]/edit, /sellers"]
+    dash --> exp["/expenses/[tab]<br/>overview salary vehicle hamali other"]
+    dash --> bills["/bills/[id]/print and /edit"]
+    subgraph apis["API Route Handlers"]
+        a1["/api/auth/login logout me"]
+        a2["/api/bilty and /api/bilty/[id]"]
+        a3["/api/companies/profile"]
+    end

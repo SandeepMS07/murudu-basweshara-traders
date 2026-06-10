@@ -1,0 +1,19 @@
+flowchart LR
+    subgraph slice["src/features/&lt;domain&gt;/"]
+        direction TB
+        C["components/<br/>Client UI: Form, Table, Columns"]
+        S["schemas/<br/>Zod schema to TS types<br/>(source of truth)"]
+        U["utils/<br/>pure functions<br/>calculations + .test.ts"]
+        SV["service/<br/>Supabase queries<br/>server-only"]
+    end
+    subgraph app["src/app/&lt;domain&gt;/"]
+        P["page.tsx<br/>Server Component"]
+        A["actions.ts<br/>use server"]
+    end
+    P -->|reads| SV
+    P -->|renders| C
+    C -->|calls| A
+    A -->|parse| S
+    A --> SV
+    SV --> U
+    SV --> S

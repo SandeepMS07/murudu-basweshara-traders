@@ -1,0 +1,29 @@
+flowchart TB
+    subgraph Client["Browser"]
+        UI["React 19 UI (Server + Client Components)<br/>shadcn-ui / Tailwind / TanStack Table"]
+    end
+    subgraph Edge["Next.js 16 App Router - single deployable"]
+        MW["proxy.ts middleware<br/>JWT gate + redirects"]
+        RSC["Server Components<br/>render data server-side"]
+        SA["Server Actions<br/>app/*/actions.ts"]
+        API["Route Handlers<br/>app/api/*"]
+    end
+    subgraph Domain["Feature / Domain layer (src/features/*)"]
+        SVC["Services<br/>purchase, bilty, sales, bills,<br/>companies, gunny, expenses, auth"]
+        SCHEMA["Zod Schemas<br/>validation + types"]
+        CALC["Pure calc utils<br/>money math, tested"]
+    end
+    subgraph Data["Supabase (Postgres)"]
+        PG[("Tables + Sequences + RPC")]
+    end
+    UI -->|navigation| MW
+    MW --> RSC
+    UI -->|form submit / mutation| SA
+    UI -->|login, bilty CRUD, company profile| API
+    RSC --> SVC
+    SA -->|Zod.parse| SCHEMA
+    SA --> SVC
+    API --> SVC
+    SVC --> SCHEMA
+    SVC --> CALC
+    SVC -->|service-role key| PG

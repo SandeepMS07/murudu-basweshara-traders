@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    participant B as Browser (Client Component)
+    participant M as proxy.ts (middleware)
+    participant A as Server Action
+    participant Z as Zod schema
+    participant S as Service
+    participant DB as Supabase (Postgres)
+    B->>M: navigate / submit (cookie session)
+    M->>M: verifySession(JWT)
+    alt no valid session and private route
+        M-->>B: 302 redirect to /login
+    end
+    B->>A: createPurchaseAction(input)
+    A->>Z: purchaseSchema.parse(input)
+    Z-->>A: validated input (or throws)
+    A->>S: createPurchase(parsed)
+    S->>S: requireAuth + role check
+    S->>S: calculatePurchase (derive totals)
+    S->>DB: insert(payload)
+    DB-->>S: row (or 23505 unique violation)
+    S-->>A: domain object
+    A-->>B: result (or thrown Error to toast)

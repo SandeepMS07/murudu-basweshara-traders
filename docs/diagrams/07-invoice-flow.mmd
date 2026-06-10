@@ -1,0 +1,7 @@
+flowchart LR
+    A["generateSalesInvoice()"] --> B["rpc next_company_invoice_seq(issuer)"]
+    B --> C["INSERT ON CONFLICT<br/>DO UPDATE last_seq = last_seq + 1<br/>RETURNING last_seq"]
+    C --> D["invoice_no = PREFIX-0001"]
+    D --> E["insert sales_invoices (header)"]
+    E --> F["insert sales_invoice_items[]"]
+    F -->|items fail| G["delete header (compensating)"]

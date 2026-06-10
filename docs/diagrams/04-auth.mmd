@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant API as login route
+    participant AS as auth.service
+    participant DB as users table
+    participant J as jose JWT
+    B->>API: POST email and password
+    API->>AS: authenticateUser
+    AS->>DB: select user by email
+    DB-->>AS: password_hash and role
+    AS->>AS: bcrypt compare password hash
+    AS->>J: signSession id email role HS256 24h
+    J-->>AS: token
+    AS-->>B: Set-Cookie session JWT httpOnly sameSite lax
+    Note over B,API: Later requests carry the cookie and proxy.ts verifies it on every protected route

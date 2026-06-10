@@ -1,0 +1,4 @@
+{ "theme": "base", "themeVariables": {
+  "primaryColor": "#0b1220", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#3b82f6",
+  "lineColor": "#64748b", "fontSize": "14px", "fontFamily": "ui-sans-serif, system-ui, sans-serif",
+  "clusterBkg": "#0b1220", "clusterBorder": "#334155", "tertiaryColor": "#111827" } }

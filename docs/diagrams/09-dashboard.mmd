@@ -1,0 +1,16 @@
+flowchart LR
+    subgraph fetch["Parallel fetch (server)"]
+        P["getPurchases"]
+        S["getSales"]
+        B["getBiltys"]
+        C["getCompanies(buyer)"]
+    end
+    FY["Filter to current<br/>Financial Year (Apr-Mar, IST)"]
+    AGG["Aggregate KPIs<br/>purchase amt + bags,<br/>sales amt + pending,<br/>stock = purchased - sold"]
+    UI["Dashboard cards<br/>+ PurchaseTrendChart"]
+    P --> FY
+    S --> FY
+    B --> FY
+    C --> FY
+    FY --> AGG
+    AGG --> UI

@@ -1,0 +1,32 @@
+flowchart TB
+    subgraph core["Core modules"]
+        PUR["Purchases<br/>buy grain from farmers"]
+        BIL["Bilty<br/>transport consignments"]
+        SAL["Sales<br/>sell to buyer companies"]
+        GUN["Gunny Bags<br/>jute sack purchases"]
+        EXP["Expenses<br/>salary, vehicle, hamali, other"]
+    end
+    subgraph billing["Billing & companies"]
+        BILLS["Bills<br/>from purchase/bilty"]
+        INV["Sales Invoices<br/>numbered, snapshotted"]
+        COMP["Companies<br/>issuer + buyer profiles"]
+    end
+    subgraph crosscut["Cross-cutting"]
+        DASH["Dashboard<br/>KPIs + trends (per FY)"]
+        AUTH["Auth<br/>JWT + roles"]
+        XLS["Excel import/export"]
+    end
+    PUR --> BILLS
+    BIL --> BILLS
+    SAL --> INV
+    COMP --> INV
+    SAL --> COMP
+    GUN --> GUN
+    PUR --> DASH
+    BIL --> DASH
+    SAL --> DASH
+    COMP --> DASH
+    AUTH -. guards .-> core
+    AUTH -. guards .-> billing
+    XLS -. seed/report .-> PUR
+    XLS -. seed/report .-> SAL

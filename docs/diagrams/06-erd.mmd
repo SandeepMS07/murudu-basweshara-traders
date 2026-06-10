@@ -1,0 +1,115 @@
+erDiagram
+    users {
+        uuid id PK
+        text email UK
+        text role "admin or operator"
+    }
+    purchases {
+        text id PK
+        bigint bill_no UK
+        numeric net_weight
+        numeric final_total
+        text source "manual or app"
+    }
+    bilty {
+        text id PK
+        bigint bill_no UK
+        text party
+        numeric final_total
+    }
+    bilty_parties {
+        text id PK
+        text name UK
+    }
+    bilty_party_payments {
+        text id PK
+        text party_id FK
+        numeric amount
+    }
+    bills {
+        text id PK
+        date bill_date
+        numeric final_amount
+        date due_date
+    }
+    sales {
+        text id PK
+        text bill_number UK
+        text issuer_company_id FK
+        numeric pending_amount
+    }
+    companies {
+        text id PK
+        text type "issuer or buyer"
+        text invoice_prefix
+    }
+    company_invoice_counters {
+        text issuer_company_id PK
+        bigint last_seq
+    }
+    company_payments {
+        text id PK
+        text company_id FK
+        numeric amount
+    }
+    company_payment_allocations {
+        text id PK
+        text payment_id FK
+        text sale_id FK
+        numeric amount
+    }
+    sales_invoices {
+        text id PK
+        text issuer_company_id FK
+        text buyer_company_id FK
+        text invoice_no UK
+        jsonb snapshot_json
+    }
+    sales_invoice_items {
+        text id PK
+        text sales_invoice_id FK
+        text sale_id FK
+    }
+    gunny_bags {
+        text id PK
+        text seller
+        numeric amount
+        numeric paid_amount
+    }
+    gunny_sellers {
+        text id PK
+        text name UK
+    }
+    gunny_seller_payments {
+        text id PK
+        text seller_id FK
+        numeric amount
+    }
+    gunny_payment_allocations {
+        text id PK
+        text payment_id FK
+        text record_id FK
+        numeric amount
+    }
+    expense_employees {
+        text id PK
+        text name UK
+    }
+    expenses {
+        text id PK
+        text category
+        text employee_id FK
+        numeric amount
+    }
+    bilty_parties ||--o{ bilty_party_payments : receives
+    companies ||--o| company_invoice_counters : has_counter
+    companies ||--o{ company_payments : receives
+    company_payments ||--o{ company_payment_allocations : split_into
+    sales ||--o{ company_payment_allocations : applied_to
+    companies ||--o{ sales_invoices : issues_or_buys
+    sales_invoices ||--o{ sales_invoice_items : contains
+    sales ||--o{ sales_invoice_items : billed_in
+    gunny_sellers ||--o{ gunny_seller_payments : receives
+    gunny_seller_payments ||--o{ gunny_payment_allocations : split_into
+    gunny_bags ||--o{ gunny_payment_allocations : applied_to
+    expense_employees ||--o{ expenses : incurs
