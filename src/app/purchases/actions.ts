@@ -10,7 +10,6 @@ import {
 } from "@/features/purchases/service/purchase.service";
 import { purchaseSchema, PurchaseInput, PaymentMethod } from "@/features/purchases/schemas";
 import { upsertBillById } from "@/features/bills/service/bill.service";
-import { istTodayIso } from "@/lib/date";
 
 export async function createPurchaseAction(data: PurchaseInput) {
   const parsed = purchaseSchema.parse(data);
@@ -34,9 +33,7 @@ export async function generateBillFromPurchaseAction(purchaseId: string) {
 
   const billId = `PUR_BILL_${purchaseId}`;
   const bill = await upsertBillById(billId, {
-    // Stamp the bill with the date it is generated (today, IST), not the
-    // original purchase/record date.
-    bill_date: istTodayIso(),
+    bill_date: purchase.date,
     net_weight: purchase.net_weight,
     rate: purchase.rate,
     freight: 0,

@@ -23,7 +23,6 @@ import {
 } from "@/features/bilty/schemas";
 import { type PaymentMethod } from "@/features/bilty/schemas";
 import { upsertBillById } from "@/features/bills/service/bill.service";
-import { istTodayIso } from "@/lib/date";
 
 export async function createBiltyAction(data: BiltyInput) {
   const parsed = biltySchema.parse(data);
@@ -47,9 +46,7 @@ export async function generateBillFromBiltyAction(biltyId: string) {
 
   const billId = `BILTY_BILL_${biltyId}`;
   return upsertBillById(billId, {
-    // Stamp the bill with the date it is generated (today, IST), not the
-    // original bilty/record date.
-    bill_date: istTodayIso(),
+    bill_date: bilty.date,
     net_weight: bilty.net_weight,
     rate: bilty.rate,
     freight: 0,
