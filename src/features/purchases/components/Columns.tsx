@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
+import { istTodayIso } from "@/lib/date";
 
 type PurchaseColumnsConfig = {
   entityLabelSingular?: string;
@@ -99,6 +100,9 @@ function PurchaseActionsCell({
         ? "bill-print-total-value-md"
         : "";
   const previewRate = purchase.rate;
+  // The generated bill is stamped with today's date (IST), so the preview
+  // must show the same date the "Generate Bill" action will persist.
+  const previewBillDate = istTodayIso();
 
   const handleDelete = () => {
     if (isManual) return;
@@ -299,7 +303,7 @@ function PurchaseActionsCell({
                   <div className="bill-print-info-right">
                     <div className="bill-print-kv">
                       <span className="bill-print-icon">◼</span>
-                      <span>DATE:</span> <strong>{purchase.date}</strong>
+                      <span>DATE:</span> <strong>{previewBillDate}</strong>
                     </div>
                     <div className="bill-print-kv">
                       <span className="bill-print-icon">◼</span>

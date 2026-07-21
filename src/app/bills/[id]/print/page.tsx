@@ -8,6 +8,7 @@ import { getBiltyById, getBiltyParties } from "@/features/bilty/service/bilty.se
 import { Bill } from "@/features/bills/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
+import { istTodayIso } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,7 +41,9 @@ export default async function BillPrintPage({
     bill = {
       id,
       bill_no: 0,
-      bill_date: sourceRecord.date,
+      // Not-yet-generated preview: show today (IST), matching the date the
+      // "Generate Bill" action will stamp on the persisted bill.
+      bill_date: istTodayIso(),
       net_weight: sourceRecord.net_weight,
       rate: sourceRecord.rate,
       freight: 0,
