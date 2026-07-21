@@ -38,9 +38,9 @@ function SaleActionsCell({
   const [generateOpen, setGenerateOpen] = useState(false);
   const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [issuedOn, setIssuedOn] = useState(() =>
-    format(new Date(), "yyyy-MM-dd"),
-  );
+  // Invoice "Dated" / "Delivery Note Date" should reflect the sale's own
+  // date (its create date), not the day the bill is generated.
+  const [issuedOn, setIssuedOn] = useState(sale.sale_date);
   const defaultIssuerId = useMemo(() => {
     if (
       sale.issuer_company_id &&
@@ -81,7 +81,7 @@ function SaleActionsCell({
       return;
     }
     setPreviewInvoiceId(null);
-    setIssuedOn(format(new Date(), "yyyy-MM-dd"));
+    setIssuedOn(sale.sale_date);
     setSelectedIssuerId(defaultIssuerId);
     setGenerateOpen(true);
 
@@ -90,7 +90,7 @@ function SaleActionsCell({
         const invoice = await generateSalesInvoiceAction({
           saleIds: [sale.id],
           issuerCompanyId: defaultIssuerId,
-          issuedOn: format(new Date(), "yyyy-MM-dd"),
+          issuedOn: sale.sale_date,
         });
         setPreviewInvoiceId(invoice.id);
       } catch (error: unknown) {
