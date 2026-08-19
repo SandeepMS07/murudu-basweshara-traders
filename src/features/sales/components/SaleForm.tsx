@@ -180,13 +180,15 @@ export function SaleForm({
       if (payload.sale_company_id && selectedBuyer) {
         payload.party = selectedBuyer.name;
       }
-      if (isEditing && initialData?.id) {
-        await updateSaleAction(initialData.id, payload);
-        toast.success("Sale updated");
-      } else {
-        await createSaleAction(payload);
-        toast.success("Sale created");
+      const result =
+        isEditing && initialData?.id
+          ? await updateSaleAction(initialData.id, payload)
+          : await createSaleAction(payload);
+      if (!result.success) {
+        toast.error(result.message);
+        return;
       }
+      toast.success(isEditing ? "Sale updated" : "Sale created");
       router.replace("/sales");
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to save sale");

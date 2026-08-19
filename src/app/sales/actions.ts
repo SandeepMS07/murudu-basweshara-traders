@@ -16,8 +16,24 @@ import {
 import { generateSalesInvoice } from "@/features/sales/service/sales-invoice.service";
 
 export async function createSaleAction(data: SaleInput) {
-  const parsed = saleSchema.parse(data);
-  return createSale(parsed);
+  const parsed = saleSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      message: parsed.error.issues[0]?.message ?? "Invalid sale data",
+    };
+  }
+  try {
+    const sale = await createSale(parsed.data);
+    return { success: true as const, sale };
+  } catch (error) {
+    // Surface the real reason instead of the redacted production digest.
+    console.error("createSaleAction failed:", error);
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Failed to create sale",
+    };
+  }
 }
 
 export async function getNextSaleBillNumberAction(
@@ -33,8 +49,23 @@ export async function getNextSaleBillNumberAction(
 }
 
 export async function updateSaleAction(id: string, data: SaleInput) {
-  const parsed = saleSchema.parse(data);
-  return updateSale(id, parsed);
+  const parsed = saleSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      message: parsed.error.issues[0]?.message ?? "Invalid sale data",
+    };
+  }
+  try {
+    const sale = await updateSale(id, parsed.data);
+    return { success: true as const, sale };
+  } catch (error) {
+    console.error("updateSaleAction failed:", error);
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Failed to update sale",
+    };
+  }
 }
 
 export async function deleteSaleAction(id: string) {
