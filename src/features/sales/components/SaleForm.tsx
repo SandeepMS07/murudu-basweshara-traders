@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -26,7 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createSaleAction, updateSaleAction } from "@/app/sales/actions";
+import {
+  createSaleAction,
+  getNextSaleBillNumberAction,
+  updateSaleAction,
+} from "@/app/sales/actions";
 import { saleSchema, Sale } from "@/features/sales/schemas";
 import { formatCurrencyINR } from "@/lib/number-format";
 import { Company } from "@/features/companies/schemas";
@@ -61,6 +65,8 @@ export function SaleForm({
   const [isLoading, setIsLoading] = useState(false);
   const [buyers, setBuyers] = useState<Company[]>(buyerCompanies);
   const [buyerSearch, setBuyerSearch] = useState(initialData?.party ?? "");
+  // Once the user types a bill number themselves, stop auto-suggesting.
+  const [billNumberEdited, setBillNumberEdited] = useState(false);
   const isEditing = Boolean(initialData);
   const issuerOptions = useMemo(
     () =>
@@ -145,6 +151,25 @@ export function SaleForm({
     () => buyers.find((company) => company.id === selectedBuyerId) ?? null,
     [buyers, selectedBuyerId]
   );
+
+  // Suggest the next bill number for the selected issuer company (create mode
+  // only, and only until the user edits the field). Bill numbers are scoped
+  // per issuer company, so switching the issuer changes the suggestion.
+  const selectedIssuerId = form.watch("issuer_company_id");
+  useEffect(() => {
+    if (isEditing || billNumberEdited) return;
+    let active = true;
+    getNextSaleBillNumberAction(form.getValues("sale_date"), selectedIssuerId ?? null)
+      .then((next) => {
+        if (active && !billNumberEdited) {
+          form.setValue("bill_number", next);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [selectedIssuerId, isEditing, billNumberEdited, form]);
 
   async function onSubmit(values: SaleFormValues) {
     setIsLoading(true);
@@ -247,7 +272,15 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Bill Number</FormLabel>
                     <FormControl>
-                      <Input {...field} className={fieldClassName} placeholder="Enter bill number" />
+                      <Input
+                        {...field}
+                        onChange={(event) => {
+                          setBillNumberEdited(true);
+                          field.onChange(event);
+                        }}
+                        className={fieldClassName}
+                        placeholder="Enter bill number"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

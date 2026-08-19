@@ -250,13 +250,19 @@ export async function createSale(input: SaleInput): Promise<Sale> {
     throw new Error("Bill number is required");
   }
 
+  const issuerCompanyId = await resolveIssuerCompanyId(input);
+
   const { start, end } = getFinancialYearBounds(input.sale_date || new Date());
-  const { data: existingBill, error: billError } = await supabaseServer
+  let billQuery = supabaseServer
     .from("sales")
     .select("id")
     .eq("bill_number", billNumber)
     .gte("sale_date", start)
-    .lte("sale_date", end)
+    .lte("sale_date", end);
+  billQuery = issuerCompanyId
+    ? billQuery.eq("issuer_company_id", issuerCompanyId)
+    : billQuery.is("issuer_company_id", null);
+  const { data: existingBill, error: billError } = await billQuery
     .limit(1)
     .maybeSingle();
 
@@ -264,11 +270,12 @@ export async function createSale(input: SaleInput): Promise<Sale> {
     throw new Error(`Failed to validate bill number: ${billError.message}`);
   }
   if (existingBill) {
-    throw new Error("Bill number already exists for this financial year");
+    throw new Error(
+      "Bill number already exists for this issuer company in this financial year"
+    );
   }
 
   const resolved = await resolvePartyFields(input);
-  const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
     {
       ...input,
@@ -292,7 +299,9 @@ export async function createSale(input: SaleInput): Promise<Sale> {
 
   if (error) {
     if (error.code === "23505" && String(error.message).includes("bill_number")) {
-      throw new Error("Bill number already exists for this financial year");
+      throw new Error(
+        "Bill number already exists for this issuer company in this financial year"
+      );
     }
     throw new Error(`Failed to create sale: ${error.message}`);
   }
@@ -316,14 +325,20 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
     throw new Error("Bill number is required");
   }
 
+  const issuerCompanyId = await resolveIssuerCompanyId(input);
+
   const { start, end } = getFinancialYearBounds(input.sale_date || new Date());
-  const { data: existingBill, error: billError } = await supabaseServer
+  let billQuery = supabaseServer
     .from("sales")
     .select("id")
     .eq("bill_number", billNumber)
     .gte("sale_date", start)
     .lte("sale_date", end)
-    .neq("id", id)
+    .neq("id", id);
+  billQuery = issuerCompanyId
+    ? billQuery.eq("issuer_company_id", issuerCompanyId)
+    : billQuery.is("issuer_company_id", null);
+  const { data: existingBill, error: billError } = await billQuery
     .limit(1)
     .maybeSingle();
 
@@ -331,11 +346,12 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
     throw new Error(`Failed to validate bill number: ${billError.message}`);
   }
   if (existingBill) {
-    throw new Error("Bill number already exists for this financial year");
+    throw new Error(
+      "Bill number already exists for this issuer company in this financial year"
+    );
   }
 
   const resolved = await resolvePartyFields(input);
-  const issuerCompanyId = await resolveIssuerCompanyId(input);
   const calculated = calculateSale(
     {
       ...input,
@@ -360,7 +376,9 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
 
   if (error) {
     if (error.code === "23505" && String(error.message).includes("bill_number")) {
-      throw new Error("Bill number already exists for this financial year");
+      throw new Error(
+        "Bill number already exists for this issuer company in this financial year"
+      );
     }
     throw new Error(`Failed to update sale: ${error.message}`);
   }
@@ -700,12 +718,25 @@ export async function getNextSaleIdentifiers(): Promise<{
 }
 
 export async function getNextSaleIdentifiersForDate(
-  saleDate: string
+  saleDate: string,
+  issuerCompanyId?: string | null
 ): Promise<{
   nextSlNo: number;
   nextBillNumber: string;
 }> {
   const { start, end } = getFinancialYearBounds(saleDate || new Date());
+  // Bill numbers run per issuer company: scope the next-number scan to the
+  // selected issuer (or the no-issuer bucket) when one is provided.
+  let billNumberQuery = supabaseServer
+    .from("sales")
+    .select("bill_number")
+    .gte("sale_date", start)
+    .lte("sale_date", end);
+  if (issuerCompanyId) {
+    billNumberQuery = billNumberQuery.eq("issuer_company_id", issuerCompanyId);
+  } else if (issuerCompanyId === null) {
+    billNumberQuery = billNumberQuery.is("issuer_company_id", null);
+  }
   const [{ data: slRows, error: slError }, { data: billRows, error: billError }] =
     await Promise.all([
       supabaseServer
@@ -714,11 +745,7 @@ export async function getNextSaleIdentifiersForDate(
         .not("sl_no", "is", null)
         .order("sl_no", { ascending: false })
         .limit(1),
-      supabaseServer
-        .from("sales")
-        .select("bill_number")
-        .gte("sale_date", start)
-        .lte("sale_date", end),
+      billNumberQuery,
     ]);
 
   if (slError) {

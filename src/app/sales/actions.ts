@@ -9,6 +9,7 @@ import {
 import {
   createSale,
   deleteSale,
+  getNextSaleIdentifiersForDate,
   importSalesFromBillWorkbook,
   updateSale,
 } from "@/features/sales/service/sale.service";
@@ -17,6 +18,18 @@ import { generateSalesInvoice } from "@/features/sales/service/sales-invoice.ser
 export async function createSaleAction(data: SaleInput) {
   const parsed = saleSchema.parse(data);
   return createSale(parsed);
+}
+
+export async function getNextSaleBillNumberAction(
+  saleDate: string,
+  issuerCompanyId: string | null
+) {
+  await requireAuth();
+  const { nextBillNumber } = await getNextSaleIdentifiersForDate(
+    saleDate,
+    issuerCompanyId
+  );
+  return nextBillNumber;
 }
 
 export async function updateSaleAction(id: string, data: SaleInput) {

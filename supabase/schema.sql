@@ -256,10 +256,12 @@ create table if not exists public.sales (
 
 create index if not exists idx_sales_sale_date on public.sales (sale_date desc);
 create index if not exists idx_sales_bill_number on public.sales (bill_number);
--- bill_number is unique per financial year (Apr–Mar), not globally.
-create unique index if not exists idx_sales_bill_number_fy_unique
+-- bill_number is unique per issuer company, per financial year (Apr–Mar).
+-- Each issuer company keeps its own bill-number series.
+create unique index if not exists idx_sales_bill_number_issuer_fy_unique
   on public.sales (
     bill_number,
+    coalesce(issuer_company_id, ''),
     (
       (extract(year from sale_date)::int)
       - (case when extract(month from sale_date) < 4 then 1 else 0 end)
