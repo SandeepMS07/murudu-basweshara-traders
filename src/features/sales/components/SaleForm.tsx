@@ -615,10 +615,14 @@ export function SaleForm({
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || billNumberLoading}
                 className="cursor-pointer border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                {isLoading || billNumberLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Save"
+                )}
               </Button>
             </div>
           </form>
