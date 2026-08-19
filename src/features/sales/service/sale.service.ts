@@ -291,6 +291,9 @@ export async function createSale(input: SaleInput): Promise<Sale> {
     .single();
 
   if (error) {
+    if (error.code === "23505" && String(error.message).includes("bill_number")) {
+      throw new Error("Bill number already exists for this financial year");
+    }
     throw new Error(`Failed to create sale: ${error.message}`);
   }
 
@@ -356,6 +359,9 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
     .single();
 
   if (error) {
+    if (error.code === "23505" && String(error.message).includes("bill_number")) {
+      throw new Error("Bill number already exists for this financial year");
+    }
     throw new Error(`Failed to update sale: ${error.message}`);
   }
 

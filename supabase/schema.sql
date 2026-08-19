@@ -229,7 +229,7 @@ create unique index if not exists idx_bills_bill_no_unique on public.bills (bill
 create table if not exists public.sales (
   id text primary key,
   sl_no integer null,
-  bill_number text not null unique,
+  bill_number text not null,
   sale_date date not null,
   issuer_company_id text null,
   dispatch_through text not null default 'TRUCK' check (dispatch_through in ('TRUCK', 'TRACTORY')),
@@ -256,6 +256,15 @@ create table if not exists public.sales (
 
 create index if not exists idx_sales_sale_date on public.sales (sale_date desc);
 create index if not exists idx_sales_bill_number on public.sales (bill_number);
+-- bill_number is unique per financial year (Apr–Mar), not globally.
+create unique index if not exists idx_sales_bill_number_fy_unique
+  on public.sales (
+    bill_number,
+    (
+      (extract(year from sale_date)::int)
+      - (case when extract(month from sale_date) < 4 then 1 else 0 end)
+    )
+  );
 create index if not exists idx_sales_party on public.sales (party);
 create index if not exists idx_sales_sale_company_id on public.sales (sale_company_id);
 create index if not exists idx_sales_issuer_company_id on public.sales (issuer_company_id);
