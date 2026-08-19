@@ -12,6 +12,11 @@
 -- 1) Drop the per-financial-year-only unique index from the previous migration.
 drop index if exists public.idx_sales_bill_number_fy_unique;
 
+-- 1b) Drop the rogue GLOBAL unique index on bill_number. It was created
+--     manually (never in schema.sql), so earlier migrations missed it. This is
+--     the real reason bill numbers could not be reused across issuers or years.
+drop index if exists public.ux_sales_bill_number;
+
 -- 2) Also drop the original global unique constraint if it is still present
 --    (no-op if the per-FY migration already removed it).
 do $$

@@ -67,6 +67,8 @@ export function SaleForm({
   const [buyerSearch, setBuyerSearch] = useState(initialData?.party ?? "");
   // Once the user types a bill number themselves, stop auto-suggesting.
   const [billNumberEdited, setBillNumberEdited] = useState(false);
+  // Shows a loader on the bill-number field while re-fetching for a new issuer.
+  const [billNumberLoading, setBillNumberLoading] = useState(false);
   const isEditing = Boolean(initialData);
   const issuerOptions = useMemo(
     () =>
@@ -159,13 +161,17 @@ export function SaleForm({
   useEffect(() => {
     if (isEditing || billNumberEdited) return;
     let active = true;
+    setBillNumberLoading(true);
     getNextSaleBillNumberAction(form.getValues("sale_date"), selectedIssuerId ?? null)
       .then((next) => {
         if (active && !billNumberEdited) {
           form.setValue("bill_number", next);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setBillNumberLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -274,15 +280,21 @@ export function SaleForm({
                   <FormItem>
                     <FormLabel>Bill Number</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(event) => {
-                          setBillNumberEdited(true);
-                          field.onChange(event);
-                        }}
-                        className={fieldClassName}
-                        placeholder="Enter bill number"
-                      />
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          onChange={(event) => {
+                            setBillNumberEdited(true);
+                            field.onChange(event);
+                          }}
+                          disabled={billNumberLoading}
+                          className={fieldClassName}
+                          placeholder="Enter bill number"
+                        />
+                        {billNumberLoading ? (
+                          <Loader2 className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-zinc-400" />
+                        ) : null}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -313,7 +325,16 @@ export function SaleForm({
                     >
                       <FormControl>
                         <SelectTrigger className={`${fieldClassName} !h-10 w-full`}>
-                          <SelectValue placeholder="Select issuer company" />
+                          <SelectValue placeholder="Select issuer company">
+                            {(value) => {
+                              const selected = issuerOptions.find(
+                                (company) => company.id === value,
+                              );
+                              return selected
+                                ? selected.display_name || selected.name
+                                : "Select issuer company";
+                            }}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="border border-[#343946] bg-[#1f2430] text-zinc-100 ring-0">
