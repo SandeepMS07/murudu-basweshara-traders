@@ -1,6 +1,6 @@
 import { Bill, BillInput } from "../schemas";
 import { calculateBill } from "../utils/calculations";
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 
 type BillRow = {
@@ -148,10 +148,7 @@ export async function upsertBillById(id: string, input: BillInput): Promise<Bill
 }
 
 export async function updateBill(id: string, input: BillInput): Promise<Bill> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("purchases", "edit");
 
   const existing = await getBillById(id);
   if (!existing) throw new Error("Bill not found");

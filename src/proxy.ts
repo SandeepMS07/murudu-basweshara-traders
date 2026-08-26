@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySession } from "@/features/auth/lib/session";
+import { can, firstAllowedPath, moduleForPath } from "@/features/auth/lib/permissions";
 
-const publicRoutes = ["/login", "/api/auth/login"];
+const publicRoutes = ["/login", "/api/auth/login", "/no-access"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -30,16 +31,24 @@ export async function proxy(request: NextRequest) {
 
   // Redirect authenticated users away from the login page
   if (pathname === "/login" && sessionUser) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL(firstAllowedPath(sessionUser), request.url));
   }
-  
-  // Root URL redirects to dashboard if authenticated, else login
+
+  // Root URL redirects to the user's first allowed module, else login
   if (pathname === "/") {
-      if (sessionUser) {
-          return NextResponse.redirect(new URL("/dashboard", request.url));
-      } else {
-          return NextResponse.redirect(new URL("/login", request.url));
-      }
+    return NextResponse.redirect(
+      new URL(sessionUser ? firstAllowedPath(sessionUser) : "/login", request.url),
+    );
+  }
+
+  // Module-based access control: block routes the user can't view.
+  if (sessionUser && !isPublicRoute) {
+    const routeModule = moduleForPath(pathname);
+    if (routeModule && !can(sessionUser, routeModule, "view")) {
+      return NextResponse.redirect(
+        new URL(firstAllowedPath(sessionUser), request.url),
+      );
+    }
   }
 
   return NextResponse.next();

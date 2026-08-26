@@ -2,6 +2,7 @@ import { JWTPayload, SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
 import { SessionUser } from "../types";
+import { can, type ModuleKey, type PermissionAction } from "./permissions";
 
 const secretKey = new TextEncoder().encode(env.SESSION_SECRET);
 
@@ -61,6 +62,17 @@ export async function requireAuth(): Promise<SessionUser> {
 export async function requireRole(roles: string[]): Promise<SessionUser> {
   const user = await requireAuth();
   if (!roles.includes(user.role)) {
+    throw new Error("Forbidden");
+  }
+  return user;
+}
+
+export async function requireModule(
+  module: ModuleKey,
+  action: PermissionAction = "view",
+): Promise<SessionUser> {
+  const user = await requireAuth();
+  if (!can(user, module, action)) {
     throw new Error("Forbidden");
   }
   return user;

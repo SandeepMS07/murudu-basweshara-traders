@@ -1,4 +1,4 @@
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
   Company,
@@ -141,10 +141,9 @@ export async function getCompanyById(id: string): Promise<Company | null> {
 }
 
 async function assertAdminAccess() {
-  const user = await requireAuth();
-  if (user.role !== "admin") {
-    throw new Error("Only admin can manage companies");
-  }
+  // Companies are part of the Sales module; editing them requires sales edit
+  // access (admins pass automatically).
+  await requireModule("sales", "edit");
 }
 
 export async function createCompany(input: CompanyInput): Promise<Company> {

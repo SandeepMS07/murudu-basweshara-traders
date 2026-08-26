@@ -7,7 +7,7 @@ import {
   type PaymentMethod,
 } from "../schemas";
 import { calculateBilty } from "../utils/calculations";
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 
@@ -233,10 +233,7 @@ export async function upsertBiltyPartyByName(
 }
 
 export async function deleteBiltyParty(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const existing = await getBiltyPartyById(id);
   if (!existing) {
@@ -259,10 +256,7 @@ export async function updateBiltyParty(
   place?: string,
   mob?: string
 ): Promise<BiltyParty> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const existing = await getBiltyPartyById(id);
   if (!existing) {
@@ -342,10 +336,7 @@ export async function getBiltyPartyPayments(partyId?: string): Promise<BiltyPart
 export async function createBiltyPartyPayment(
   input: BiltyPartyPaymentInput
 ): Promise<BiltyPartyPayment> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const payload = {
     id: input.id ?? crypto.randomUUID(),
@@ -372,10 +363,7 @@ export async function createBiltyPartyPayment(
 }
 
 export async function deleteBiltyPartyPayment(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const { error } = await supabaseServer
     .from("bilty_party_payments")
@@ -553,10 +541,7 @@ export async function createBilty(input: BiltyInput): Promise<Bilty> {
 }
 
 export async function updateBilty(id: string, input: BiltyInput): Promise<Bilty> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const existing = await getBiltyById(id);
   if (!existing) throw new Error("Bilty not found");
@@ -621,10 +606,7 @@ export async function updateBiltyPaymentThrough(
   payment_through: PaymentMethod,
   payment_date?: string | null
 ): Promise<Bilty> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const normalizedPaymentDate =
     payment_through === "none"
@@ -652,10 +634,7 @@ export async function updateBiltyPaymentThrough(
 }
 
 export async function deleteBilty(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("bilty", "edit");
 
   const existing = await getBiltyById(id);
   if (!existing) throw new Error("Bilty not found");

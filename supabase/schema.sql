@@ -10,6 +10,18 @@ create table if not exists public.users (
   created_at timestamptz not null default now()
 );
 
+-- RBAC: per-user, per-module access levels (admins bypass these).
+create table if not exists public.user_permissions (
+  user_id    uuid not null references public.users(id) on delete cascade,
+  module     text not null,
+  level      text not null check (level in ('none', 'view', 'edit')) default 'none',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, module)
+);
+create index if not exists idx_user_permissions_user_id
+  on public.user_permissions (user_id);
+
 create table if not exists public.purchases (
   id text primary key,
   bill_no bigint,

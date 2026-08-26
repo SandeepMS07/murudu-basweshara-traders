@@ -1,7 +1,7 @@
 import { format, isValid, parse } from "date-fns";
 import * as XLSX from "xlsx";
 
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import { Sale, SaleInput, SalesImportSummary } from "@/features/sales/schemas";
 import { calculateSale } from "@/features/sales/utils/calculations";
@@ -240,10 +240,7 @@ export async function getSaleById(id: string): Promise<Sale | null> {
 }
 
 export async function createSale(input: SaleInput): Promise<Sale> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("sales", "edit");
 
   const billNumber = normalizeBillNumber(input.bill_number);
   if (!billNumber) {
@@ -310,10 +307,7 @@ export async function createSale(input: SaleInput): Promise<Sale> {
 }
 
 export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("sales", "edit");
 
   const existing = await getSaleById(id);
   if (!existing) {
@@ -387,10 +381,7 @@ export async function updateSale(id: string, input: SaleInput): Promise<Sale> {
 }
 
 export async function deleteSale(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("sales", "edit");
 
   const existing = await getSaleById(id);
   if (!existing) {
