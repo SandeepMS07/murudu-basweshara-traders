@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifySession } from "@/features/auth/lib/session";
 import { can, firstAllowedPath, moduleForPath } from "@/features/auth/lib/permissions";
 
-const publicRoutes = ["/login", "/api/auth/login", "/no-access"];
+const publicRoutes = ["/", "/login", "/api/auth/login", "/no-access"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -34,12 +34,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(firstAllowedPath(sessionUser), request.url));
   }
 
-  // Root URL redirects to the user's first allowed module, else login
-  if (pathname === "/") {
-    return NextResponse.redirect(
-      new URL(sessionUser ? firstAllowedPath(sessionUser) : "/login", request.url),
-    );
-  }
+  // "/" is the public marketing landing page — no redirect.
 
   // Module-based access control: block routes the user can't view.
   if (sessionUser && !isPublicRoute) {
