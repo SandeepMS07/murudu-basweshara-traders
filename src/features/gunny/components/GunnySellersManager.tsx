@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { Input } from "@/components/ui/input";
 import {
   type GunnyRecord,
@@ -35,6 +36,7 @@ export function GunnySellersManager({
   payments,
   allocations,
 }: Props) {
+  const canEdit = useCanEdit("gunny");
   const [sellerList, setSellerList] = useState(sellers);
   const [paymentList, setPaymentList] = useState(payments);
   const [allocationList, setAllocationList] = useState(allocations);
@@ -337,13 +339,15 @@ export function GunnySellersManager({
               </button>
             ))}
           </div>
-          <Button
-            type="button"
-            onClick={openAddSeller}
-            className="h-10 rounded-xl border border-[#ff6a3d] bg-[#ff6a3d] px-5 text-sm text-white hover:bg-[#ff5a28]"
-          >
-            Add Party
-          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              onClick={openAddSeller}
+              className="h-10 rounded-xl border border-[#ff6a3d] bg-[#ff6a3d] px-5 text-sm text-white hover:bg-[#ff5a28]"
+            >
+              Add Party
+            </Button>
+          ) : null}
         </div>
 
         {activeSeller ? (

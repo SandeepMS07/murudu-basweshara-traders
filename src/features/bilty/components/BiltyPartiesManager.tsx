@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -44,6 +45,7 @@ interface BiltyPartiesManagerProps {
 }
 
 export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesManagerProps) {
+  const canEdit = useCanEdit("bilty");
   const [partyData, setPartyData] = useState(parties);
   const [paymentData, setPaymentData] = useState(payments);
   const [partyDraft, setPartyDraft] = useState("");
@@ -293,20 +295,22 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
                 );
               })}
             </div>
-            <Button
-              type="button"
-              onClick={() => {
-                setEditingPartyId(null);
-                setPartyDraft("");
-                setPartyPlaceDraft("");
-                setPartyMobDraft("");
-                setPartyFormOpen(true);
-              }}
-              disabled={isPending}
-              className="ml-auto whitespace-nowrap border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-            >
-              Add Party
-            </Button>
+            {canEdit ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setEditingPartyId(null);
+                  setPartyDraft("");
+                  setPartyPlaceDraft("");
+                  setPartyMobDraft("");
+                  setPartyFormOpen(true);
+                }}
+                disabled={isPending}
+                className="ml-auto whitespace-nowrap border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              >
+                Add Party
+              </Button>
+            ) : null}
           </div>
 
           <div className="overflow-x-auto rounded-md border border-[#252932]">

@@ -12,6 +12,7 @@ import { updatePurchasePaymentThroughAction } from "@/app/purchases/actions";
 import { toast } from "sonner";
 import { formatCurrencyINR } from "@/lib/number-format";
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 
 interface PurchasesTableClientProps {
   data: Purchase[];
@@ -46,6 +47,7 @@ export function PurchasesTableClient({
   columnsFactory = createPurchaseColumns,
   updatePaymentThroughAction = updatePurchasePaymentThroughAction,
 }: PurchasesTableClientProps) {
+  const canEdit = useCanEdit("purchases");
   const [, startTransition] = useTransition();
   const [paymentMethodOverrides, setPaymentMethodOverrides] = useState<
     Record<string, PaymentMethod>
@@ -228,7 +230,7 @@ export function PurchasesTableClient({
       }
       toolbarFarRight={
         <div className="flex w-full flex-col items-stretch gap-2 sm:items-end">
-          {addHref ? (
+          {addHref && canEdit ? (
             <Link href={addHref} className="w-full sm:w-auto">
               <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />

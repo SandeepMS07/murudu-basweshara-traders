@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/features/auth/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "MB Groups",
@@ -20,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>

@@ -19,6 +19,7 @@ import {
   updateCompanyAction,
 } from "@/app/companies/actions";
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -72,6 +73,7 @@ export function CompaniesManager({
   payments,
   allocations,
 }: CompaniesManagerProps) {
+  const canEdit = useCanEdit("sales");
   const [data, setData] = useState(companies);
   const [paymentData, setPaymentData] = useState(payments);
   const [allocationData, setAllocationData] = useState(allocations);
@@ -225,17 +227,19 @@ export function CompaniesManager({
           <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] px-3 py-1.5 text-sm text-zinc-300">
             Sale Companies
           </div>
-          <Button
-            type="button"
-            onClick={() => {
-              setEditingId(null);
-              setDraft(emptyDraft);
-              setFormOpen(true);
-            }}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            Add Company
-          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setDraft(emptyDraft);
+                setFormOpen(true);
+              }}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              Add Company
+            </Button>
+          ) : null}
         </div>
 
         <div className="mt-3 space-y-3">
