@@ -548,26 +548,26 @@ export function CompanyStatementView({
                         Bill No
                       </th>
                       <th
-                        style={{ width: "10%" }}
+                        style={{ width: "6%" }}
                         className="px-2.5 py-1.5 text-left font-medium"
                       >
                         Issuer
                       </th>
                       <th
-                        style={{ width: "10%" }}
-                        className="px-2.5 py-1.5 text-left font-medium"
+                        style={{ width: "13%" }}
+                        className="px-2.5 py-1.5 text-left font-medium whitespace-nowrap"
                       >
                         Date
                       </th>
                       <th
-                        style={{ width: "13%" }}
-                        className="px-2.5 py-1.5 text-left font-medium"
+                        style={{ width: "15%" }}
+                        className="px-2.5 py-1.5 text-left font-medium whitespace-nowrap"
                       >
                         Vehicle
                       </th>
                       <th
-                        style={{ width: "9%" }}
-                        className="px-2.5 py-1.5 text-right font-medium"
+                        style={{ width: "12%" }}
+                        className="px-2.5 py-1.5 text-right font-medium whitespace-nowrap"
                       >
                         Net Wt
                       </th>
@@ -590,7 +590,7 @@ export function CompanyStatementView({
                         Balance
                       </th>
                       <th
-                        style={{ width: "17%" }}
+                        style={{ width: "13%" }}
                         className="px-2.5 py-1.5 text-left font-medium"
                       >
                         Status
@@ -638,7 +638,7 @@ export function CompanyStatementView({
                             <td className="px-2.5 py-1 whitespace-nowrap text-zinc-600">
                               {sale.lorry_number || "-"}
                             </td>
-                            <td className="px-2.5 py-1 text-right tabular-nums text-zinc-600">
+                            <td className="px-2.5 py-1 text-right tabular-nums whitespace-nowrap text-zinc-600">
                               {formatNumberIN(sale.net_weight, {
                                 maximumFractionDigits: 2,
                               })}
