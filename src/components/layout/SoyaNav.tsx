@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard } from "lucide-react";
+import { HandCoins, LayoutDashboard } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -12,10 +12,11 @@ type SoyaNavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-// Purchases, Bilty and Sales are appended here as each module lands, so the nav
-// never shows a link to a route that doesn't exist yet.
+// Bilty and Sales are appended here as each module lands, so the nav never
+// shows a link to a route that doesn't exist yet.
 const soyaNavItems: SoyaNavItem[] = [
   { name: "Dashboard", href: "/soya/dashboard", icon: LayoutDashboard },
+  { name: "Purchases", href: "/soya/purchases", icon: HandCoins },
 ];
 
 /**

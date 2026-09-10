@@ -1,0 +1,173 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import { addDays, isValid, parseISO } from "date-fns";
+
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { DataTable } from "@/components/shared/DataTable";
+import { Button } from "@/components/ui/button";
+import {
+  createSoyaTradeColumns,
+  type SoyaTradeColumnsConfig,
+} from "@/features/soya-trade/components/Columns";
+import type { SoyaTrade } from "@/features/soya-trade/schemas";
+import type { SoyaCompany } from "@/features/soya-companies/schemas";
+
+interface SoyaTradeTableClientProps {
+  data: SoyaTrade[];
+  buyerCompanies: SoyaCompany[];
+  pendingBySaleId: Record<string, number>;
+  addSaleHref?: string;
+  /** e.g. "Purchase" — used on the add button. */
+  entityLabel: string;
+  columnsConfig: SoyaTradeColumnsConfig;
+  exportFileName: string;
+}
+
+export function SoyaTradeTableClient({
+  data,
+  buyerCompanies,
+  pendingBySaleId,
+  addSaleHref,
+  entityLabel,
+  columnsConfig,
+  exportFileName,
+}: SoyaTradeTableClientProps) {
+  const [selectedBuyerId, setSelectedBuyerId] = useState("");
+  const buyerPhoneById = useMemo(
+    () => Object.fromEntries(buyerCompanies.map((company) => [company.id, company.phone || ""])),
+    [buyerCompanies]
+  );
+
+  const filteredData = useMemo(() => {
+    if (!selectedBuyerId) return data;
+    return data.filter((sale) => sale.sale_company_id === selectedBuyerId);
+  }, [data, selectedBuyerId]);
+
+  const columns = useMemo(
+    () => createSoyaTradeColumns(pendingBySaleId, columnsConfig),
+    [pendingBySaleId, columnsConfig]
+  );
+  const todayStart = useMemo(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }, []);
+
+  const parseTermDays = useCallback((terms: string | null | undefined) => {
+    const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return parsed;
+  }, []);
+
+  const getDueDate = useCallback(
+    (sale: SoyaTrade) => {
+      const saleDate = parseISO(sale.sale_date);
+      if (!isValid(saleDate)) return null;
+      return addDays(saleDate, parseTermDays(sale.payment_terms));
+    },
+    [parseTermDays]
+  );
+
+  const getRowDueStatus = useCallback(
+    (sale: SoyaTrade) => {
+      const dueDate = getDueDate(sale);
+      if (!dueDate) return "unknown" as const;
+      const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+      const effectivePending = pendingBySaleId[sale.id] ?? sale.pending_amount;
+      if (effectivePending <= 0) return "cleared" as const;
+      if (dueStart.getTime() < todayStart.getTime()) return "overdue" as const;
+      if (dueStart.getTime() === todayStart.getTime()) return "due_today" as const;
+      return "upcoming" as const;
+    },
+    [getDueDate, pendingBySaleId, todayStart]
+  );
+
+  const getRowClassName = useCallback(
+    (sale: SoyaTrade) => {
+      const status = getRowDueStatus(sale);
+      if (status === "overdue")
+        return "bg-[#2a1111]/40 text-[#f5d3d3] hover:bg-[#361616]/50";
+      if (status === "due_today")
+        return "bg-[#2a2412]/40 text-[#f7e3b0] hover:bg-[#352d16]/50";
+      if (status === "cleared")
+        return "bg-[#102015]/30 text-[#c7f2d2] hover:bg-[#16301f]/45";
+      return "";
+    },
+    [getRowDueStatus]
+  );
+
+  const toolbarRight = null;
+
+  // Soya is admin-only, so there is no per-module edit gate here.
+  const toolbarFarRight = addSaleHref ? (
+    <Link href={addSaleHref} className="w-full sm:w-auto">
+      <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
+        <Plus className="mr-2 h-4 w-4" />
+        Add {entityLabel}
+      </Button>
+    </Link>
+  ) : null;
+
+  const toolbarBelow = (
+    <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#3b1b1b] bg-[#2a1111]/40 px-2 py-1 text-xs text-zinc-200">
+          <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
+          Overdue (date crossed)
+        </div>
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#3d3418] bg-[#2a2412]/40 px-2 py-1 text-xs text-zinc-200">
+          <span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
+          Due Today
+        </div>
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#1d3a27] bg-[#102015]/30 px-2 py-1 text-xs text-zinc-200">
+          <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
+          Cleared
+        </div>
+        <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#2a2d34] bg-[#15171c] px-2 py-1 text-xs text-zinc-200">
+          <span className="h-2 w-2 rounded-full bg-[#71717a]" />
+          Upcoming
+        </div>
+      </div>
+      <select
+        value={selectedBuyerId}
+        onChange={(event) => {
+          setSelectedBuyerId(event.target.value);
+        }}
+        className="h-10 w-full rounded-md border border-[#2a2d34] bg-[#14161b] px-3 text-sm text-zinc-100 lg:max-w-[320px]"
+      >
+        <option value="">All buyer companies</option>
+        {buyerCompanies.map((company) => (
+          <option key={company.id} value={company.id}>
+            {company.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  return (
+    <>
+      <DataTable
+        columns={columns}
+        data={filteredData}
+        exportFileName={exportFileName}
+        disablePagination
+        scrollContainerClassName="max-h-[70vh]"
+        searchKey="party"
+        searchPlaceholder="Filter by party or phone..."
+        searchPredicate={(sale, query) => {
+          const party = (sale.party || "").toLowerCase();
+          const buyerPhone = (buyerPhoneById[sale.sale_company_id || ""] || "").replace(/\D/g, "");
+          const queryDigits = query.replace(/\D/g, "");
+
+          return party.includes(query) || (!!queryDigits && buyerPhone.includes(queryDigits));
+        }}
+        toolbarRight={toolbarRight}
+        toolbarBelow={toolbarBelow}
+        toolbarFarRight={toolbarFarRight}
+        rowClassName={(row) => getRowClassName(row.original)}
+      />
+    </>
+  );
+}
