@@ -1,4 +1,4 @@
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
@@ -173,8 +173,7 @@ export async function getNextGunnyBillNoPreview(billDate?: string): Promise<numb
 }
 
 export async function createGunnyRecord(input: GunnyRecordInput): Promise<GunnyRecord> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const payload = {
     id: crypto.randomUUID(),
@@ -203,8 +202,7 @@ export async function createGunnyRecord(input: GunnyRecordInput): Promise<GunnyR
 }
 
 export async function updateGunnyRecord(id: string, input: GunnyRecordInput): Promise<GunnyRecord> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const { data: existing, error: existingError } = await supabaseServer
     .from("gunny_bags")
@@ -245,8 +243,7 @@ export async function updateGunnyRecord(id: string, input: GunnyRecordInput): Pr
 }
 
 export async function deleteGunnyRecord(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const { data: existing, error: existingError } = await supabaseServer
     .from("gunny_bags")
@@ -276,8 +273,7 @@ export async function getGunnySellers(): Promise<GunnySeller[]> {
 }
 
 export async function createGunnySeller(input: GunnySellerInput): Promise<GunnySeller> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const payload = {
     id: crypto.randomUUID(),
@@ -297,8 +293,7 @@ export async function createGunnySeller(input: GunnySellerInput): Promise<GunnyS
 }
 
 export async function updateGunnySeller(id: string, input: GunnySellerInput): Promise<GunnySeller> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const payload = {
     name: input.name.trim(),
@@ -319,8 +314,7 @@ export async function updateGunnySeller(id: string, input: GunnySellerInput): Pr
 }
 
 export async function deleteGunnySeller(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const { error } = await supabaseServer.from("gunny_sellers").delete().eq("id", id);
   if (error) throw new Error(`Failed to delete seller: ${error.message}`);
@@ -343,8 +337,7 @@ export async function getGunnySellerPayments(sellerId?: string): Promise<GunnySe
 }
 
 export async function createGunnySellerPayment(input: GunnySellerPaymentInput): Promise<GunnySellerPayment> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const payload = {
     id: crypto.randomUUID(),
@@ -386,8 +379,7 @@ export async function createGunnySellerPayment(input: GunnySellerPaymentInput): 
 }
 
 export async function deleteGunnySellerPayment(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") throw new Error("Forbidden");
+  await requireModule("gunny", "edit");
 
   const { error } = await supabaseServer.from("gunny_seller_payments").delete().eq("id", id);
   if (error) throw new Error(`Failed to delete seller payment: ${error.message}`);

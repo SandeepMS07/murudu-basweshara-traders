@@ -1,9 +1,15 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { addDays, format, isValid, parseISO } from "date-fns";
-import { Download } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  Printer,
+  Receipt,
+} from "lucide-react";
 
 import {
   Company,
@@ -19,6 +25,7 @@ import {
   updateCompanyAction,
 } from "@/app/companies/actions";
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -30,6 +37,7 @@ import {
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
 import { exportWorkbookToXlsx } from "@/lib/excel/client-export";
+import { printIframeAs } from "@/lib/print-iframe";
 
 type CompanyDraft = {
   type: "issuer" | "buyer";
@@ -72,6 +80,7 @@ export function CompaniesManager({
   payments,
   allocations,
 }: CompaniesManagerProps) {
+  const canEdit = useCanEdit("sales");
   const [data, setData] = useState(companies);
   const [paymentData, setPaymentData] = useState(payments);
   const [allocationData, setAllocationData] = useState(allocations);
@@ -81,6 +90,8 @@ export function CompaniesManager({
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
   const [activeBuyerId, setActiveBuyerId] = useState<string | null>(null);
   const [detailsTab, setDetailsTab] = useState<"sales" | "ledger">("sales");
+  const [statementOpen, setStatementOpen] = useState(false);
+  const statementFrameRef = useRef<HTMLIFrameElement | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const buyerCompanies = useMemo(
@@ -225,17 +236,19 @@ export function CompaniesManager({
           <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] px-3 py-1.5 text-sm text-zinc-300">
             Sale Companies
           </div>
-          <Button
-            type="button"
-            onClick={() => {
-              setEditingId(null);
-              setDraft(emptyDraft);
-              setFormOpen(true);
-            }}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            Add Company
-          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setDraft(emptyDraft);
+                setFormOpen(true);
+              }}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              Add Company
+            </Button>
+          ) : null}
         </div>
 
         <div className="mt-3 space-y-3">
@@ -266,28 +279,38 @@ export function CompaniesManager({
                 onDelete={(company) => setDeleteTarget(company)}
                 isPending={isPending}
               />
-              <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] p-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setDetailsTab("sales")}
+                    className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
+                      detailsTab === "sales"
+                        ? "bg-[#23262e] text-zinc-100"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    Sale Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDetailsTab("ledger")}
+                    className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
+                      detailsTab === "ledger"
+                        ? "bg-[#23262e] text-zinc-100"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    Payment Ledger
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setDetailsTab("sales")}
-                  className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
-                    detailsTab === "sales"
-                      ? "bg-[#23262e] text-zinc-100"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
+                  onClick={() => setStatementOpen(true)}
+                  className="inline-flex items-center rounded-md border border-[#2a2d34] bg-[#1b1e24] px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-[#23262e] hover:text-zinc-100"
                 >
-                  Sale Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDetailsTab("ledger")}
-                  className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
-                    detailsTab === "ledger"
-                      ? "bg-[#23262e] text-zinc-100"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  Payment Ledger
+                  <Receipt className="mr-2 h-4 w-4" />
+                  View Statement
                 </button>
               </div>
 
@@ -297,12 +320,15 @@ export function CompaniesManager({
                   sales={activeBuyerSales}
                   payments={activeBuyerPayments}
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
+                  companies={data}
                 />
               ) : (
                 <CompanyPaymentsLedger
                   companyId={activeBuyer.id}
                   sales={activeBuyerSales}
                   payments={activeBuyerPayments}
+                  allocations={activeBuyerAllocations}
+                  companies={data}
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
                   totalAmount={activeBuyerSales.reduce(
                     (sum, sale) => sum + sale.amount,
@@ -539,6 +565,54 @@ export function CompaniesManager({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="flex h-[90vh] w-[95vw] max-w-5xl flex-col gap-0 overflow-hidden rounded-xl border border-[#2a2d34] bg-[#15171c] p-0 sm:max-w-5xl"
+        >
+          <div className="flex items-center justify-between border-b border-[#2a2d34] px-4 py-2.5">
+            <span className="text-sm font-medium text-zinc-200">
+              Statement of Account
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (!activeBuyer) return;
+                  const name = activeBuyer.display_name || activeBuyer.name;
+                  printIframeAs(
+                    statementFrameRef.current?.contentWindow,
+                    `${name} Statement ${format(new Date(), "dd-MM-yyyy")}`,
+                  );
+                }}
+                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setStatementOpen(false)}
+                className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+          {activeBuyer && statementOpen ? (
+            <iframe
+              ref={statementFrameRef}
+              src={`/companies/${activeBuyer.id}/statement?embed=1`}
+              title="Statement of Account"
+              className="min-h-0 flex-1 bg-white"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -642,13 +716,20 @@ function SalesDetailsTable({
   sales,
   payments,
   pendingBySaleId,
+  companies,
 }: {
   companyName: string;
   sales: Sale[];
   payments: CompanyPayment[];
   pendingBySaleId: Record<string, number>;
+  companies: Company[];
 }) {
   const PAGE_SIZE = 8;
+  const companyNameById = useMemo(
+    () =>
+      new Map(companies.map((c) => [c.id, c.display_name || c.name])),
+    [companies],
+  );
   const totalAmount = sales.reduce((sum, sale) => sum + sale.amount, 0);
   const totalPending = sales.reduce(
     (sum, sale) => sum + (pendingBySaleId[sale.id] ?? sale.pending_amount),
@@ -929,6 +1010,9 @@ function SalesDetailsTable({
                 Bill No
               </th>
               <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Issuer
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
                 Date
               </th>
               <th className="border-b border-[#252932] px-3 py-2 text-left">
@@ -963,7 +1047,7 @@ function SalesDetailsTable({
           <tbody>
             {sales.length === 0 ? (
               <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={11}>
+                <td className="px-3 py-3 text-zinc-500" colSpan={12}>
                   No sales found for this company.
                 </td>
               </tr>
@@ -974,6 +1058,11 @@ function SalesDetailsTable({
                   className={`border-b border-[#252932] last:border-b-0 ${getRowClassName(sale)}`}
                 >
                   <td className="px-3 py-2">{sale.bill_number}</td>
+                  <td className="px-3 py-2">
+                    {sale.issuer_company_id
+                      ? companyNameById.get(sale.issuer_company_id) ?? "-"
+                      : "-"}
+                  </td>
                   <td className="px-3 py-2">
                     {formatDisplayDate(sale.sale_date)}
                   </td>
@@ -1048,6 +1137,8 @@ function CompanyPaymentsLedger({
   companyId,
   sales,
   payments,
+  allocations,
+  companies,
   pendingBySaleId,
   totalAmount,
   onCreate,
@@ -1056,6 +1147,8 @@ function CompanyPaymentsLedger({
   companyId: string;
   sales: Sale[];
   payments: CompanyPayment[];
+  allocations: CompanyPaymentAllocation[];
+  companies: Company[];
   pendingBySaleId: Record<string, number>;
   totalAmount: number;
   onCreate: (
@@ -1071,6 +1164,28 @@ function CompanyPaymentsLedger({
   const [allocationInputs, setAllocationInputs] = useState<
     Record<string, string>
   >({});
+  // Tracks which bills have "allocate in full" checked, as a quick-fill
+  // alternative to typing the pending amount by hand.
+  const [fullAllocationChecked, setFullAllocationChecked] = useState<
+    Record<string, boolean>
+  >({});
+  // Tracks which bills have "round up" checked, and how much was added to
+  // the overall payment amount for each so it can be reverted if unchecked
+  // or the allocation is edited manually afterwards.
+  const [roundUpChecked, setRoundUpChecked] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [roundOffAppliedByBillId, setRoundOffAppliedByBillId] = useState<
+    Record<string, number>
+  >({});
+  // How much was added to the overall payment amount to cover allocations
+  // that add up to more than what was typed in "Amount" (e.g. ticking
+  // "allocate in full" on a bill that's short of the amount being paid).
+  const [appliedGlobalRoundUp, setAppliedGlobalRoundUp] = useState(0);
+  // When the payment amount is more than what's allocated to bills below,
+  // the leftover normally rolls onto the next pending bill automatically.
+  // Checking this instead holds it as an unapplied credit for the company.
+  const [holdExtraAsCredit, setHoldExtraAsCredit] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CompanyPayment | null>(null);
   const [page, setPage] = useState(1);
@@ -1086,18 +1201,230 @@ function CompanyPaymentsLedger({
     () => payments.reduce((sum, payment) => sum + payment.amount, 0),
     [payments],
   );
+
+  const saleById = useMemo(
+    () => new Map(sales.map((sale) => [sale.id, sale])),
+    [sales],
+  );
+  const companyNameById = useMemo(
+    () => new Map(companies.map((c) => [c.id, c.display_name || c.name])),
+    [companies],
+  );
+  // Bills a payment covers include both explicit allocations (chosen when the
+  // payment was recorded) and the same FIFO effective-allocation used to
+  // compute pending/overdue elsewhere, so every payment shows its bills even
+  // if no explicit allocation was made for it.
+  const effectivePendingResult = useMemo(
+    () => computeEffectiveSalePending(sales, payments, allocations),
+    [allocations, payments, sales],
+  );
+  const saleIdsByPaymentId = effectivePendingResult.saleIdsByPaymentId;
+  // Money paid that isn't applied to any bill — either because staff chose
+  // to hold it as credit instead of letting it roll onto the next bill, or
+  // because the company has simply paid more than it's ever been billed.
+  const creditBalance = effectivePendingResult.creditByCompanyId[companyId] ?? 0;
+
+  const getPaymentBillInfo = (paymentId: string) => {
+    const billSales = (saleIdsByPaymentId[paymentId] ?? [])
+      .map((saleId) => saleById.get(saleId))
+      .filter((sale): sale is Sale => !!sale);
+    const billNumbers =
+      billSales.map((sale) => sale.bill_number).join(", ") || "-";
+    const issuerNames =
+      [
+        ...new Set(
+          billSales.map(
+            (sale) =>
+              (sale.issuer_company_id &&
+                companyNameById.get(sale.issuer_company_id)) ||
+              "-",
+          ),
+        ),
+      ].join(", ") || "-";
+    return { billNumbers, issuerNames };
+  };
+
+  const formatDisplayDate = (value: string) => {
+    try {
+      return format(parseISO(value), "dd-MM-yyyy");
+    } catch {
+      return value;
+    }
+  };
   const saleAllocationRows = useMemo(
     () =>
-      sales.map((sale) => {
-        const remaining = Math.max(
-          pendingBySaleId[sale.id] ?? sale.pending_amount,
-          0,
-        );
-        return { sale, remaining };
-      }),
+      sales
+        .map((sale) => {
+          const remaining = Math.max(
+            pendingBySaleId[sale.id] ?? sale.pending_amount,
+            0,
+          );
+          return { sale, remaining };
+        })
+        .filter((row) => row.remaining > 0),
     [pendingBySaleId, sales],
   );
   const remaining = Math.max(totalAmount - totalReceived, 0);
+
+  // Keep "allocate in full" bills capped to what's actually available as the
+  // payment amount changes (e.g. typed after ticking the checkbox), so they
+  // never silently drift past it — bills the user has explicitly rounded up
+  // are left alone.
+  useEffect(() => {
+    const parsedAmountNow = Number(amount) || 0;
+    setAllocationInputs((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const row of saleAllocationRows) {
+        if (!fullAllocationChecked[row.sale.id] || roundUpChecked[row.sale.id]) {
+          continue;
+        }
+        const otherAllocated = saleAllocationRows
+          .filter((otherRow) => otherRow.sale.id !== row.sale.id)
+          .reduce(
+            (sum, otherRow) => sum + (Number(current[otherRow.sale.id]) || 0),
+            0,
+          );
+        const available = Math.max(parsedAmountNow - otherAllocated, 0);
+        const fillAmount = Math.min(row.remaining, available);
+        const fillStr = fillAmount > 0 ? String(fillAmount) : "";
+        if (current[row.sale.id] !== fillStr) {
+          next[row.sale.id] = fillStr;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+    // Only re-run when the payment amount changes; checkbox toggles already
+    // set the correct value themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount]);
+
+  // If allocations add up to more than the payment amount (e.g. "allocate in
+  // full" was ticked on a bill whose pending is bigger than what's actually
+  // being paid), warn instead of letting it through silently — the user must
+  // explicitly tick "round up" to bump the payment amount to cover it.
+  const totalAllocatedLive = saleAllocationRows.reduce(
+    (sum, row) => sum + (Number(allocationInputs[row.sale.id]) || 0),
+    0,
+  );
+  const parsedAmountLive = Number(amount) || 0;
+  const globalAllocationShortfall = Math.max(
+    totalAllocatedLive - parsedAmountLive,
+    0,
+  );
+  const isGlobalRoundedUp =
+    appliedGlobalRoundUp > 0 && globalAllocationShortfall === 0;
+  const showGlobalRoundUp =
+    globalAllocationShortfall > 0 || isGlobalRoundedUp;
+  // Amount typed that isn't allocated to any bill above — left alone, this
+  // rolls onto the next pending bill automatically when pending is computed.
+  const extraUnallocated = Math.max(
+    parsedAmountLive - totalAllocatedLive,
+    0,
+  );
+
+  const handleGlobalRoundUpToggle = (checked: boolean) => {
+    if (checked) {
+      const delta = globalAllocationShortfall;
+      if (delta > 0) {
+        setAmount((current) => String((Number(current) || 0) + delta));
+        setAppliedGlobalRoundUp(delta);
+      }
+    } else {
+      if (appliedGlobalRoundUp > 0) {
+        setAmount((current) => {
+          const next = (Number(current) || 0) - appliedGlobalRoundUp;
+          return next > 0 ? String(next) : "";
+        });
+      }
+      setAppliedGlobalRoundUp(0);
+    }
+  };
+
+  // Undo the effect of a previously-applied round-up: subtract what it added
+  // to the overall payment amount and forget the applied delta.
+  const revertRoundUp = (saleId: string) => {
+    const appliedDelta = roundOffAppliedByBillId[saleId] ?? 0;
+    if (appliedDelta > 0) {
+      setAmount((current) => {
+        const next = (Number(current) || 0) - appliedDelta;
+        return next > 0 ? String(next) : "";
+      });
+    }
+    setRoundOffAppliedByBillId((current) => ({ ...current, [saleId]: 0 }));
+  };
+
+  // Fills the bill's allocation with its full pending amount and bumps the
+  // overall payment amount by the shortfall, so a short payment (e.g. a
+  // customer sending 5,10,000 against a 5,10,108 bill) can be marked as
+  // fully cleared with the difference absorbed as a round-off.
+  const handleRoundUpToggle = (
+    row: { sale: Sale; remaining: number },
+    checked: boolean,
+  ) => {
+    setRoundUpChecked((current) => ({ ...current, [row.sale.id]: checked }));
+    if (checked) {
+      const currentInput = Number(allocationInputs[row.sale.id]) || 0;
+      const delta = Math.max(row.remaining - currentInput, 0);
+      setAllocationInputs((current) => ({
+        ...current,
+        [row.sale.id]: String(row.remaining),
+      }));
+      if (delta > 0) {
+        setAmount((current) => String((Number(current) || 0) + delta));
+        setRoundOffAppliedByBillId((current) => ({
+          ...current,
+          [row.sale.id]: delta,
+        }));
+      }
+    } else {
+      revertRoundUp(row.sale.id);
+    }
+  };
+
+  // Quick-fill: tick the box to allocate a bill's full pending amount
+  // instead of typing it in by hand.
+  const handleFullAllocationToggle = (
+    row: { sale: Sale; remaining: number },
+    checked: boolean,
+  ) => {
+    setFullAllocationChecked((current) => ({
+      ...current,
+      [row.sale.id]: checked,
+    }));
+    if (checked) {
+      // Cap the fill to what's actually left of the typed payment amount
+      // (after what's already allocated to other bills) — don't silently
+      // fill more than that; let the shortfall warning + round-up handle it.
+      // (If the payment amount isn't typed yet, this caps to 0 for now; the
+      // effect below re-fills it once an amount is entered.)
+      const parsedAmountNow = Number(amount) || 0;
+      const otherAllocated = saleAllocationRows
+        .filter((otherRow) => otherRow.sale.id !== row.sale.id)
+        .reduce(
+          (sum, otherRow) =>
+            sum + (Number(allocationInputs[otherRow.sale.id]) || 0),
+          0,
+        );
+      const available = Math.max(parsedAmountNow - otherAllocated, 0);
+      const fillAmount = Math.min(row.remaining, available);
+      setAllocationInputs((current) => ({
+        ...current,
+        [row.sale.id]: fillAmount > 0 ? String(fillAmount) : "",
+      }));
+      if (roundUpChecked[row.sale.id]) {
+        setRoundUpChecked((current) => ({ ...current, [row.sale.id]: false }));
+        revertRoundUp(row.sale.id);
+      }
+    } else {
+      setAllocationInputs((current) => ({ ...current, [row.sale.id]: "" }));
+      if (roundUpChecked[row.sale.id]) {
+        setRoundUpChecked((current) => ({ ...current, [row.sale.id]: false }));
+        revertRoundUp(row.sale.id);
+      }
+    }
+  };
 
   const createPayment = () => {
     const parsedAmount = Number(amount);
@@ -1137,6 +1464,10 @@ function CompanyPaymentsLedger({
       return;
     }
 
+    const creditHoldAmount = holdExtraAsCredit
+      ? Math.max(parsedAmount - totalAllocated, 0)
+      : 0;
+
     startTransition(async () => {
       try {
         const created = await createCompanyPaymentAction({
@@ -1144,6 +1475,7 @@ function CompanyPaymentsLedger({
           paid_on: date,
           amount: parsedAmount,
           note,
+          credit_hold_amount: creditHoldAmount,
           allocations: allocationsPayload.map((item) => ({
             sale_id: item.sale_id,
             amount: item.amount,
@@ -1153,6 +1485,11 @@ function CompanyPaymentsLedger({
         setAmount("");
         setNote("");
         setAllocationInputs({});
+        setFullAllocationChecked({});
+        setRoundUpChecked({});
+        setRoundOffAppliedByBillId({});
+        setAppliedGlobalRoundUp(0);
+        setHoldExtraAsCredit(false);
         setPaymentDialogOpen(false);
         toast.success("Payment added");
       } catch (error: unknown) {
@@ -1218,14 +1555,32 @@ function CompanyPaymentsLedger({
             {formatCurrencyINR(remaining, { maximumFractionDigits: 0 })}
           </div>
         </div>
+        {creditBalance > 0 ? (
+          <div className="rounded-md border border-emerald-800/60 bg-emerald-950/30 p-2 text-sm">
+            <div className="text-emerald-500">Credit Balance</div>
+            <div className="font-semibold text-emerald-300">
+              {formatCurrencyINR(creditBalance, { maximumFractionDigits: 0 })}
+            </div>
+            <div className="text-[11px] text-emerald-500/70">
+              Not applied to any bill — internal only, not shown on the
+              customer statement.
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="overflow-x-auto rounded-md border border-[#252932]">
-        <table className="w-full min-w-[720px] border-collapse text-sm text-zinc-200">
+        <table className="w-full min-w-225 border-collapse text-sm text-zinc-200">
           <thead className="bg-[#15171c]">
             <tr>
               <th className="border-b border-[#252932] px-3 py-2 text-left">
                 Date
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Bill No
+              </th>
+              <th className="border-b border-[#252932] px-3 py-2 text-left">
+                Issuer
               </th>
               <th className="border-b border-[#252932] px-3 py-2 text-right">
                 Amount
@@ -1241,35 +1596,44 @@ function CompanyPaymentsLedger({
           <tbody>
             {payments.length === 0 ? (
               <tr>
-                <td className="px-3 py-3 text-zinc-500" colSpan={4}>
+                <td className="px-3 py-3 text-zinc-500" colSpan={6}>
                   No payments added yet.
                 </td>
               </tr>
             ) : (
-              paginatedPayments.map((payment) => (
-                <tr
-                  key={payment.id}
-                  className="border-b border-[#252932] last:border-b-0"
-                >
-                  <td className="px-3 py-2">{payment.paid_on}</td>
-                  <td className="px-3 py-2 text-right">
-                    {formatCurrencyINR(payment.amount)}
-                  </td>
-                  <td className="px-3 py-2">{payment.note || "-"}</td>
-                  <td className="px-3 py-2 text-right">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      disabled={isPending}
-                      className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-                      onClick={() => setDeleteTarget(payment)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))
+              paginatedPayments.map((payment) => {
+                const { billNumbers, issuerNames } = getPaymentBillInfo(
+                  payment.id,
+                );
+                return (
+                  <tr
+                    key={payment.id}
+                    className="border-b border-[#252932] last:border-b-0"
+                  >
+                    <td className="px-3 py-2">
+                      {formatDisplayDate(payment.paid_on)}
+                    </td>
+                    <td className="px-3 py-2">{billNumbers}</td>
+                    <td className="px-3 py-2">{issuerNames}</td>
+                    <td className="px-3 py-2 text-right">
+                      {formatCurrencyINR(payment.amount)}
+                    </td>
+                    <td className="px-3 py-2">{payment.note || "-"}</td>
+                    <td className="px-3 py-2 text-right">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={isPending}
+                        className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+                        onClick={() => setDeleteTarget(payment)}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -1343,36 +1707,175 @@ function CompanyPaymentsLedger({
                     No sales available for allocation.
                   </div>
                 ) : (
-                  saleAllocationRows.map((row) => (
-                    <div
-                      key={row.sale.id}
-                      className="grid grid-cols-12 items-center gap-2 text-xs"
-                    >
-                      <div className="col-span-4 text-zinc-300">
-                        Bill {row.sale.bill_number} • Pending{" "}
-                        {formatCurrencyINR(row.remaining)}
+                  saleAllocationRows.map((row) => {
+                    const enteredValue =
+                      Number(allocationInputs[row.sale.id]) || 0;
+                    const isRoundUp = !!roundUpChecked[row.sale.id];
+                    const hasShortfall =
+                      enteredValue > 0 && enteredValue < row.remaining;
+                    const shortfall = Math.max(
+                      row.remaining - enteredValue,
+                      0,
+                    );
+                    return (
+                      <div
+                        key={row.sale.id}
+                        className="grid grid-cols-12 items-start gap-2 text-xs"
+                      >
+                        <div className="col-span-4 pt-2 text-zinc-300">
+                          Bill {row.sale.bill_number} • Pending{" "}
+                          {formatCurrencyINR(row.remaining)}
+                        </div>
+                        <div className="col-span-8">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              title="Allocate the full pending amount"
+                              checked={!!fullAllocationChecked[row.sale.id]}
+                              onChange={(event) =>
+                                handleFullAllocationToggle(
+                                  row,
+                                  event.target.checked,
+                                )
+                              }
+                              className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-[#2a2d34] bg-[#111214] accent-[#ff6a3d]"
+                            />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max={row.remaining}
+                              placeholder="Allocate amount"
+                              className="h-9 border-[#2a2d34] bg-[#111214] text-zinc-100"
+                              value={allocationInputs[row.sale.id] ?? ""}
+                              onChange={(event) => {
+                                setAllocationInputs((current) => ({
+                                  ...current,
+                                  [row.sale.id]: event.target.value,
+                                }));
+                                if (fullAllocationChecked[row.sale.id]) {
+                                  setFullAllocationChecked((current) => ({
+                                    ...current,
+                                    [row.sale.id]: false,
+                                  }));
+                                }
+                                if (roundUpChecked[row.sale.id]) {
+                                  setRoundUpChecked((current) => ({
+                                    ...current,
+                                    [row.sale.id]: false,
+                                  }));
+                                  revertRoundUp(row.sale.id);
+                                }
+                              }}
+                            />
+                          </div>
+                          {(hasShortfall || isRoundUp) && (
+                            <div
+                              className={`mt-2 flex items-start gap-2 rounded-md border px-2.5 py-2 ${
+                                isRoundUp
+                                  ? "border-emerald-500/25 bg-emerald-500/10"
+                                  : "border-amber-500/25 bg-amber-500/10"
+                              }`}
+                            >
+                              {isRoundUp ? (
+                                <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
+                              ) : (
+                                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-400" />
+                              )}
+                              <div className="flex-1 space-y-1.5">
+                                {!isRoundUp && (
+                                  <p className="text-[11px] leading-snug text-amber-300">
+                                    {formatCurrencyINR(shortfall)} short of
+                                    the pending amount.
+                                  </p>
+                                )}
+                                <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-300">
+                                  <input
+                                    type="checkbox"
+                                    checked={isRoundUp}
+                                    onChange={(event) =>
+                                      handleRoundUpToggle(
+                                        row,
+                                        event.target.checked,
+                                      )
+                                    }
+                                    className="h-3.5 w-3.5 cursor-pointer rounded accent-[#ff6a3d]"
+                                  />
+                                  {isRoundUp
+                                    ? "Rounded up — bill will be cleared in full"
+                                    : "Round up to clear this bill in full"}
+                                </label>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="col-span-8">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max={row.remaining}
-                          placeholder="Allocate amount"
-                          className="h-9 border-[#2a2d34] bg-[#111214] text-zinc-100"
-                          value={allocationInputs[row.sale.id] ?? ""}
-                          onChange={(event) =>
-                            setAllocationInputs((current) => ({
-                              ...current,
-                              [row.sale.id]: event.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
+              {showGlobalRoundUp && (
+                <div
+                  className={`mt-2 flex items-start gap-2 rounded-md border px-3 py-2.5 ${
+                    isGlobalRoundedUp
+                      ? "border-emerald-500/25 bg-emerald-500/10"
+                      : "border-amber-500/30 bg-amber-500/10"
+                  }`}
+                >
+                  {isGlobalRoundedUp ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+                  ) : (
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
+                  )}
+                  <div className="flex-1 space-y-1.5">
+                    {!isGlobalRoundedUp && (
+                      <p className="text-[11px] leading-snug text-amber-300">
+                        Allocated total ({formatCurrencyINR(totalAllocatedLive)}
+                        ) is {formatCurrencyINR(globalAllocationShortfall)}{" "}
+                        more than the payment amount (
+                        {formatCurrencyINR(parsedAmountLive)}).
+                      </p>
+                    )}
+                    <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={isGlobalRoundedUp}
+                        onChange={(event) =>
+                          handleGlobalRoundUpToggle(event.target.checked)
+                        }
+                        className="h-3.5 w-3.5 cursor-pointer rounded accent-[#ff6a3d]"
+                      />
+                      {isGlobalRoundedUp
+                        ? `Rounded up — payment amount is now ${formatCurrencyINR(totalAllocatedLive)}`
+                        : `Round up payment amount to ${formatCurrencyINR(totalAllocatedLive)}`}
+                    </label>
+                  </div>
+                </div>
+              )}
+              {extraUnallocated > 0 && (
+                <div className="mt-2 flex items-start gap-2 rounded-md border border-zinc-500/30 bg-zinc-500/10 px-3 py-2.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-zinc-400" />
+                  <div className="flex-1 space-y-1.5">
+                    <p className="text-[11px] leading-snug text-zinc-300">
+                      {formatCurrencyINR(extraUnallocated)} of this payment
+                      isn&apos;t allocated to a bill above — by default it
+                      will be applied to the next pending bill automatically.
+                    </p>
+                    <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-300">
+                      <input
+                        type="checkbox"
+                        checked={holdExtraAsCredit}
+                        onChange={(event) =>
+                          setHoldExtraAsCredit(event.target.checked)
+                        }
+                        className="h-3.5 w-3.5 cursor-pointer rounded accent-[#ff6a3d]"
+                      />
+                      Hold {formatCurrencyINR(extraUnallocated)} as credit
+                      instead — don&apos;t apply it to the next bill
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

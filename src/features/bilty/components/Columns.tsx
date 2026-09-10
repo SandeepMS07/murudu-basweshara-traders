@@ -37,5 +37,6 @@ export function createBiltyColumns(
     billIdPrefix: "BILTY_BILL_",
     documentLabel: "ESTIMATION INVOICE",
     sourceTypeLabel: "BILTY",
+    module: "bilty",
   }) as unknown as ColumnDef<Bilty>[];
 }

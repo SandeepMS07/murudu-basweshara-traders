@@ -4,7 +4,7 @@ import {
   PurchaseInput,
 } from "../schemas";
 import { calculatePurchase } from "../utils/calculations";
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 
@@ -152,7 +152,7 @@ export async function isPurchaseBillNoAvailable(
 }
 
 export async function createPurchase(input: PurchaseInput): Promise<Purchase> {
-  await requireAuth();
+  await requireModule("purchases", "edit");
 
   const calculated = calculatePurchase({ ...input, source: "app" }, crypto.randomUUID());
   const payload = {
@@ -197,10 +197,7 @@ export async function createPurchase(input: PurchaseInput): Promise<Purchase> {
 }
 
 export async function updatePurchase(id: string, input: PurchaseInput): Promise<Purchase> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("purchases", "edit");
 
   const existing = await getPurchaseById(id);
   if (!existing) throw new Error("Purchase not found");
@@ -255,10 +252,7 @@ export async function updatePurchasePaymentThrough(
   payment_through: PaymentMethod,
   payment_date?: string | null
 ): Promise<Purchase> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("purchases", "edit");
 
   const normalizedPaymentDate =
     payment_through === "none"
@@ -286,10 +280,7 @@ export async function updatePurchasePaymentThrough(
 }
 
 export async function deletePurchase(id: string): Promise<void> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("purchases", "edit");
 
   const existing = await getPurchaseById(id);
   if (!existing) throw new Error("Purchase not found");

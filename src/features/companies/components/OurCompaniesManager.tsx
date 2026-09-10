@@ -10,6 +10,7 @@ import {
   updateCompanyAction,
 } from "@/app/companies/actions";
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -56,6 +57,7 @@ interface OurCompaniesManagerProps {
 }
 
 export function OurCompaniesManager({ companies }: OurCompaniesManagerProps) {
+  const canEdit = useCanEdit("sales");
   const [data, setData] = useState(companies);
   const [draft, setDraft] = useState<IssuerDraft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -140,17 +142,19 @@ export function OurCompaniesManager({ companies }: OurCompaniesManagerProps) {
           <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] px-3 py-1.5 text-sm text-zinc-300">
             Our Companies
           </div>
-          <Button
-            type="button"
-            onClick={() => {
-              setEditingId(null);
-              setDraft(emptyDraft);
-              setFormOpen(true);
-            }}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            Add Company
-          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setDraft(emptyDraft);
+                setFormOpen(true);
+              }}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              Add Company
+            </Button>
+          ) : null}
         </div>
 
         <div className="mt-3 overflow-x-auto rounded-md border border-[#252932]">

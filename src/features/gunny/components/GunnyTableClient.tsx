@@ -8,9 +8,11 @@ import { type GunnyRecord } from "@/features/gunny/schemas";
 import { deleteGunnyRecordAction } from "@/app/gunny/actions";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { useRouter } from "next/navigation";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 
 export function GunnyTableClient({ data }: { data: GunnyRecord[] }) {
   const router = useRouter();
+  const canEdit = useCanEdit("gunny");
   const [isPending, startTransition] = useTransition();
 
   const onDelete = (id: string) => {
@@ -28,11 +30,13 @@ export function GunnyTableClient({ data }: { data: GunnyRecord[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <Link href="/gunny/add">
-          <Button className="border border-[#2a2d34] bg-[#17191f] text-zinc-100 hover:bg-[#1d2026]">Add Gunny Bags</Button>
-        </Link>
-      </div>
+      {canEdit ? (
+        <div className="flex justify-end">
+          <Link href="/gunny/add">
+            <Button className="border border-[#2a2d34] bg-[#17191f] text-zinc-100 hover:bg-[#1d2026]">Add Gunny Bags</Button>
+          </Link>
+        </div>
+      ) : null}
       <div className="overflow-x-auto rounded-xl border border-[#252932] bg-[#111214]">
         <table className="min-w-[1100px] w-full text-sm">
           <thead className="bg-[#15171c] text-zinc-200">
@@ -68,10 +72,16 @@ export function GunnyTableClient({ data }: { data: GunnyRecord[] }) {
                   <td className="px-3 py-2">{row.note || "-"}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-2">
-                      <Link href={`/gunny/${row.id}/edit`}>
-                        <Button size="sm" variant="outline" className="h-8 border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026]">Edit</Button>
-                      </Link>
-                      <Button size="sm" disabled={isPending} onClick={() => onDelete(row.id)} className="h-8 border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]">Delete</Button>
+                      {canEdit ? (
+                        <>
+                          <Link href={`/gunny/${row.id}/edit`}>
+                            <Button size="sm" variant="outline" className="h-8 border-[#2a2d34] bg-[#17191f] text-zinc-200 hover:bg-[#1d2026]">Edit</Button>
+                          </Link>
+                          <Button size="sm" disabled={isPending} onClick={() => onDelete(row.id)} className="h-8 border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]">Delete</Button>
+                        </>
+                      ) : (
+                        <span className="text-zinc-600">—</span>
+                      )}
                     </div>
                   </td>
                 </tr>

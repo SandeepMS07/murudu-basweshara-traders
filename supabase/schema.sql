@@ -10,6 +10,18 @@ create table if not exists public.users (
   created_at timestamptz not null default now()
 );
 
+-- RBAC: per-user, per-module access levels (admins bypass these).
+create table if not exists public.user_permissions (
+  user_id    uuid not null references public.users(id) on delete cascade,
+  module     text not null,
+  level      text not null check (level in ('none', 'view', 'edit')) default 'none',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, module)
+);
+create index if not exists idx_user_permissions_user_id
+  on public.user_permissions (user_id);
+
 create table if not exists public.purchases (
   id text primary key,
   bill_no bigint,
@@ -311,6 +323,7 @@ create table if not exists public.company_payments (
   payment_mode text not null check (payment_mode in ('none', 'cash', 'rtgs')) default 'none',
   rtgs_name text not null default '',
   note text not null default '',
+  credit_hold_amount numeric(14,2) not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -321,6 +334,8 @@ alter table public.company_payments
   add column if not exists payment_mode text not null default 'none';
 alter table public.company_payments
   add column if not exists rtgs_name text not null default '';
+alter table public.company_payments
+  add column if not exists credit_hold_amount numeric(14,2) not null default 0;
 alter table public.company_payments
   drop constraint if exists company_payments_payment_mode_check;
 alter table public.company_payments

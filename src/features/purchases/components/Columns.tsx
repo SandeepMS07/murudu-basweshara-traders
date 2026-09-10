@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
+import type { ModuleKey } from "@/features/auth/lib/permissions";
 
 type PurchaseColumnsConfig = {
   entityLabelSingular?: string;
@@ -45,6 +47,7 @@ type PurchaseColumnsConfig = {
   billIdPrefix?: string;
   documentLabel?: string;
   sourceTypeLabel?: string;
+  module?: ModuleKey;
 };
 
 const defaultPurchaseColumnsConfig: Required<Pick<
@@ -71,6 +74,7 @@ const defaultPurchaseColumnsConfig: Required<Pick<
   billIdPrefix: "PUR_BILL_",
   documentLabel: "ESTIMATION INVOICE",
   sourceTypeLabel: "PURCHASE",
+  module: "purchases",
 };
 
 function PurchaseActionsCell({
@@ -85,6 +89,7 @@ function PurchaseActionsCell({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const mergedConfig = { ...defaultPurchaseColumnsConfig, ...config };
+  const canEdit = useCanEdit(mergedConfig.module ?? "purchases");
   const previewBillNumber = String(purchase.bill_no || "-");
   const isManual = purchase.source === "manual";
   const billToPhone = stripIndiaCountryCode(purchase.mob);
@@ -165,38 +170,42 @@ function PurchaseActionsCell({
   return (
     <>
       <div className="flex justify-end gap-1 pr-2">
-        <Link href={`${mergedConfig.editHrefBase}/${purchase.id}/edit`}>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={isManual || isPending}
-            title={isManual ? "Manual entries are read-only" : "Edit"}
-          >
-            {isManual ? (
-              <Eye className="h-4 w-4" />
-            ) : (
-              <Edit className="h-4 w-4" />
-            )}
-          </Button>
-        </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={isPending}
-          title="Generate Bill"
-          onClick={handleGenerateBill}
-        >
-          <ReceiptText className="h-4 w-4 text-emerald-600" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          disabled={isManual || isPending}
-          title={isManual ? "Manual entries are read-only" : "Delete"}
-          onClick={handleDelete}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        {canEdit ? (
+          <>
+            <Link href={`${mergedConfig.editHrefBase}/${purchase.id}/edit`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={isManual || isPending}
+                title={isManual ? "Manual entries are read-only" : "Edit"}
+              >
+                {isManual ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <Edit className="h-4 w-4" />
+                )}
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isPending}
+              title="Generate Bill"
+              onClick={handleGenerateBill}
+            >
+              <ReceiptText className="h-4 w-4 text-emerald-600" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={isManual || isPending}
+              title={isManual ? "Manual entries are read-only" : "Delete"}
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        ) : null}
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -504,6 +513,7 @@ export interface PurchaseColumnOptions {
   billIdPrefix?: string;
   documentLabel?: string;
   sourceTypeLabel?: string;
+  module?: ModuleKey;
 }
 
 const paymentSelectOptions: { label: string; value: PaymentMethod }[] = [

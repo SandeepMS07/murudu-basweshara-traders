@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -20,10 +20,12 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
+  Users as UsersIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { SessionUser } from "@/features/auth/types";
+import { can, type ModuleKey } from "@/features/auth/lib/permissions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,22 +36,30 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+type NavChild = {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
 type NavItem = {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  module: ModuleKey;
   badge?: string;
   badgeDevOnly?: boolean;
-  children?: NavItem[];
+  children?: NavChild[];
 };
 
 const navItems: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Purchases", href: "/purchases", icon: ShoppingCart },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, module: "dashboard" },
+  { name: "Purchases", href: "/purchases", icon: ShoppingCart, module: "purchases" },
   {
     name: "Bilty",
     href: "/bilty",
     icon: Truck,
+    module: "bilty",
     children: [
       { name: "Overview", href: "/bilty", icon: LayoutList },
       { name: "Parties", href: "/bilty/parties", icon: Building2 },
@@ -59,6 +69,7 @@ const navItems: NavItem[] = [
     name: "Sales",
     href: "/sales",
     icon: HandCoins,
+    module: "sales",
     children: [
       { name: "Overview", href: "/sales", icon: HandCoins },
       { name: "Companies", href: "/companies", icon: Building2 },
@@ -68,6 +79,7 @@ const navItems: NavItem[] = [
     name: "Gunny Bags",
     href: "/gunny",
     icon: Package,
+    module: "gunny",
     badge: "DEV",
     badgeDevOnly: true,
     children: [
@@ -79,6 +91,7 @@ const navItems: NavItem[] = [
     name: "Expenses",
     href: "/expenses/overview",
     icon: Wallet,
+    module: "expenses",
     children: [
       { name: "Overview", href: "/expenses/overview", icon: LayoutList },
       { name: "Salary", href: "/expenses/salary", icon: UserRound },
@@ -87,6 +100,7 @@ const navItems: NavItem[] = [
       { name: "Other Expenses", href: "/expenses/other", icon: ReceiptText },
     ],
   },
+  { name: "Users", href: "/users", icon: UsersIcon, module: "users" },
 ];
 
 type SidebarProps = {
@@ -101,6 +115,11 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
+  // Only show modules the user can view. Empty until the user loads.
+  const visibleNavItems = useMemo(
+    () => (userInfo ? navItems.filter((item) => can(userInfo, item.module, "view")) : []),
+    [userInfo],
+  );
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >(() => {
@@ -191,7 +210,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-1">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive =
             pathname.startsWith(item.href) ||
             item.children?.some((child) => pathname.startsWith(child.href));

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Company } from "@/features/companies/schemas";
 import { Input } from "@/components/ui/input";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 
 function SaleActionsCell({
   sale,
@@ -34,6 +35,7 @@ function SaleActionsCell({
   issuerCompanies: Company[];
 }) {
   const router = useRouter();
+  const canEdit = useCanEdit("sales");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
@@ -124,38 +126,42 @@ function SaleActionsCell({
   return (
     <>
       <div className="flex justify-end gap-1 pr-2">
-        <Link href={`/sales/${sale.id}/edit`}>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Edit sale"
-            className="cursor-pointer"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-        </Link>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          title="Generate Bill"
-          disabled={isPending}
-          onClick={handleOpenGenerate}
-          className="cursor-pointer"
-        >
-          <FileText className="h-4 w-4 text-emerald-500" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          title="Delete sale"
-          disabled={isPending}
-          onClick={() => setConfirmOpen(true)}
-          className="cursor-pointer"
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        {canEdit ? (
+          <>
+            <Link href={`/sales/${sale.id}/edit`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Edit sale"
+                className="cursor-pointer"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Generate Bill"
+              disabled={isPending}
+              onClick={handleOpenGenerate}
+              className="cursor-pointer"
+            >
+              <FileText className="h-4 w-4 text-emerald-500" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Delete sale"
+              disabled={isPending}
+              onClick={() => setConfirmOpen(true)}
+              className="cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        ) : null}
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

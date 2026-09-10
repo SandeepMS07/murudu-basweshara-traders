@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { createSaleColumns } from "@/features/sales/components/Columns";
 import { Sale } from "@/features/sales/schemas";
 import { Company } from "@/features/companies/schemas";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 
 interface SalesTableClientProps {
   data: Sale[];
@@ -92,7 +93,8 @@ export function SalesTableClient({
 
   const toolbarRight = null;
 
-  const toolbarFarRight = addSaleHref ? (
+  const canEdit = useCanEdit("sales");
+  const toolbarFarRight = addSaleHref && canEdit ? (
     <Link href={addSaleHref} className="w-full sm:w-auto">
       <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
         <Plus className="mr-2 h-4 w-4" />

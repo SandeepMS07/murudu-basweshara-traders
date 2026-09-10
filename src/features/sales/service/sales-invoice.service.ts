@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
   GenerateSalesInvoiceInput,
@@ -174,10 +174,7 @@ export async function getSalesInvoiceById(id: string): Promise<SalesInvoice | nu
 export async function generateSalesInvoice(
   input: GenerateSalesInvoiceInput
 ): Promise<SalesInvoice> {
-  const user = await requireAuth();
-  if (user.role !== "admin" && user.role !== "operator") {
-    throw new Error("Forbidden");
-  }
+  await requireModule("sales", "edit");
 
   const saleIds = normalizeSaleIds(input.saleIds);
   if (saleIds.length === 0) {

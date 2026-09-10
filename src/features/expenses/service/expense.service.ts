@@ -1,4 +1,4 @@
-import { requireAuth } from "@/features/auth/lib/session";
+import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
   EmployeeInput,
@@ -123,7 +123,7 @@ export async function getExpenses(): Promise<ExpenseEntry[]> {
 }
 
 export async function createExpenseEmployee(input: EmployeeInput): Promise<ExpenseEmployee> {
-  await requireAuth();
+  await requireModule("expenses", "edit");
 
   const payload = {
     id: crypto.randomUUID(),
@@ -145,7 +145,7 @@ export async function createExpenseEmployee(input: EmployeeInput): Promise<Expen
 }
 
 export async function updateExpenseEmployee(id: string, input: EmployeeInput): Promise<ExpenseEmployee> {
-  await requireAuth();
+  await requireModule("expenses", "edit");
 
   const payload = {
     name: input.name.trim().toLowerCase(),
@@ -168,7 +168,7 @@ export async function updateExpenseEmployee(id: string, input: EmployeeInput): P
 }
 
 export async function deleteExpenseEmployee(id: string): Promise<void> {
-  await requireAuth();
+  await requireModule("expenses", "edit");
 
   const { error } = await supabaseServer
     .from("expense_employees")
@@ -181,7 +181,7 @@ export async function deleteExpenseEmployee(id: string): Promise<void> {
 }
 
 export async function createExpense(input: ExpenseInput): Promise<ExpenseEntry> {
-  await requireAuth();
+  await requireModule("expenses", "edit");
 
   const payload = {
     id: crypto.randomUUID(),
@@ -206,7 +206,7 @@ export async function createExpense(input: ExpenseInput): Promise<ExpenseEntry> 
 }
 
 export async function updateExpense(id: string, input: ExpenseInput): Promise<ExpenseEntry> {
-  await requireAuth();
+  await requireModule("expenses", "edit");
 
   const payload = {
     category: input.category,
@@ -232,7 +232,7 @@ export async function updateExpense(id: string, input: ExpenseInput): Promise<Ex
 }
 
 export async function deleteExpense(id: string): Promise<void> {
-  await requireAuth();
+  await requireModule("expenses", "edit");
 
   const { error } = await supabaseServer.from("expenses").delete().eq("id", id);
 

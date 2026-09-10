@@ -39,6 +39,7 @@ export const companyPaymentSchema = z.object({
   payment_mode: z.enum(["none", "cash", "rtgs"]).default("none"),
   rtgs_name: z.string().trim().default(""),
   note: z.string().trim().default(""),
+  credit_hold_amount: z.coerce.number().min(0).default(0),
   allocations: z
     .array(
       z.object({
@@ -53,6 +54,14 @@ export const companyPaymentSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "RTGS name is required for RTGS mode",
       path: ["rtgs_name"],
+    });
+  }
+  const totalAllocated = value.allocations.reduce((sum, item) => sum + item.amount, 0);
+  if (totalAllocated + value.credit_hold_amount > value.amount) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Allocated amount plus credit hold cannot exceed payment amount",
+      path: ["credit_hold_amount"],
     });
   }
 });
@@ -73,6 +82,7 @@ export interface CompanyPayment {
   payment_mode: "none" | "cash" | "rtgs";
   rtgs_name: string;
   note: string;
+  credit_hold_amount: number;
   created_at?: string;
   updated_at?: string;
 }

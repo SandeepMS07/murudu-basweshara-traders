@@ -14,6 +14,7 @@ import {
   updateExpenseEmployeeAction,
 } from "@/app/expenses/actions";
 import { Button } from "@/components/ui/button";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -123,6 +124,7 @@ export function ExpensesManager({
   expenses,
   initialTab = "salary",
 }: ExpensesManagerProps) {
+  const canEdit = useCanEdit("expenses");
   const [isPending, startTransition] = useTransition();
   const tab = initialTab;
   const [employeeList, setEmployeeList] = useState(employees);
@@ -481,6 +483,7 @@ export function ExpensesManager({
                 Export CSV
               </Button>
               {tab === "salary" ? (
+                canEdit ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -489,7 +492,8 @@ export function ExpensesManager({
                 >
                   Add Employee
                 </Button>
-              ) : null}
+              ) : null) : null}
+              {canEdit ? (
               <Button
                 type="button"
                 onClick={() => openExpenseDialog()}
@@ -497,6 +501,7 @@ export function ExpensesManager({
               >
                 {expenseButtonLabel[tab]}
               </Button>
+              ) : null}
             </div>
           </div>
 

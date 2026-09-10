@@ -8,6 +8,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatCurrencyINR } from "@/lib/number-format";
+import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import { type Bilty, type PaymentMethod } from "@/features/bilty/schemas";
 import {
   createBiltyColumns,
@@ -34,6 +35,7 @@ const paymentBadgeStyles: Record<PaymentMethod, string> = {
 };
 
 export function BiltysTableClient({ data, addHref = "/bilty/add" }: BiltysTableClientProps) {
+  const canEdit = useCanEdit("bilty");
   const [, startTransition] = useTransition();
   const [paymentMethodOverrides, setPaymentMethodOverrides] = useState<
     Record<string, PaymentMethod>
@@ -203,7 +205,7 @@ export function BiltysTableClient({ data, addHref = "/bilty/add" }: BiltysTableC
         </div>
       }
       toolbarFarRight={
-        addHref ? (
+        addHref && canEdit ? (
           <Link href={addHref} className="w-full sm:w-auto">
             <Button className="h-10 w-full border border-[#2a2d34] bg-[#17191f] px-4 text-zinc-100 hover:bg-[#1d2026] sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
