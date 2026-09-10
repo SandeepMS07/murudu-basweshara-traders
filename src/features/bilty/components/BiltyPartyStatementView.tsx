@@ -17,9 +17,7 @@ const formatDisplayDate = (value: string) => {
 };
 
 const paymentModeLabel = (payment: BiltyPartyPayment) => {
-  if (payment.payment_mode === "rtgs") {
-    return payment.rtgs_name ? `RTGS (${payment.rtgs_name})` : "RTGS";
-  }
+  if (payment.payment_mode === "rtgs") return "RTGS";
   if (payment.payment_mode === "cash") return "Cash";
   if (payment.payment_mode === "upi") return "UPI";
   return "-";
@@ -225,7 +223,7 @@ export function BiltyPartyStatementView({
 
               <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                 <SectionHeading icon={Wallet}>Balance Summary</SectionHeading>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-start gap-2 rounded-md border border-zinc-200 bg-white px-2.5 py-2">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
                       <Receipt className="h-3.5 w-3.5" />
@@ -264,7 +262,7 @@ export function BiltyPartyStatementView({
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 rounded-md border border-[#ff6a3d]/30 bg-[#fff4ef] px-2.5 py-2">
+                  <div className="col-span-2 flex items-start gap-2 rounded-md border border-[#ff6a3d]/30 bg-[#fff4ef] px-2.5 py-2">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ff6a3d] text-white">
                       <Wallet className="h-3.5 w-3.5" />
                     </span>
