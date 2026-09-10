@@ -3,12 +3,14 @@ import { z } from "zod";
 import { companySchema, type Company } from "@/features/companies/schemas";
 
 /**
- * Soya keeps its own party directory. It adds "supplier" on top of the maize
- * issuer/buyer split, because the Soya Purchases module buys from suppliers
- * while Soya Sales bills buyers, and a firm can be both without the two
- * ledgers mixing.
+ * Soya keeps its own party directory in soya_companies, but the shape is the
+ * maize one: issuers (our billing entities) and buyers (the counterparty).
+ * The types are aliased rather than re-declared so the reused maize screens
+ * (CompanyStatementView) accept Soya rows with no adapter, and so any future
+ * change to the maize Company shape fails the build here instead of silently
+ * diverging in production.
  */
-export const soyaCompanyTypeEnum = z.enum(["issuer", "buyer", "supplier"]);
+export const soyaCompanyTypeEnum = z.enum(["issuer", "buyer"]);
 
 export type SoyaCompanyType = z.infer<typeof soyaCompanyTypeEnum>;
 
@@ -21,19 +23,4 @@ export type SoyaCompanyInput = z.infer<typeof soyaCompanySchema>;
 /** Pre-validation shape: the schema fills the optional fields with defaults. */
 export type SoyaCompanyDraft = z.input<typeof soyaCompanySchema>;
 
-export interface SoyaCompany extends Omit<Company, "type"> {
-  type: SoyaCompanyType;
-}
-
-/**
- * The reused CompanyStatementView only needs the party directory to look up
- * display names, and its prop type is the maize Company (issuer/buyer only).
- * Narrow explicitly rather than casting: for a statement's purposes a supplier
- * is simply the counterparty.
- */
-export function toStatementCompanies(companies: SoyaCompany[]): Company[] {
-  return companies.map(({ type, ...rest }) => ({
-    ...rest,
-    type: type === "issuer" ? "issuer" : "buyer",
-  }));
-}
+export type SoyaCompany = Company;

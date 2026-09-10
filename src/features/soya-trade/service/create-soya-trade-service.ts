@@ -41,7 +41,7 @@ export type SoyaTradeServiceConfig = {
   /** Records table, e.g. "soya_purchases" or "soya_sales". */
   table: string;
   /** Which party directory type the counterparty belongs to. */
-  partyType: Extract<SoyaCompanyType, "buyer" | "supplier">;
+  partyType: Extract<SoyaCompanyType, "buyer">;
   /** Human label used in error messages, e.g. "purchase". */
   entityLabel: string;
   /** Table blocking deletes when a record is already invoiced, if any. */

@@ -64,7 +64,37 @@ as an unapplied credit (instead of it auto-rolling onto the next bill) when
 recording a payment in Companies → Payment Ledger. Shows as "Credit Balance" in
 the app only — intentionally not shown on the customer-facing Statement of Account.
 
-### 2.4 Cleanup (optional, after confidence)
+### 2.4 Soya business line — required for the Soya workspace
+
+Soya is a **second, independent business line** (admin-only, everything under
+`/soya`). It has its own tables and shares none with maize, so these two files
+are additive: every statement is `create ... if not exists`, there is no
+`alter table` against any maize table, and no `soya_*` table has a foreign key
+into a maize table. Re-running them is a no-op.
+
+Run both in the Supabase SQL editor, **dev first**:
+
+| File | Creates |
+|---|---|
+| `supabase/soya-parties.sql` | `soya_companies` · `soya_sales` · `soya_sale_payments` · `soya_sale_payment_allocations` |
+| `supabase/soya-factory.sql` | `soya_bilty_parties` · `soya_bilty` · `soya_bilty_party_payments` |
+
+Until they are applied, the Soya pages render an "Unavailable" notice naming the
+file to run rather than erroring — the maize side is unaffected either way.
+
+Two deliberate differences from the maize schema:
+
+- **No shared sequence.** Maize bilty's "Generate Bill" writes `public.bills`,
+  whose `bills_bill_no_seq` is shared with maize Purchases — a Soya bill written
+  there would silently consume a maize bill number. Soya Factory therefore has
+  **no bill-generation flow and no sequence**: `bill_no` is supplied by the app
+  and validated unique per financial year. Nothing on the maize side can be
+  advanced by Soya activity.
+- **Soya bill numbers restart each April** (unique per financial year), which is
+  what the service layer already validates. Maize's global-unique
+  `idx_bilty_bill_no_unique` is left untouched.
+
+### 2.5 Cleanup (optional, after confidence)
 
 ```sql
 -- backup created during the SRI LAKSHMI '*' bill-number cleanup (2026-08-19)
@@ -110,6 +140,12 @@ To run locally on a specific port: `npm run dev -- -p 3002`.
    scoped per issuer per financial year (Apr–Mar).
 5. **Landing page:** open `/` logged-out — the public marketing page should
    render (no redirect to `/login`). `Staff login →` is in the footer.
+6. **Soya (admin only):** as admin, the sidebar shows a Maize/Soya switcher →
+   Soya has Dashboard, **Factory** (bilty-shaped) and **Parties**
+   (sales-shaped). Confirm a non-admin sees **no** switcher and is redirected
+   off `/soya/*`. Then confirm maize is untouched: **Purchases → Generate Bill
+   still produces `max+1`** (this is the check that catches any shared-sequence
+   regression) and the maize Bilty/Sales bill numbers are unchanged.
 
 ---
 

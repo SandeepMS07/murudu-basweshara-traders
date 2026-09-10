@@ -53,9 +53,9 @@ interface SoyaTradeFormProps {
   initialBillNumber?: string;
   /** e.g. "Purchase" — used in headings, buttons and toasts. */
   entityLabel: string;
-  /** e.g. "Supplier" — label for the counterparty field. */
+  /** e.g. "Party" — label for the counterparty field. */
   partyLabel: string;
-  /** Where to go after a successful save, e.g. "/soya/purchases". */
+  /** Where to go after a successful save, e.g. "/soya/parties". */
   listHref: string;
   createAction: (data: SoyaTradeFormPayload) => Promise<SaveResult>;
   updateAction: (id: string, data: SoyaTradeFormPayload) => Promise<SaveResult>;
@@ -64,12 +64,12 @@ interface SoyaTradeFormProps {
     issuerCompanyId: string | null,
   ) => Promise<string>;
   createPartyAction: (data: {
-    type: "supplier" | "buyer";
+    type: "buyer";
     name: string;
     display_name: string;
   }) => Promise<CreatePartyResult>;
   /** Which directory the counterparty is created in. */
-  partyType: "supplier" | "buyer";
+  partyType: "buyer";
 }
 
 type SaleFormValues = z.input<typeof soyaTradeSchema>;

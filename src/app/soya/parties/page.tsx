@@ -2,19 +2,19 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
 import {
-  getSoyaPurchases,
-  getSoyaSuppliers,
-  getSoyaSupplierPaymentAllocations,
-  getSoyaSupplierPayments,
-} from "@/features/soya-purchases/service/soya-purchase.service";
+  getSoyaParties,
+  getSoyaPartyEntries,
+  getSoyaPartyPaymentAllocations,
+  getSoyaPartyPayments,
+} from "@/features/soya-parties/service/soya-party.service";
 import { SoyaTradeTableClient } from "@/features/soya-trade/components/SoyaTradeTableClient";
-import { soyaPurchaseColumnsConfig } from "@/features/soya-purchases/config";
-import { deleteSoyaPurchaseAction } from "./actions";
+import { soyaPartyColumnsConfig } from "@/features/soya-parties/config";
+import { deleteSoyaPartyEntryAction } from "./actions";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
 
-export default async function SoyaPurchasesPage() {
+export default async function SoyaPartiesPage() {
   await requireSoyaAdminPage();
 
   const nowIst = new Date(
@@ -28,40 +28,38 @@ export default async function SoyaPurchasesPage() {
   );
   const { start: lastFyStart } = getFinancialYearBounds(lastFyReference);
 
-  const [purchasesResult, suppliersResult, paymentsResult, allocationsResult] =
+  const [entriesResult, partiesResult, paymentsResult, allocationsResult] =
     await Promise.allSettled([
-      getSoyaPurchases(),
-      getSoyaSuppliers(),
-      getSoyaSupplierPayments(),
-      getSoyaSupplierPaymentAllocations(),
+      getSoyaPartyEntries(),
+      getSoyaParties(),
+      getSoyaPartyPayments(),
+      getSoyaPartyPaymentAllocations(),
     ]);
 
   // Until the migration is applied these reads fail; the page still renders so
   // the module is inspectable rather than erroring outright.
   for (const [label, result] of [
-    ["soya purchases", purchasesResult],
-    ["soya suppliers", suppliersResult],
-    ["soya supplier payments", paymentsResult],
-    ["soya supplier allocations", allocationsResult],
+    ["soya party entries", entriesResult],
+    ["soya parties", partiesResult],
+    ["soya party payments", paymentsResult],
+    ["soya party allocations", allocationsResult],
   ] as const) {
     if (result.status === "rejected") {
       console.error(`Failed to load ${label}`, result.reason);
     }
   }
 
-  const purchases =
-    purchasesResult.status === "fulfilled" ? purchasesResult.value : [];
-  const suppliers =
-    suppliersResult.status === "fulfilled" ? suppliersResult.value : [];
+  const entries = entriesResult.status === "fulfilled" ? entriesResult.value : [];
+  const parties = partiesResult.status === "fulfilled" ? partiesResult.value : [];
   const payments =
     paymentsResult.status === "fulfilled" ? paymentsResult.value : [];
   const allocations =
     allocationsResult.status === "fulfilled" ? allocationsResult.value : [];
 
-  const scoped = purchases.filter(
+  const scoped = entries.filter(
     (record) => record.sale_date >= fyStart && record.sale_date <= fyEnd,
   );
-  const tableRecords = purchases.filter(
+  const tableRecords = entries.filter(
     (record) => record.sale_date >= lastFyStart && record.sale_date <= fyEnd,
   );
 
@@ -86,7 +84,7 @@ export default async function SoyaPurchasesPage() {
 
   const cards = [
     {
-      title: "Total Purchases",
+      title: "Total Entries",
       value: formatNumberIN(scoped.length, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
@@ -104,11 +102,11 @@ export default async function SoyaPurchasesPage() {
       value: formatCurrencyINR(totalAmount, { maximumFractionDigits: 0 }),
     },
     {
-      title: "Balance Payable",
+      title: "Balance Pending",
       value: formatCurrencyINR(totalPending, { maximumFractionDigits: 0 }),
     },
     {
-      title: "Total Paid",
+      title: "Total Received",
       value: formatCurrencyINR(totalPaid, { maximumFractionDigits: 0 }),
     },
   ];
@@ -137,14 +135,14 @@ export default async function SoyaPurchasesPage() {
 
       <SoyaTradeTableClient
         data={tableRecords}
-        buyerCompanies={suppliers}
+        buyerCompanies={parties}
         pendingBySaleId={tablePendingByRecordId}
-        addSaleHref="/soya/purchases/new"
-        entityLabel="Purchase"
-        exportFileName="soya_purchases"
+        addSaleHref="/soya/parties/new"
+        entityLabel="Entry"
+        exportFileName="soya_parties"
         columnsConfig={{
-          ...soyaPurchaseColumnsConfig,
-          deleteAction: deleteSoyaPurchaseAction,
+          ...soyaPartyColumnsConfig,
+          deleteAction: deleteSoyaPartyEntryAction,
         }}
       />
     </AppShell>

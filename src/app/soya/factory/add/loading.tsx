@@ -1,7 +1,7 @@
 import { AppShellSkeleton } from "@/components/layout/AppShellSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function NewSoyaPurchaseLoading() {
+export default function NewSoyaFactoryEntryLoading() {
   return (
     <AppShellSkeleton>
       <Skeleton className="h-16 w-80" />
@@ -9,4 +9,3 @@ export default function NewSoyaPurchaseLoading() {
     </AppShellSkeleton>
   );
 }
-

@@ -1,7 +1,7 @@
 import { AppShellSkeleton } from "@/components/layout/AppShellSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function SoyaPurchasesLoading() {
+export default function SoyaPartiesLoading() {
   return (
     <AppShellSkeleton>
       <div className="flex items-center justify-between">
@@ -18,4 +18,3 @@ export default function SoyaPurchasesLoading() {
     </AppShellSkeleton>
   );
 }
-

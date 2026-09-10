@@ -240,7 +240,7 @@ export async function deleteSoyaCompany(
 /** Finds a party by name within its type, creating it if it's new. */
 export async function upsertSoyaCompanyByName(
   rawName: string,
-  type: Extract<SoyaCompanyType, "buyer" | "supplier">,
+  type: Extract<SoyaCompanyType, "buyer">,
 ): Promise<SoyaCompany | null> {
   const name = normalizeName(rawName);
   if (!name) return null;
