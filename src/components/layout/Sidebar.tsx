@@ -163,8 +163,17 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
     fetchUser();
 
+    // Permissions are checked live on the server, but this client copy is
+    // only fetched once on mount — refetch on focus so a permission change
+    // shows/hides nav items without requiring a page reload.
+    const onFocus = () => fetchUser();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     return () => {
       active = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
   }, []);
 

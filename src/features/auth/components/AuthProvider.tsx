@@ -30,18 +30,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!active) return;
-        setUser(data?.user ?? null);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (active) setLoading(false);
-      });
+
+    const fetchUser = () =>
+      fetch("/api/auth/me")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!active) return;
+          setUser(data?.user ?? null);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (active) setLoading(false);
+        });
+
+    fetchUser();
+
+    // Permissions are checked live against the database on the server, but
+    // this client copy is only fetched once on mount — refetch on focus so
+    // an admin changing someone's access shows up (e.g. Add/Edit buttons)
+    // without the user having to reload the page.
+    const onFocus = () => fetchUser();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     return () => {
       active = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
   }, []);
 
