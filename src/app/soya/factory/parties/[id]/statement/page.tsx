@@ -3,11 +3,11 @@ import { Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
-import { BiltyPartyStatementView } from "@/features/bilty/components/BiltyPartyStatementView";
+import { SoyaFactoryStatement } from "@/features/soya-factory/components/SoyaFactoryStatement";
 import {
-  getSoyaFactoryPartyById,
-  getSoyaFactoryPartyPayments,
-  getSoyaFactoryRecords,
+  getSoyaFactoryById,
+  getSoyaFactoryEntries,
+  getSoyaFactoryPayments,
 } from "@/features/soya-factory/service/soya-factory.service";
 
 const inter = Inter({
@@ -24,15 +24,13 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const party = await getSoyaFactoryPartyById(id);
-  const dateStr = format(new Date(), "dd-MM-yyyy");
-  const name = party?.name || "Party";
+  const factory = await getSoyaFactoryById(id);
   return {
-    title: `${name} Statement ${dateStr}`,
+    title: `${factory?.name || "Factory"} Statement ${format(new Date(), "dd-MM-yyyy")}`,
   };
 }
 
-export default async function SoyaFactoryPartyStatementPage({
+export default async function SoyaFactoryStatementPage({
   params,
   searchParams,
 }: {
@@ -44,30 +42,32 @@ export default async function SoyaFactoryPartyStatementPage({
   const { id } = await params;
   const { embed } = (await searchParams) || {};
 
-  const party = await getSoyaFactoryPartyById(id);
-  if (!party) {
+  const factory = await getSoyaFactoryById(id);
+  if (!factory) {
     notFound();
   }
 
-  const [records, payments] = await Promise.all([
-    getSoyaFactoryRecords(),
-    getSoyaFactoryPartyPayments(id),
+  const [entries, payments] = await Promise.all([
+    getSoyaFactoryEntries(),
+    getSoyaFactoryPayments(id),
   ]);
 
-  const normalized = party.name.trim().toLowerCase();
-  const partyRecords = records.filter(
-    (record) => record.party.trim().toLowerCase() === normalized,
+  const normalized = factory.name.trim().toLowerCase();
+  const factoryEntries = entries.filter(
+    (entry) => entry.factory.trim().toLowerCase() === normalized,
   );
 
   return (
     <div className={inter.className}>
-      {/* Reused verbatim from the maize side — it is fully prop-driven. */}
-      <BiltyPartyStatementView
-        partyName={party.name}
-        partyPlace={party.place || undefined}
-        partyMob={party.mob || undefined}
-        biltys={partyRecords}
-        payments={payments}
+      <SoyaFactoryStatement
+        factoryName={factory.name}
+        entries={factoryEntries}
+        payments={payments.map((payment) => ({
+          id: payment.id,
+          paid_on: payment.paid_on,
+          bank: payment.bank,
+          amount: payment.amount,
+        }))}
         hideBackLink={embed === "1"}
       />
     </div>

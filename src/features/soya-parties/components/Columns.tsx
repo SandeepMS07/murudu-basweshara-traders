@@ -5,32 +5,32 @@ import { format, parseISO } from "date-fns";
 
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { SoyaRowActions } from "@/features/soya/components/SoyaRowActions";
-import type { SoyaFactoryEntry } from "@/features/soya-factory/schemas";
+import type { SoyaPartyEntry } from "@/features/soya-parties/schemas";
 
 /**
- * Headers are the customer's workbook headers verbatim (FACTORY half of the
- * SALES sheet, columns 1-12, plus PARTY from the per-factory ledger tabs).
- * AMOUNT appears twice on purpose: column 9 is the taxable value, column 12 the
- * invoice total.
+ * Headers are the customer's workbook headers verbatim (PARTIES half of the
+ * SALES sheet, columns 13-26, plus LORRY NO and FACTORY from the per-party
+ * ledger tabs). AMOUNT appears twice on purpose: column 19 is the taxable
+ * value, column 23 the invoice total. FREIGHT and FRIGHT are two different
+ * columns in the sheet, not a duplicate.
  */
 const whole = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 const num = (value: number) => formatNumberIN(value, whole);
 const money = (value: number) => formatCurrencyINR(value, whole);
+const nowrap = {
+  headClassName: "whitespace-nowrap",
+  cellClassName: "whitespace-nowrap",
+} as const;
 
-export function createSoyaFactoryColumns(
+export function createSoyaPartyColumns(
   deleteAction: (id: string) => Promise<void>,
-): ColumnDef<SoyaFactoryEntry>[] {
+): ColumnDef<SoyaPartyEntry>[] {
   return [
     {
       accessorKey: "sl_no",
       header: "SL NO",
       cell: ({ row }) => row.original.sl_no ?? "-",
-    },
-    {
-      accessorKey: "factory",
-      header: "FACTORY",
-      cell: ({ row }) => row.original.factory || "-",
     },
     {
       accessorKey: "date",
@@ -43,18 +43,19 @@ export function createSoyaFactoryColumns(
           return raw;
         }
       },
-      meta: { cellClassName: "whitespace-nowrap" },
+      meta: nowrap,
     },
     {
-      accessorKey: "pb_no",
-      header: "P B NO",
-      cell: ({ row }) => row.original.pb_no || "-",
+      accessorKey: "bill_no",
+      header: "BILL NO",
+      cell: ({ row }) => row.original.bill_no || "-",
+      meta: nowrap,
     },
     {
-      accessorKey: "lorry",
-      header: "LORRY",
-      cell: ({ row }) => row.original.lorry || "-",
-      meta: { cellClassName: "whitespace-nowrap" },
+      accessorKey: "lorry_no",
+      header: "LORRY NO",
+      cell: ({ row }) => row.original.lorry_no || "-",
+      meta: nowrap,
     },
     {
       accessorKey: "bags",
@@ -62,9 +63,10 @@ export function createSoyaFactoryColumns(
       cell: ({ row }) => num(row.original.bags),
     },
     {
-      accessorKey: "weight",
-      header: "WEIGHT",
-      cell: ({ row }) => num(row.original.weight),
+      accessorKey: "net_wt",
+      header: "NET WT",
+      cell: ({ row }) => num(row.original.net_wt),
+      meta: nowrap,
     },
     {
       accessorKey: "rate",
@@ -79,13 +81,19 @@ export function createSoyaFactoryColumns(
       accessorKey: "amount",
       header: "AMOUNT",
       cell: ({ row }) => money(row.original.amount),
-      meta: { cellClassName: "whitespace-nowrap" },
+      meta: nowrap,
     },
     {
-      accessorKey: "gst_amount",
-      header: "GST 5 %",
-      cell: ({ row }) => money(row.original.gst_amount),
-      meta: { headClassName: "whitespace-nowrap", cellClassName: "whitespace-nowrap" },
+      accessorKey: "cgst",
+      header: "2.5%CGST",
+      cell: ({ row }) => money(row.original.cgst),
+      meta: nowrap,
+    },
+    {
+      accessorKey: "sgst",
+      header: "2.5%SGST",
+      cell: ({ row }) => money(row.original.sgst),
+      meta: nowrap,
     },
     {
       accessorKey: "tcs",
@@ -98,7 +106,13 @@ export function createSoyaFactoryColumns(
       cell: ({ row }) => (
         <div className="font-medium">{money(row.original.total_amount)}</div>
       ),
-      meta: { cellClassName: "whitespace-nowrap" },
+      meta: nowrap,
+    },
+    {
+      accessorKey: "freight",
+      header: "FREIGHT",
+      cell: ({ row }) => num(row.original.freight),
+      meta: nowrap,
     },
     {
       accessorKey: "party",
@@ -106,12 +120,23 @@ export function createSoyaFactoryColumns(
       cell: ({ row }) => row.original.party || "-",
     },
     {
+      accessorKey: "fright",
+      header: "FRIGHT",
+      cell: ({ row }) => money(row.original.fright),
+      meta: nowrap,
+    },
+    {
+      accessorKey: "factory",
+      header: "FACTORY",
+      cell: ({ row }) => row.original.factory || "-",
+    },
+    {
       id: "actions",
       header: "ACTIONS",
       cell: ({ row }) => (
         <SoyaRowActions
           recordId={row.original.id}
-          editHref={`/soya/factory/${row.original.id}/edit`}
+          editHref={`/soya/parties/${row.original.id}/edit`}
           deleteAction={deleteAction}
         />
       ),

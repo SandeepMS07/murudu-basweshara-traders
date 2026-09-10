@@ -1,102 +1,91 @@
 -- ============================================================================
--- SOYA BUSINESS LINE — part 2: Factory module (the bilty record shape)
+-- SOYA BUSINESS LINE — Factory module (the buy side)
 -- ============================================================================
 -- Safe / idempotent: every statement is "create ... if not exists", so this can
 -- be re-run without effect.
 --
 -- Fully independent of the maize tables. Nothing here references public.bilty,
--- public.bilty_parties, public.bilty_party_payments or public.bills, and NO
--- existing object is altered — there is no "alter table" on any maize table.
+-- public.bilty_parties, public.purchases, public.bills or any other maize
+-- object, NO existing object is altered (no "alter table" on a maize table),
+-- and no sequence is shared — so nothing on the maize side can be advanced by
+-- Soya activity.
 --
--- IMPORTANT — no shared sequence. The maize bilty "Generate Bill" flow writes
--- public.bills, whose bills_bill_no_seq is shared with maize Purchases; a Soya
--- bill written there would silently consume a maize bill number. Soya Factory
--- therefore has no bill-generation flow and no sequence of its own: bill_no is
--- always supplied by the application and validated unique per financial year
--- (which is what the service layer already enforces), so nothing on the maize
--- side can be advanced by Soya activity.
+-- Columns follow the FACTORY half of the SALES sheet in the customer's workbook
+-- (columns 1-12), plus the PARTY column its per-factory ledger tabs carry:
 --
--- NAMING NOTE: soya_bilty mirrors public.bilty column-for-column so the app can
--- reuse the maize *pure* helpers (calculateBilty, BiltyPartyStatementView) with
--- no adapter layer. In the UI these are labelled "Factory".
+--   1 SL NO · 2 FACTORY · 3 DATE · 4 P B NO · 5 LORRY · 6 BAGS · 7 WEIGHT
+--   8 RATE · 9 AMOUNT · 10 GST 5 % · 11 TCS · 12 AMOUNT
+--
+-- AMOUNT appears twice in the sheet: column 9 is the taxable value (amount) and
+-- column 12 the invoice total (total_amount).
+--
+-- P B NO is text, not a number: the workbook has values like 'MI/75'.
 -- ============================================================================
 
--- --------------------------------------------------------- factory parties
-create table if not exists public.soya_bilty_parties (
+-- ------------------------------------------------------------ factory master
+create table if not exists public.soya_factories (
   id text primary key,
   name text not null unique,
-  place text not null default '',
-  mob text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_soya_bilty_parties_name
-  on public.soya_bilty_parties (name);
+create index if not exists idx_soya_factories_name
+  on public.soya_factories (name);
 
--- --------------------------------------------------------- factory records
-create table if not exists public.soya_bilty (
+-- ----------------------------------------------------------- factory entries
+create table if not exists public.soya_factory_entries (
   id text primary key,
-  bill_no bigint,
+  sl_no integer null,
+  -- The factory name is denormalized here (as in the sheet) and matched to
+  -- soya_factories by name, the same way maize bilty relates to bilty_parties.
+  factory text not null default '',
   date date not null,
-  party text not null default '',
-  name text not null default '',
-  place text not null default '',
-  mob text not null default '',
+  pb_no text not null default '',
+  lorry text not null default '',
   bags numeric(12,2) not null default 0,
   weight numeric(12,2) not null default 0,
-  less_percent numeric(6,2) not null default 0,
   rate numeric(12,2) not null default 0,
-  bag_less numeric(12,2) not null default 0,
-  add_amount numeric(12,2) not null default 0,
-  cash_paid numeric(12,2) not null default 0,
-  upi_paid numeric(12,2) not null default 0,
-  payment_date date null,
-  source text not null check (source in ('manual', 'app')) default 'app',
-  -- CASH is allowed from the start here; the maize check predates it.
-  payment_through text not null
-    check (payment_through in ('RTGS', 'UPI', 'CASH', 'none')) default 'none',
-  less_weight numeric(12,2) not null default 0,
-  net_weight numeric(12,2) not null default 0,
-  amount numeric(14,2) not null default 0,
-  final_total numeric(14,2) not null default 0,
-  bag_avg numeric(12,2) not null default 0,
+  -- Derived (see src/features/soya-factory/utils/calculations.ts):
+  --   amount = weight * rate, gst_amount = amount * 5%,
+  --   total_amount = amount + gst_amount + tcs
+  amount numeric(16,2) not null default 0,
+  gst_amount numeric(16,4) not null default 0,
+  tcs numeric(16,4) not null default 0,
+  total_amount numeric(16,4) not null default 0,
+  -- Which party the lorry was sold on to; the ledger tabs record it.
+  party text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_soya_bilty_date
-  on public.soya_bilty (date desc);
-create index if not exists idx_soya_bilty_party
-  on public.soya_bilty (party);
+create index if not exists idx_soya_factory_entries_date
+  on public.soya_factory_entries (date desc);
+create index if not exists idx_soya_factory_entries_factory
+  on public.soya_factory_entries (factory);
+create index if not exists idx_soya_factory_entries_pb_no
+  on public.soya_factory_entries (pb_no);
+create index if not exists idx_soya_factory_entries_party
+  on public.soya_factory_entries (party);
 
--- bill_no unique per financial year (Apr-Mar), restarting at 1 each April.
--- The maize side is globally unique instead; that index is left untouched.
-create unique index if not exists idx_soya_bilty_bill_no_fy_unique
-  on public.soya_bilty (
-    bill_no,
-    (
-      (extract(year from date)::int)
-      - (case when extract(month from date) < 4 then 1 else 0 end)
-    )
-  );
+-- P B NO is the *factory's* own bill number, not ours, so it is deliberately
+-- not made unique — two factories can legitimately reuse a series.
 
--- ---------------------------------------------------- factory party payments
-create table if not exists public.soya_bilty_party_payments (
+-- ---------------------------------------------------------- factory payments
+-- Payments made TO a factory. Mirrors the four-column block on the per-factory
+-- ledger tabs: SL NO · DATE · BANK · AMOUNT.
+create table if not exists public.soya_factory_payments (
   id text primary key,
-  party_id text not null
-    references public.soya_bilty_parties(id) on delete cascade,
+  factory_id text not null
+    references public.soya_factories(id) on delete cascade,
   paid_on date not null,
-  amount numeric(14,2) not null default 0,
-  payment_mode text not null
-    check (payment_mode in ('none', 'cash', 'upi', 'rtgs')) default 'none',
-  rtgs_name text not null default '',
-  note text not null default '',
+  bank text not null default '',
+  amount numeric(16,2) not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_soya_bilty_party_payments_party_id
-  on public.soya_bilty_party_payments (party_id);
-create index if not exists idx_soya_bilty_party_payments_paid_on
-  on public.soya_bilty_party_payments (paid_on desc);
+create index if not exists idx_soya_factory_payments_factory_id
+  on public.soya_factory_payments (factory_id);
+create index if not exists idx_soya_factory_payments_paid_on
+  on public.soya_factory_payments (paid_on desc);

@@ -2,25 +2,20 @@ import { AppShell } from "@/components/layout/AppShell";
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
 import { SoyaFactoryForm } from "@/features/soya-factory/components/SoyaFactoryForm";
 import {
-  getNextSoyaFactoryBillNoPreview,
-  getSoyaFactoryParties,
+  getNextSoyaFactorySlNo,
+  getSoyaFactories,
 } from "@/features/soya-factory/service/soya-factory.service";
+import { getSoyaParties } from "@/features/soya-parties/service/soya-party.service";
 
 export default async function NewSoyaFactoryEntryPage() {
   await requireSoyaAdminPage();
 
   const today = new Date().toISOString().split("T")[0];
-
-  // Until the migration is applied these reads fail; the form still renders so
-  // the module is inspectable rather than erroring outright.
-  const [nextBillNoResult, partiesResult] = await Promise.allSettled([
-    getNextSoyaFactoryBillNoPreview(today),
-    getSoyaFactoryParties(),
+  const [slNoResult, factoriesResult, partiesResult] = await Promise.allSettled([
+    getNextSoyaFactorySlNo(today),
+    getSoyaFactories(),
+    getSoyaParties(),
   ]);
-
-  const nextBillNo =
-    nextBillNoResult.status === "fulfilled" ? nextBillNoResult.value : 1;
-  const parties = partiesResult.status === "fulfilled" ? partiesResult.value : [];
 
   return (
     <AppShell>
@@ -29,12 +24,21 @@ export default async function NewSoyaFactoryEntryPage() {
           Create Factory Entry
         </h1>
         <p className="text-zinc-500">
-          Enter the details to create a new Soya factory entry.
+          Enter the purchase details to create a new Soya factory entry.
         </p>
       </div>
       <SoyaFactoryForm
-        nextBillNo={nextBillNo}
-        partyOptions={parties.map((party) => party.name)}
+        nextSlNo={slNoResult.status === "fulfilled" ? slNoResult.value : 1}
+        factoryOptions={
+          factoriesResult.status === "fulfilled"
+            ? factoriesResult.value.map((factory) => factory.name)
+            : []
+        }
+        partyOptions={
+          partiesResult.status === "fulfilled"
+            ? partiesResult.value.map((party) => party.name)
+            : []
+        }
       />
     </AppShell>
   );

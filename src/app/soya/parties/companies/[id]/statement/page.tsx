@@ -3,12 +3,10 @@ import { Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
-import { CompanyStatementView } from "@/features/companies/components/CompanyStatementView";
-import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
-import { getSoyaCompanies } from "@/features/soya-companies/service/soya-company.service";
+import { SoyaPartyStatement } from "@/features/soya-parties/components/SoyaPartyStatement";
 import {
+  getSoyaPartyById,
   getSoyaPartyEntries,
-  getSoyaPartyPaymentAllocations,
   getSoyaPartyPayments,
 } from "@/features/soya-parties/service/soya-party.service";
 
@@ -26,14 +24,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const companies = await getSoyaCompanies();
-  const party = companies.find(
-    (company) => company.id === id && company.type === "buyer",
-  );
-  const dateStr = format(new Date(), "dd-MM-yyyy");
-  const name = party?.display_name || party?.name || "Party";
+  const party = await getSoyaPartyById(id);
   return {
-    title: `${name} Statement ${dateStr}`,
+    title: `${party?.name || "Party"} Statement ${format(new Date(), "dd-MM-yyyy")}`,
   };
 }
 
@@ -49,46 +42,33 @@ export default async function SoyaPartyStatementPage({
   const { id } = await params;
   const { embed } = (await searchParams) || {};
 
-  const [companies, entries, payments, allocations] = await Promise.all([
-    getSoyaCompanies(),
-    getSoyaPartyEntries(),
-    getSoyaPartyPayments(),
-    getSoyaPartyPaymentAllocations(),
-  ]);
-
-  const party = companies.find(
-    (company) => company.id === id && company.type === "buyer",
-  );
+  const party = await getSoyaPartyById(id);
   if (!party) {
     notFound();
   }
 
-  const partyEntries = entries.filter((entry) => entry.sale_company_id === id);
-  const partyPayments = payments.filter((payment) => payment.company_id === id);
-  const partyEntryIds = new Set(partyEntries.map((entry) => entry.id));
-  const partyAllocations = allocations.filter((allocation) =>
-    partyEntryIds.has(allocation.sale_id),
-  );
+  const [entries, payments] = await Promise.all([
+    getSoyaPartyEntries(),
+    getSoyaPartyPayments(id),
+  ]);
 
-  const { pendingBySaleId, saleIdsByPaymentId } = computeEffectiveSalePending(
-    partyEntries,
-    partyPayments,
-    partyAllocations,
+  const normalized = party.name.trim().toLowerCase();
+  const partyEntries = entries.filter(
+    (entry) => entry.party.trim().toLowerCase() === normalized,
   );
 
   return (
     <div className={inter.className}>
-      {/* Reused verbatim from the maize side — it is fully prop-driven. */}
-      <CompanyStatementView
-        companyName={party.display_name || party.name}
-        companyAddress={party.address || undefined}
-        companyPhone={party.phone || undefined}
-        companyGstin={party.gstin || undefined}
-        sales={partyEntries}
-        payments={partyPayments}
-        pendingBySaleId={pendingBySaleId}
-        saleIdsByPaymentId={saleIdsByPaymentId}
-        companies={companies}
+      <SoyaPartyStatement
+        partyName={party.name}
+        entries={partyEntries}
+        payments={payments.map((payment) => ({
+          id: payment.id,
+          paid_on: payment.paid_on,
+          bank: payment.bank,
+          amount: payment.amount,
+          remarks: payment.remarks,
+        }))}
         hideBackLink={embed === "1"}
       />
     </div>

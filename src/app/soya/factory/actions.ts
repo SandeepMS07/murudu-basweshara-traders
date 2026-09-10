@@ -1,104 +1,132 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import {
-  createSoyaFactoryPartyPayment,
-  createSoyaFactoryRecord,
-  deleteSoyaFactoryParty,
-  deleteSoyaFactoryPartyPayment,
-  deleteSoyaFactoryRecord,
-  getSoyaFactoryParties,
-  getSoyaFactoryPartyPayments,
-  isSoyaFactoryBillNoAvailable,
-  updateSoyaFactoryParty,
-  updateSoyaFactoryPaymentThrough,
-  updateSoyaFactoryRecord,
-  upsertSoyaFactoryPartyByName,
+  soyaFactoryEntrySchema,
+  soyaFactoryPaymentSchema,
+  type SoyaFactoryEntryInput,
+} from "@/features/soya-factory/schemas";
+import {
+  createSoyaFactory,
+  createSoyaFactoryEntry,
+  createSoyaFactoryPayment,
+  deleteSoyaFactory,
+  deleteSoyaFactoryEntry,
+  deleteSoyaFactoryPayment,
+  getNextSoyaFactorySlNo,
+  updateSoyaFactory,
+  updateSoyaFactoryEntry,
 } from "@/features/soya-factory/service/soya-factory.service";
-import {
-  biltyPartyPaymentSchema,
-  biltySchema,
-  type BiltyInput,
-  type BiltyPartyPaymentInput,
-  type PaymentMethod,
-} from "@/features/bilty/schemas";
+
+const LIST_PATH = "/soya/factory";
+const MASTER_PATH = "/soya/factory/parties";
 
 // There is deliberately no generateBill action here: the maize bilty bill flow
 // writes public.bills, whose sequence is shared with maize Purchases, so a Soya
 // bill would consume a maize bill number. See supabase/soya-factory.sql.
 
-export async function createSoyaFactoryRecordAction(data: BiltyInput) {
-  const parsed = biltySchema.parse(data);
-  return createSoyaFactoryRecord(parsed);
-}
+// ------------------------------------------------------------------- entries
 
-export async function updateSoyaFactoryRecordAction(
-  id: string,
-  data: BiltyInput,
+export async function createSoyaFactoryEntryAction(
+  data: SoyaFactoryEntryInput,
 ) {
-  const parsed = biltySchema.parse(data);
-  return updateSoyaFactoryRecord(id, parsed);
-}
-
-export async function deleteSoyaFactoryRecordAction(id: string) {
-  return deleteSoyaFactoryRecord(id);
-}
-
-export async function updateSoyaFactoryPaymentThroughAction(
-  id: string,
-  paymentThrough: PaymentMethod,
-  paymentDate?: string | null,
-) {
-  return updateSoyaFactoryPaymentThrough(id, paymentThrough, paymentDate);
-}
-
-export async function checkSoyaFactoryBillNoAvailabilityAction(
-  billNo: number,
-  billDate: string,
-  excludeId?: string,
-) {
-  return isSoyaFactoryBillNoAvailable(billNo, billDate, excludeId);
-}
-
-export async function getSoyaFactoryPartiesAction() {
-  return getSoyaFactoryParties();
-}
-
-export async function createSoyaFactoryPartyAction(
-  name: string,
-  place?: string,
-  mob?: string,
-) {
-  const party = await upsertSoyaFactoryPartyByName(name, { place, mob });
-  if (!party) {
-    throw new Error("Party name is required");
+  const parsed = soyaFactoryEntrySchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      message: parsed.error.issues[0]?.message ?? "Invalid entry data",
+    };
   }
-  return party;
+  try {
+    const entry = await createSoyaFactoryEntry(parsed.data);
+    revalidatePath(LIST_PATH);
+    revalidatePath(MASTER_PATH);
+    return { success: true as const, entry };
+  } catch (error) {
+    console.error("createSoyaFactoryEntryAction failed:", error);
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Failed to create entry",
+    };
+  }
 }
 
-export async function deleteSoyaFactoryPartyAction(id: string) {
-  return deleteSoyaFactoryParty(id);
-}
-
-export async function updateSoyaFactoryPartyAction(
+export async function updateSoyaFactoryEntryAction(
   id: string,
-  name: string,
-  place?: string,
-  mob?: string,
+  data: SoyaFactoryEntryInput,
 ) {
-  return updateSoyaFactoryParty(id, name, place, mob);
+  const parsed = soyaFactoryEntrySchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      message: parsed.error.issues[0]?.message ?? "Invalid entry data",
+    };
+  }
+  try {
+    const entry = await updateSoyaFactoryEntry(id, parsed.data);
+    revalidatePath(LIST_PATH);
+    revalidatePath(MASTER_PATH);
+    return { success: true as const, entry };
+  } catch (error) {
+    console.error("updateSoyaFactoryEntryAction failed:", error);
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Failed to update entry",
+    };
+  }
 }
 
-export async function getSoyaFactoryPartyPaymentsAction(partyId?: string) {
-  return getSoyaFactoryPartyPayments(partyId);
+/** Throws on failure — the row action surfaces the message as a toast. */
+export async function deleteSoyaFactoryEntryAction(id: string) {
+  await deleteSoyaFactoryEntry(id);
+  revalidatePath(LIST_PATH);
+  revalidatePath(MASTER_PATH);
 }
 
-export async function createSoyaFactoryPartyPaymentAction(
-  data: BiltyPartyPaymentInput,
-) {
-  const parsed = biltyPartyPaymentSchema.parse(data);
-  return createSoyaFactoryPartyPayment(parsed);
+export async function getNextSoyaFactorySlNoAction(date: string) {
+  return getNextSoyaFactorySlNo(date);
 }
 
-export async function deleteSoyaFactoryPartyPaymentAction(id: string) {
-  return deleteSoyaFactoryPartyPayment(id);
+// ------------------------------------------------------------ factory master
+
+export async function createSoyaFactoryAction(name: string) {
+  await createSoyaFactory(name);
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
+}
+
+export async function updateSoyaFactoryAction(id: string, name: string) {
+  await updateSoyaFactory(id, name);
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
+}
+
+export async function deleteSoyaFactoryAction(id: string) {
+  await deleteSoyaFactory(id);
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
+}
+
+// ---------------------------------------------------------- factory payments
+
+export async function createSoyaFactoryPaymentAction(draft: {
+  ownerId: string;
+  paid_on: string;
+  bank: string;
+  amount: number;
+}) {
+  const parsed = soyaFactoryPaymentSchema.parse({
+    factory_id: draft.ownerId,
+    paid_on: draft.paid_on,
+    bank: draft.bank,
+    amount: draft.amount,
+  });
+  await createSoyaFactoryPayment(parsed);
+  revalidatePath(MASTER_PATH);
+}
+
+export async function deleteSoyaFactoryPaymentAction(id: string) {
+  await deleteSoyaFactoryPayment(id);
+  revalidatePath(MASTER_PATH);
 }

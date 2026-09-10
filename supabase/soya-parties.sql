@@ -1,138 +1,109 @@
 -- ============================================================================
--- SOYA BUSINESS LINE — part 1: master data (companies) + Parties module
+-- SOYA BUSINESS LINE — Parties module (the sell side)
 -- ============================================================================
 -- Safe / idempotent: every statement is "create ... if not exists", so this can
 -- be re-run without effect.
 --
 -- Fully independent of the maize tables. Nothing here references public.sales,
--- public.companies, public.bilty or public.bills, and NO existing object is
--- altered — there is no "alter table" on any maize table, and no change to
--- bills_bill_no_seq, bilty_bill_no_seq, company_invoice_counters or
--- next_company_invoice_seq.
+-- public.companies, public.company_payments or any other maize object, NO
+-- existing object is altered (no "alter table" on a maize table), and no
+-- sequence is shared — so nothing on the maize side can be advanced by Soya
+-- activity.
 --
--- NAMING NOTE: soya_sales mirrors public.sales column-for-column (sale_date,
--- sale_company_id, issuer_company_id, and sale_id in the allocation table)
--- because the Soya "Parties" module is a clone of the maize Sales module.
--- Keeping the names identical lets the app reuse the maize *pure* helpers
--- (computeEffectiveSalePending, CompanyStatementView) with no adapter layer.
+-- Columns follow the PARTIES half of the SALES sheet in the customer's workbook
+-- (columns 13-26), plus the LORRY NO and FACTORY columns its per-party ledger
+-- tabs carry:
+--
+--   13 SL NO · 14 DATE · 15 BILL NO · 16 BAGS · 17 NET WT · 18 RATE
+--   19 AMOUNT · 20 2.5%CGST · 21 2.5%SGST · 22 TCS · 23 AMOUNT
+--   24 FREIGHT · 25 PARTY · 26 FRIGHT
+--
+-- AMOUNT appears twice in the sheet: column 19 is the taxable value (amount)
+-- and column 23 the invoice total (total_amount).
+--
+-- FREIGHT (24) and FRIGHT (26) are two separate columns, not a typo of one:
+-- 24 holds a per-trip rate (260, 270) and 26 a lump amount (90480, 82080).
+-- Neither is derived from the other in the source data.
+--
+-- BILL NO is text, not a number: the workbook opens the year with '29*1'.
 -- ============================================================================
 
--- ---------------------------------------------------------------- master data
-create table if not exists public.soya_companies (
+-- -------------------------------------------------------------- party master
+create table if not exists public.soya_parties (
   id text primary key,
-  type text not null check (type in ('issuer', 'buyer')),
-  name text not null,
-  display_name text not null default '',
-  code text not null default '',
-  address text not null default '',
-  phone text not null default '',
-  email text not null default '',
-  gstin text not null default '',
-  bank_name text not null default '',
-  bank_account_no text not null default '',
-  bank_branch_ifsc text not null default '',
-  invoice_prefix text not null default '',
-  is_active boolean not null default true,
-  is_default boolean not null default false,
+  name text not null unique,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_soya_companies_type
-  on public.soya_companies (type);
-create index if not exists idx_soya_companies_name
-  on public.soya_companies (name);
--- One directory per crop, one row per (type, name).
-create unique index if not exists idx_soya_companies_type_name_unique
-  on public.soya_companies (type, upper(name));
+create index if not exists idx_soya_parties_name
+  on public.soya_parties (name);
 
--- ------------------------------------------------- parties records (sales-shaped)
-create table if not exists public.soya_sales (
+-- ------------------------------------------------------------- party entries
+create table if not exists public.soya_party_entries (
   id text primary key,
   sl_no integer null,
-  bill_number text not null,
-  sale_date date not null,
-  issuer_company_id text null references public.soya_companies(id),
-  dispatch_through text not null default 'TRUCK'
-    check (dispatch_through in ('TRUCK', 'TRACTORY')),
-  lorry_number text not null default '',
-  goods_name text not null default 'SOYA',
-  destination text not null default '',
-  party text not null default '',
-  sale_company_id text null references public.soya_companies(id),
-  payment_terms text not null default '',
+  date date not null,
+  bill_no text not null default '',
+  lorry_no text not null default '',
   bags numeric(12,2) not null default 0,
-  net_weight numeric(12,2) not null default 0,
-  factory_weight numeric(12,2) not null default 0,
+  net_wt numeric(12,2) not null default 0,
   rate numeric(12,2) not null default 0,
-  flight numeric(12,2) not null default 0,
-  amount numeric(14,2) not null default 0,
-  bag_avg numeric(12,2) not null default 0,
-  factory_rate numeric(12,4) not null default 0,
-  factory_amount numeric(14,2) not null default 0,
-  pending_amount numeric(14,2) not null default 0,
-  source text not null check (source in ('manual', 'import')) default 'manual',
+  -- Derived (see src/features/soya-parties/utils/calculations.ts):
+  --   amount = net_wt * rate, cgst = sgst = amount * 2.5%,
+  --   total_amount = amount + cgst + sgst + tcs
+  amount numeric(16,2) not null default 0,
+  cgst numeric(16,4) not null default 0,
+  sgst numeric(16,4) not null default 0,
+  tcs numeric(16,4) not null default 0,
+  total_amount numeric(16,4) not null default 0,
+  freight numeric(16,2) not null default 0,
+  fright numeric(16,2) not null default 0,
+  -- The party name is denormalized here (as in the sheet) and matched to
+  -- soya_parties by name, the same way maize bilty relates to bilty_parties.
+  party text not null default '',
+  -- Which factory the goods came from; the ledger tabs record it.
+  factory text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_soya_sales_sale_date
-  on public.soya_sales (sale_date desc);
-create index if not exists idx_soya_sales_bill_number
-  on public.soya_sales (bill_number);
-create index if not exists idx_soya_sales_party
-  on public.soya_sales (party);
-create index if not exists idx_soya_sales_sale_company_id
-  on public.soya_sales (sale_company_id);
-create index if not exists idx_soya_sales_issuer_company_id
-  on public.soya_sales (issuer_company_id);
+create index if not exists idx_soya_party_entries_date
+  on public.soya_party_entries (date desc);
+create index if not exists idx_soya_party_entries_party
+  on public.soya_party_entries (party);
+create index if not exists idx_soya_party_entries_bill_no
+  on public.soya_party_entries (bill_no);
+create index if not exists idx_soya_party_entries_factory
+  on public.soya_party_entries (factory);
 
--- bill_number unique per issuer company, per financial year (Apr-Mar).
--- Same expression as idx_sales_bill_number_issuer_fy_unique on public.sales.
-create unique index if not exists idx_soya_sales_bill_number_issuer_fy_unique
-  on public.soya_sales (
-    bill_number,
-    coalesce(issuer_company_id, ''),
+-- BILL NO is ours to issue, so it is unique per financial year (Apr-Mar) and
+-- restarts each April — which is what the service layer validates.
+create unique index if not exists idx_soya_party_entries_bill_no_fy_unique
+  on public.soya_party_entries (
+    bill_no,
     (
-      (extract(year from sale_date)::int)
-      - (case when extract(month from sale_date) < 4 then 1 else 0 end)
+      (extract(year from date)::int)
+      - (case when extract(month from date) < 4 then 1 else 0 end)
     )
   );
 
--- ------------------------------------------------------------- payment ledger
-create table if not exists public.soya_sale_payments (
+-- ------------------------------------------------------------ party payments
+-- Payments received FROM a party. Mirrors the five-column block on the
+-- per-party ledger tabs: SL NO · DATE · BANK · AMOUNT · REMRKS.
+create table if not exists public.soya_party_payments (
   id text primary key,
-  company_id text not null
-    references public.soya_companies(id) on delete cascade,
+  party_id text not null
+    references public.soya_parties(id) on delete cascade,
   paid_on date not null,
-  amount numeric(14,2) not null default 0,
-  payment_mode text not null
-    check (payment_mode in ('none', 'cash', 'rtgs')) default 'none',
-  rtgs_name text not null default '',
-  note text not null default '',
-  credit_hold_amount numeric(14,2) not null default 0,
+  bank text not null default '',
+  amount numeric(16,2) not null default 0,
+  remarks text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_soya_sale_payments_company_id
-  on public.soya_sale_payments (company_id);
-create index if not exists idx_soya_sale_payments_paid_on
-  on public.soya_sale_payments (paid_on desc);
-
-create table if not exists public.soya_sale_payment_allocations (
-  id text primary key,
-  payment_id text not null
-    references public.soya_sale_payments(id) on delete cascade,
-  sale_id text not null
-    references public.soya_sales(id) on delete restrict,
-  amount numeric(14,2) not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (payment_id, sale_id)
-);
-
-create index if not exists idx_soya_sale_payment_allocations_sale_id
-  on public.soya_sale_payment_allocations (sale_id);
-create index if not exists idx_soya_sale_payment_allocations_payment_id
-  on public.soya_sale_payment_allocations (payment_id);
+create index if not exists idx_soya_party_payments_party_id
+  on public.soya_party_payments (party_id);
+create index if not exists idx_soya_party_payments_paid_on
+  on public.soya_party_payments (paid_on desc);

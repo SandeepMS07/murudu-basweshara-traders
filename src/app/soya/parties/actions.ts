@@ -1,34 +1,32 @@
 "use server";
 
-import { requireRole } from "@/features/auth/lib/session";
+import { revalidatePath } from "next/cache";
+
 import {
-  soyaTradeSchema,
-  type SoyaTradeInput,
-} from "@/features/soya-trade/schemas";
+  soyaPartyEntrySchema,
+  soyaPartyPaymentSchema,
+  type SoyaPartyEntryInput,
+} from "@/features/soya-parties/schemas";
 import {
+  createSoyaParty,
   createSoyaPartyEntry,
   createSoyaPartyPayment,
+  deleteSoyaParty,
   deleteSoyaPartyEntry,
   deleteSoyaPartyPayment,
-  getNextSoyaPartyIdentifiersForDate,
+  getNextSoyaPartyIdentifiers,
+  isSoyaPartyBillNoAvailable,
+  updateSoyaParty,
   updateSoyaPartyEntry,
 } from "@/features/soya-parties/service/soya-party.service";
-import {
-  companyPaymentSchema,
-  issuerCompanySchema,
-} from "@/features/companies/schemas";
-import {
-  soyaCompanySchema,
-  type SoyaCompanyDraft,
-} from "@/features/soya-companies/schemas";
-import {
-  createSoyaCompany,
-  deleteSoyaCompany,
-  updateSoyaCompany,
-} from "@/features/soya-companies/service/soya-company.service";
 
-export async function createSoyaPartyEntryAction(data: SoyaTradeInput) {
-  const parsed = soyaTradeSchema.safeParse(data);
+const LIST_PATH = "/soya/parties";
+const MASTER_PATH = "/soya/parties/companies";
+
+// ------------------------------------------------------------------- entries
+
+export async function createSoyaPartyEntryAction(data: SoyaPartyEntryInput) {
+  const parsed = soyaPartyEntrySchema.safeParse(data);
   if (!parsed.success) {
     return {
       success: false as const,
@@ -36,8 +34,10 @@ export async function createSoyaPartyEntryAction(data: SoyaTradeInput) {
     };
   }
   try {
-    const record = await createSoyaPartyEntry(parsed.data);
-    return { success: true as const, sale: record };
+    const entry = await createSoyaPartyEntry(parsed.data);
+    revalidatePath(LIST_PATH);
+    revalidatePath(MASTER_PATH);
+    return { success: true as const, entry };
   } catch (error) {
     console.error("createSoyaPartyEntryAction failed:", error);
     return {
@@ -49,9 +49,9 @@ export async function createSoyaPartyEntryAction(data: SoyaTradeInput) {
 
 export async function updateSoyaPartyEntryAction(
   id: string,
-  data: SoyaTradeInput,
+  data: SoyaPartyEntryInput,
 ) {
-  const parsed = soyaTradeSchema.safeParse(data);
+  const parsed = soyaPartyEntrySchema.safeParse(data);
   if (!parsed.success) {
     return {
       success: false as const,
@@ -59,8 +59,10 @@ export async function updateSoyaPartyEntryAction(
     };
   }
   try {
-    const record = await updateSoyaPartyEntry(id, parsed.data);
-    return { success: true as const, sale: record };
+    const entry = await updateSoyaPartyEntry(id, parsed.data);
+    revalidatePath(LIST_PATH);
+    revalidatePath(MASTER_PATH);
+    return { success: true as const, entry };
   } catch (error) {
     console.error("updateSoyaPartyEntryAction failed:", error);
     return {
@@ -70,87 +72,66 @@ export async function updateSoyaPartyEntryAction(
   }
 }
 
+/** Throws on failure — the row action surfaces the message as a toast. */
 export async function deleteSoyaPartyEntryAction(id: string) {
-  if (!id?.trim()) {
-    return { success: false as const, message: "Entry id is required" };
-  }
-  try {
-    await deleteSoyaPartyEntry(id.trim());
-    return { success: true as const };
-  } catch (error) {
-    return {
-      success: false as const,
-      message: error instanceof Error ? error.message : "Failed to delete entry",
-    };
-  }
+  await deleteSoyaPartyEntry(id);
+  revalidatePath(LIST_PATH);
+  revalidatePath(MASTER_PATH);
 }
 
-export async function getNextSoyaPartyBillNumberAction(
-  saleDate: string,
-  issuerCompanyId: string | null,
+export async function getNextSoyaPartyIdentifiersAction(date: string) {
+  return getNextSoyaPartyIdentifiers(date);
+}
+
+export async function checkSoyaPartyBillNoAction(
+  billNo: string,
+  date: string,
+  excludeId?: string,
 ) {
-  await requireRole(["admin"]);
-  const { nextBillNumber } = await getNextSoyaPartyIdentifiersForDate(
-    saleDate,
-    issuerCompanyId,
-  );
-  return nextBillNumber;
+  return isSoyaPartyBillNoAvailable(billNo, date, excludeId);
 }
 
-export async function createSoyaPartyAction(data: SoyaCompanyDraft) {
-  const parsed = soyaCompanySchema.safeParse(data);
-  if (!parsed.success) {
-    return {
-      success: false as const,
-      message: parsed.error.issues[0]?.message ?? "Invalid party data",
-    };
-  }
-  try {
-    const company = await createSoyaCompany(parsed.data);
-    return { success: true as const, company };
-  } catch (error) {
-    return {
-      success: false as const,
-      message: error instanceof Error ? error.message : "Failed to create party",
-    };
-  }
+// -------------------------------------------------------------- party master
+
+export async function createSoyaPartyAction(name: string) {
+  await createSoyaParty(name);
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
 }
 
-/*
- * The three actions below mirror the maize /companies action contract exactly —
- * they throw on invalid input and return the entity rather than a result object.
- * That is what the party ledger screen (copied from CompaniesManager) expects,
- * so its logic works unchanged. createSoyaPartyAction above keeps the
- * result-object shape instead, because the entry form renders the message
- * inline rather than throwing.
- */
-export async function createSoyaPartyCompanyAction(data: unknown) {
-  const parsed = soyaCompanySchema.parse(data);
-  if (parsed.type === "issuer") {
-    issuerCompanySchema.parse(parsed);
-  }
-  return createSoyaCompany(parsed);
+export async function updateSoyaPartyAction(id: string, name: string) {
+  await updateSoyaParty(id, name);
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
 }
 
-export async function updateSoyaPartyCompanyAction(id: string, data: unknown) {
-  const parsed = soyaCompanySchema.parse(data);
-  if (parsed.type === "issuer") {
-    issuerCompanySchema.parse(parsed);
-  }
-  return updateSoyaCompany(id, parsed);
+export async function deleteSoyaPartyAction(id: string) {
+  await deleteSoyaParty(id);
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
 }
 
-export async function deleteSoyaPartyCompanyAction(id: string) {
-  return deleteSoyaCompany(id);
-}
+// ------------------------------------------------------------ party payments
 
-// `unknown` in, parsed here: the schema supplies defaults for payment_mode and
-// rtgs_name, which callers omit. Same contract as the maize payment action.
-export async function createSoyaPartyPaymentAction(data: unknown) {
-  const parsed = companyPaymentSchema.parse(data);
-  return createSoyaPartyPayment(parsed);
+export async function createSoyaPartyPaymentAction(draft: {
+  ownerId: string;
+  paid_on: string;
+  bank: string;
+  amount: number;
+  remarks: string;
+}) {
+  const parsed = soyaPartyPaymentSchema.parse({
+    party_id: draft.ownerId,
+    paid_on: draft.paid_on,
+    bank: draft.bank,
+    amount: draft.amount,
+    remarks: draft.remarks,
+  });
+  await createSoyaPartyPayment(parsed);
+  revalidatePath(MASTER_PATH);
 }
 
 export async function deleteSoyaPartyPaymentAction(id: string) {
   await deleteSoyaPartyPayment(id);
+  revalidatePath(MASTER_PATH);
 }

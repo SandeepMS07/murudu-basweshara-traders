@@ -2,19 +2,12 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
-import { SoyaTradeForm } from "@/features/soya-trade/components/SoyaTradeForm";
-import { soyaPartyLabels } from "@/features/soya-parties/config";
+import { SoyaPartyForm } from "@/features/soya-parties/components/SoyaPartyForm";
 import {
   getSoyaParties,
   getSoyaPartyEntryById,
-  getSoyaPartyIssuers,
 } from "@/features/soya-parties/service/soya-party.service";
-import {
-  createSoyaPartyAction,
-  createSoyaPartyEntryAction,
-  getNextSoyaPartyBillNumberAction,
-  updateSoyaPartyEntryAction,
-} from "../../actions";
+import { getSoyaFactories } from "@/features/soya-factory/service/soya-factory.service";
 
 export default async function EditSoyaPartyEntryPage({
   params,
@@ -24,14 +17,14 @@ export default async function EditSoyaPartyEntryPage({
   await requireSoyaAdminPage();
 
   const { id } = await params;
-  const record = await getSoyaPartyEntryById(id);
-  if (!record) {
+  const entry = await getSoyaPartyEntryById(id);
+  if (!entry) {
     notFound();
   }
 
-  const [parties, issuers] = await Promise.all([
+  const [parties, factories] = await Promise.all([
     getSoyaParties(),
-    getSoyaPartyIssuers(),
+    getSoyaFactories(),
   ]);
 
   return (
@@ -41,22 +34,13 @@ export default async function EditSoyaPartyEntryPage({
           Edit Party Entry
         </h1>
         <p className="text-zinc-500">
-          Update the details for bill {record.bill_number}.
+          Update the details for BILL NO {entry.bill_no || "-"}.
         </p>
       </div>
-      <SoyaTradeForm
-        initialData={record}
-        buyerCompanies={parties}
-        issuerCompanies={issuers}
-        canCreateBuyer
-        entityLabel={soyaPartyLabels.entityLabel}
-        partyLabel={soyaPartyLabels.partyLabel}
-        listHref={soyaPartyLabels.listHref}
-        partyType={soyaPartyLabels.partyType}
-        createAction={createSoyaPartyEntryAction}
-        updateAction={updateSoyaPartyEntryAction}
-        nextBillNumberAction={getNextSoyaPartyBillNumberAction}
-        createPartyAction={createSoyaPartyAction}
+      <SoyaPartyForm
+        initialData={entry}
+        partyOptions={parties.map((party) => party.name)}
+        factoryOptions={factories.map((factory) => factory.name)}
       />
     </AppShell>
   );
