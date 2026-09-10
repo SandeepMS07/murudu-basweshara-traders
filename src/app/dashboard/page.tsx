@@ -5,8 +5,13 @@ import { AppShell } from "@/components/layout/AppShell";
 import { getPurchases } from "@/features/purchases/service/purchase.service";
 import { getSales } from "@/features/sales/service/sale.service";
 import { getBiltys } from "@/features/bilty/service/bilty.service";
-import { getCompanies } from "@/features/companies/service/company.service";
-import { PurchaseTrendChart } from "@/features/dashboard/components/PurchaseTrendChart";
+import {
+  getCompanies,
+  getCompanyPaymentAllocations,
+  getCompanyPayments,
+} from "@/features/companies/service/company.service";
+import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
+import { SalesReceivablesCards } from "@/features/dashboard/components/SalesReceivablesCards";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 
@@ -18,6 +23,14 @@ export default async function DashboardPage() {
     getBiltys(),
     getCompanies("buyer"),
   ]);
+  const [companyPaymentsResult, allocationsResult] = await Promise.allSettled([
+    getCompanyPayments(),
+    getCompanyPaymentAllocations(),
+  ]);
+  const companyPayments =
+    companyPaymentsResult.status === "fulfilled" ? companyPaymentsResult.value : [];
+  const allocations =
+    allocationsResult.status === "fulfilled" ? allocationsResult.value : [];
   const nowIst = new Date(
     new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
   );
@@ -31,6 +44,18 @@ export default async function DashboardPage() {
   const scopedBiltys = biltys.filter(
     (b) => b.date >= fyStart && b.date <= fyEnd,
   );
+
+  // Payments are allocated FIFO across a company's entire sale history (see
+  // computeEffectiveSalePending), so this must run over ALL sales, not just
+  // the FY-scoped subset — otherwise payments meant for older sales spill
+  // onto this year's sales and understate what's actually still pending.
+  const pendingBySaleId =
+    companyPayments.length > 0 || allocations.length > 0
+      ? computeEffectiveSalePending(sales, companyPayments, allocations)
+          .pendingBySaleId
+      : {};
+  const effectivePending = (sale: (typeof scopedSales)[number]) =>
+    pendingBySaleId[sale.id] ?? sale.pending_amount ?? 0;
 
   const purchaseAmountFromPurchases = scopedPurchases.reduce(
     (acc, p) => acc + (p.final_total || 0),
@@ -47,7 +72,7 @@ export default async function DashboardPage() {
     0,
   );
   const totalSalesPending = scopedSales.reduce(
-    (acc, s) => acc + (s.pending_amount || 0),
+    (acc, s) => acc + effectivePending(s),
     0,
   );
   const purchasedBagsFromPurchases = scopedPurchases.reduce(
@@ -96,36 +121,6 @@ export default async function DashboardPage() {
   );
   const stockWeight =
     totalPurchasedNetWeight - totalSoldNetWeight + openingStockWeightFromFy2025;
-  const rtgsAmount = scopedPurchases
-    .filter((p) => p.payment_through === "RTGS")
-    .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const upiAmount = scopedPurchases
-    .filter((p) => p.payment_through === "UPI")
-    .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const pendingAmount = scopedPurchases
-    .filter((p) => p.payment_through === "none")
-    .reduce((acc, p) => acc + (p.final_total || 0), 0);
-  const byDate = new Map<string, number>();
-  for (const p of scopedPurchases) {
-    byDate.set(p.date, (byDate.get(p.date) || 0) + p.final_total);
-  }
-  const trend = [...byDate.entries()]
-    .map(([date, amount]) => ({ date, amount }))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-10);
-
-  const salesByDate = new Map<string, number>();
-  for (const sale of scopedSales) {
-    salesByDate.set(
-      sale.sale_date,
-      (salesByDate.get(sale.sale_date) || 0) + sale.amount,
-    );
-  }
-  const salesTrend = [...salesByDate.entries()]
-    .map(([date, amount]) => ({ date, amount }))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-7);
-
   const parseTermDays = (terms: string | null | undefined) => {
     const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
     if (!Number.isFinite(parsed) || parsed < 0) return 0;
@@ -149,7 +144,12 @@ export default async function DashboardPage() {
   );
   const companySummary = new Map<
     string,
-    { pending: number; overdue: number }
+    {
+      pending: number;
+      overdue: number;
+      pendingBillCount: number;
+      overdueBillCount: number;
+    }
   >();
 
   for (const sale of scopedSales) {
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
       sale.party ||
       "Unknown";
     const company = companyName.trim() || "Unknown";
-    const pending = sale.pending_amount || 0;
+    const pending = effectivePending(sale);
     const dueDate = getDueDate(sale.sale_date, sale.payment_terms);
     const dueStart = dueDate
       ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
@@ -168,16 +168,29 @@ export default async function DashboardPage() {
     const isOverdue =
       !!dueStart && dueStart.getTime() < todayStart.getTime() && pending > 0;
 
-    const existing = companySummary.get(company) ?? { pending: 0, overdue: 0 };
+    const existing = companySummary.get(company) ?? {
+      pending: 0,
+      overdue: 0,
+      pendingBillCount: 0,
+      overdueBillCount: 0,
+    };
     companySummary.set(company, {
       pending: existing.pending + pending,
       overdue: existing.overdue + (isOverdue ? pending : 0),
+      pendingBillCount: existing.pendingBillCount + (pending > 0 ? 1 : 0),
+      overdueBillCount: existing.overdueBillCount + (isOverdue ? 1 : 0),
     });
   }
 
   const companySummaryRows = [...companySummary.entries()]
     .map(([company, totals]) => ({ company, ...totals }))
+    .filter((row) => row.pending > 0 || row.overdue > 0)
     .sort((a, b) => b.pending - a.pending);
+
+  const totalOverdueAmount = companySummaryRows.reduce(
+    (acc, row) => acc + row.overdue,
+    0,
+  );
 
   return (
     <AppShell>
@@ -288,100 +301,13 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base text-zinc-100">
-                Purchase Trend (Last {trend.length || 0} Days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {trend.length > 0 ? (
-                <PurchaseTrendChart data={trend} />
-              ) : (
-                <p className="text-sm text-zinc-400">No purchase data yet.</p>
-              )}
-            </CardContent>
-          </Card>
+        <SalesReceivablesCards
+          rows={companySummaryRows}
+          totalPending={totalSalesPending}
+          totalOverdue={totalOverdueAmount}
+        />
 
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
-            <CardHeader>
-              <CardTitle className="text-base text-zinc-100">
-                Payment Through
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>RTGS</span>
-                  <span className="font-medium">
-                    {formatCurrencyINR(rtgsAmount, {
-                      maximumFractionDigits: 0,
-                    })}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-[#2a2d34]">
-                  <div
-                    className="h-2 rounded-full bg-[#ff6a3d]"
-                    style={{
-                      width: `${totalPurchasesAmount ? (rtgsAmount / totalPurchasesAmount) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>UPI</span>
-                  <span className="font-medium">
-                    {formatCurrencyINR(upiAmount, { maximumFractionDigits: 0 })}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-[#2a2d34]">
-                  <div
-                    className="h-2 rounded-full bg-[#ff8f6b]"
-                    style={{
-                      width: `${totalPurchasesAmount ? (upiAmount / totalPurchasesAmount) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Pending</span>
-                  <span className="font-medium">
-                    {formatCurrencyINR(pendingAmount, {
-                      maximumFractionDigits: 0,
-                    })}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-[#2a2d34]">
-                  <div
-                    className="h-2 rounded-full bg-[#ffb79e]"
-                    style={{
-                      width: `${totalPurchasesAmount ? (pendingAmount / totalPurchasesAmount) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base text-zinc-100">
-                Sales Trend (Last {salesTrend.length || 0} Days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {salesTrend.length > 0 ? (
-                <PurchaseTrendChart data={salesTrend} />
-              ) : (
-                <p className="text-sm text-zinc-400">No sales data yet.</p>
-              )}
-            </CardContent>
-          </Card>
+        <div className="grid gap-4">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader>
               <CardTitle className="text-base text-zinc-100">
@@ -389,12 +315,16 @@ export default async function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex h-72 flex-col gap-3">
-              <div className="grid grid-cols-3 gap-2 rounded-md border border-[#2a2d34] bg-[#15171c] px-3 py-2 text-xs uppercase tracking-[0.14em] text-zinc-500">
-                <span>Company</span>
-                <span className="text-right">Pending</span>
-                <span className="text-right">Overdue</span>
+              <div className="overflow-x-auto">
+                <div className="grid min-w-160 grid-cols-[1fr_100px_140px_100px_140px] gap-3 rounded-md border border-[#2a2d34] bg-[#15171c] px-3 py-2 text-xs uppercase tracking-[0.14em] text-zinc-500">
+                  <span>Company</span>
+                  <span className="text-right">Bills</span>
+                  <span className="text-right">Pending</span>
+                  <span className="text-right">Bills</span>
+                  <span className="text-right">Overdue</span>
+                </div>
               </div>
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+              <div className="min-h-0 flex-1 space-y-2 overflow-auto pr-1">
                 {companySummaryRows.length === 0 ? (
                   <div className="rounded-md border border-[#2a2d34] bg-[#15171c] p-3 text-sm text-zinc-400">
                     No company data yet.
@@ -403,7 +333,7 @@ export default async function DashboardPage() {
                   companySummaryRows.map((row) => (
                     <div
                       key={row.company}
-                      className="grid grid-cols-3 gap-2 rounded-md border border-[#2a2d34] bg-[#15171c] px-3 py-2 text-sm"
+                      className="grid min-w-160 grid-cols-[1fr_100px_140px_100px_140px] gap-3 rounded-md border border-[#2a2d34] bg-[#15171c] px-3 py-2 text-sm"
                     >
                       <span
                         className="truncate text-zinc-200"
@@ -411,10 +341,16 @@ export default async function DashboardPage() {
                       >
                         {row.company}
                       </span>
+                      <span className="text-right text-zinc-400">
+                        {row.pendingBillCount}
+                      </span>
                       <span className="text-right font-semibold text-zinc-100">
                         {formatCurrencyINR(row.pending, {
                           maximumFractionDigits: 0,
                         })}
+                      </span>
+                      <span className="text-right text-zinc-400">
+                        {row.overdueBillCount}
                       </span>
                       <span className="text-right font-semibold text-[#ff8f6b]">
                         {formatCurrencyINR(row.overdue, {
