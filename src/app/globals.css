@@ -1002,6 +1002,11 @@ input[type="number"] {
   display: none;
 }
 
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
 @media print {
   @page purchase-sheet {
     size: A4 landscape;
@@ -1013,7 +1018,7 @@ input[type="number"] {
     margin: 5mm;
   }
 
-  body>*:not(.bill-print-root) {
+  body:has(> .bill-print-root)>*:not(.bill-print-root) {
     display: none !important;
   }
 

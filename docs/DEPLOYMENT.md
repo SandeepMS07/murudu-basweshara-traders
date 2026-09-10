@@ -50,7 +50,21 @@ Creates `user_permissions (user_id, module, level)` used by the new login/permis
 - Run it on local/dev if sales inserts fail there with duplicate bill_number errors.
 - Safe to re-run: it only drops/creates indexes (`if exists` / `if not exists`).
 
-### 2.3 Cleanup (optional, after confidence)
+### 2.3 `company_payments.credit_hold_amount` — required for the "hold as credit" payment option
+
+Run this on any database that doesn't already have the column (safe/idempotent):
+
+```sql
+alter table public.company_payments
+  add column if not exists credit_hold_amount numeric(14,2) not null default 0;
+```
+
+Also included in the main `supabase/schema.sql`. Lets staff mark part of a payment
+as an unapplied credit (instead of it auto-rolling onto the next bill) when
+recording a payment in Companies → Payment Ledger. Shows as "Credit Balance" in
+the app only — intentionally not shown on the customer-facing Statement of Account.
+
+### 2.4 Cleanup (optional, after confidence)
 
 ```sql
 -- backup created during the SRI LAKSHMI '*' bill-number cleanup (2026-08-19)

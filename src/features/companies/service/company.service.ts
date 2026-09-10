@@ -37,6 +37,7 @@ type CompanyPaymentRow = {
   payment_mode: "none" | "cash" | "rtgs" | null;
   rtgs_name: string | null;
   note: string | null;
+  credit_hold_amount: number | string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -81,6 +82,10 @@ function toCompanyPayment(row: CompanyPaymentRow): CompanyPayment {
     payment_mode: row.payment_mode ?? "none",
     rtgs_name: row.rtgs_name ?? "",
     note: row.note ?? "",
+    credit_hold_amount:
+      typeof row.credit_hold_amount === "number"
+        ? row.credit_hold_amount
+        : Number(row.credit_hold_amount || 0),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -394,8 +399,11 @@ export async function createCompanyPayment(
   const allocations = (input.allocations ?? []).filter((item) => item.amount > 0);
   const saleIds = [...new Set(allocations.map((item) => item.sale_id))];
   const totalAllocated = allocations.reduce((sum, item) => sum + item.amount, 0);
-  if (totalAllocated > input.amount) {
-    throw new Error("Allocated amount cannot exceed payment amount");
+  const creditHoldAmount = input.credit_hold_amount ?? 0;
+  if (totalAllocated + creditHoldAmount > input.amount) {
+    throw new Error(
+      "Allocated amount plus credit hold cannot exceed payment amount"
+    );
   }
 
   if (saleIds.length > 0) {
@@ -459,6 +467,7 @@ export async function createCompanyPayment(
     payment_mode: input.payment_mode,
     rtgs_name: input.payment_mode === "rtgs" ? input.rtgs_name : "",
     note: input.note || "",
+    credit_hold_amount: creditHoldAmount,
     updated_at: new Date().toISOString(),
   };
 

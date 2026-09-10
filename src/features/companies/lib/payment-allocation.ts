@@ -6,6 +6,8 @@ import { Sale } from "@/features/sales/schemas";
 type PendingResult = {
   pendingBySaleId: Record<string, number>;
   allocatedBySaleId: Record<string, number>;
+  saleIdsByPaymentId: Record<string, string[]>;
+  creditByCompanyId: Record<string, number>;
 };
 
 const parseTermDays = (terms: string | null | undefined) => {
@@ -42,6 +44,13 @@ export function computeEffectiveSalePending(
 
   const explicitAllocatedBySaleId = new Map<string, number>();
   const explicitAllocatedByPaymentId = new Map<string, number>();
+  const saleIdsByPaymentId = new Map<string, Set<string>>();
+
+  const linkPaymentToSale = (paymentId: string, saleId: string) => {
+    const set = saleIdsByPaymentId.get(paymentId) ?? new Set<string>();
+    set.add(saleId);
+    saleIdsByPaymentId.set(paymentId, set);
+  };
 
   for (const allocation of allocations) {
     if (!saleById.has(allocation.sale_id) || !paymentById.has(allocation.payment_id)) {
@@ -55,6 +64,7 @@ export function computeEffectiveSalePending(
       allocation.payment_id,
       (explicitAllocatedByPaymentId.get(allocation.payment_id) ?? 0) + allocation.amount
     );
+    linkPaymentToSale(allocation.payment_id, allocation.sale_id);
   }
 
   const remainingBySaleId = new Map<string, number>();
@@ -80,6 +90,8 @@ export function computeEffectiveSalePending(
     current.push(payment);
     paymentsByCompanyId.set(payment.company_id, current);
   }
+
+  const creditByCompanyId = new Map<string, number>();
 
   for (const [companyId, saleIds] of saleIdsByCompanyId) {
     const companyPayments = paymentsByCompanyId.get(companyId) ?? [];
@@ -107,8 +119,11 @@ export function computeEffectiveSalePending(
 
     let saleIndex = 0;
     for (const payment of sortedPayments) {
+      const creditHold = Math.max(payment.credit_hold_amount ?? 0, 0);
       let unallocatedAmount = Math.max(
-        payment.amount - (explicitAllocatedByPaymentId.get(payment.id) ?? 0),
+        payment.amount -
+          (explicitAllocatedByPaymentId.get(payment.id) ?? 0) -
+          creditHold,
         0
       );
       while (unallocatedAmount > 0 && saleIndex < sortedSaleIds.length) {
@@ -121,10 +136,18 @@ export function computeEffectiveSalePending(
         const applied = Math.min(unallocatedAmount, saleRemaining);
         remainingBySaleId.set(saleId, saleRemaining - applied);
         allocatedBySaleId.set(saleId, (allocatedBySaleId.get(saleId) ?? 0) + applied);
+        linkPaymentToSale(payment.id, saleId);
         unallocatedAmount -= applied;
         if ((remainingBySaleId.get(saleId) ?? 0) <= 0) {
           saleIndex += 1;
         }
+      }
+      const leftover = creditHold + unallocatedAmount;
+      if (leftover > 0) {
+        creditByCompanyId.set(
+          companyId,
+          (creditByCompanyId.get(companyId) ?? 0) + leftover
+        );
       }
     }
   }
@@ -137,8 +160,20 @@ export function computeEffectiveSalePending(
     allocatedBySaleRecord[sale.id] = Math.max(allocated, 0);
   }
 
+  const saleIdsByPaymentIdRecord: Record<string, string[]> = {};
+  for (const [paymentId, saleIdSet] of saleIdsByPaymentId) {
+    saleIdsByPaymentIdRecord[paymentId] = [...saleIdSet];
+  }
+
+  const creditByCompanyIdRecord: Record<string, number> = {};
+  for (const [companyId, credit] of creditByCompanyId) {
+    creditByCompanyIdRecord[companyId] = credit;
+  }
+
   return {
     pendingBySaleId,
     allocatedBySaleId: allocatedBySaleRecord,
+    saleIdsByPaymentId: saleIdsByPaymentIdRecord,
+    creditByCompanyId: creditByCompanyIdRecord,
   };
 }
