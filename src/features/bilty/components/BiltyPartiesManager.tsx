@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Printer, Receipt } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useCanEdit } from "@/features/auth/components/AuthProvider";
@@ -37,6 +37,7 @@ import {
 } from "@/app/bilty/actions";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { exportRowsToCsv } from "@/lib/excel/client-export";
+import { printIframeAs } from "@/lib/print-iframe";
 
 interface BiltyPartiesManagerProps {
   parties: BiltyParty[];
@@ -58,6 +59,8 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
   const [deletePaymentTarget, setDeletePaymentTarget] = useState<BiltyPartyPayment | null>(null);
   const [activePartyId, setActivePartyId] = useState<string | null>(parties[0]?.id ?? null);
   const [detailsTab, setDetailsTab] = useState<"purchases" | "ledger">("purchases");
+  const [statementOpen, setStatementOpen] = useState(false);
+  const statementFrameRef = useRef<HTMLIFrameElement | null>(null);
   const [paidOn, setPaidOn] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [amount, setAmount] = useState("");
   const [paymentMode, setPaymentMode] = useState<"" | "none" | "cash" | "upi" | "rtgs">("");
@@ -389,29 +392,41 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
             </div>
           ) : null}
 
-          <div className="mt-4 inline-flex rounded-md border border-[#252932] bg-[#14161b] p-1">
-            <button
-              type="button"
-              onClick={() => setDetailsTab("purchases")}
-              className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
-                detailsTab === "purchases"
-                  ? "bg-[#23262e] text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Purchase Details
-            </button>
-            <button
-              type="button"
-              onClick={() => setDetailsTab("ledger")}
-              className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
-                detailsTab === "ledger"
-                  ? "bg-[#23262e] text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Payment Ledger
-            </button>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] p-1">
+              <button
+                type="button"
+                onClick={() => setDetailsTab("purchases")}
+                className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
+                  detailsTab === "purchases"
+                    ? "bg-[#23262e] text-zinc-100"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Purchase Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setDetailsTab("ledger")}
+                className={`cursor-pointer rounded-sm px-3 py-1.5 text-sm transition ${
+                  detailsTab === "ledger"
+                    ? "bg-[#23262e] text-zinc-100"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Payment Ledger
+              </button>
+            </div>
+            {activeParty ? (
+              <button
+                type="button"
+                onClick={() => setStatementOpen(true)}
+                className="inline-flex items-center rounded-md border border-[#2a2d34] bg-[#1b1e24] px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-[#23262e] hover:text-zinc-100"
+              >
+                <Receipt className="mr-2 h-4 w-4" />
+                View Statement
+              </button>
+            ) : null}
           </div>
         </CardHeader>
 
@@ -797,6 +812,53 @@ export function BiltyPartiesManager({ parties, biltys, payments }: BiltyPartiesM
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="flex h-[90vh] w-[95vw] max-w-5xl flex-col gap-0 overflow-hidden rounded-xl border border-[#2a2d34] bg-[#15171c] p-0 sm:max-w-5xl"
+        >
+          <div className="flex items-center justify-between border-b border-[#2a2d34] px-4 py-2.5">
+            <span className="text-sm font-medium text-zinc-200">
+              Statement of Account
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (!activeParty) return;
+                  printIframeAs(
+                    statementFrameRef.current?.contentWindow,
+                    `${activeParty.name} Statement ${format(new Date(), "dd-MM-yyyy")}`,
+                  );
+                }}
+                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setStatementOpen(false)}
+                className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+          {activeParty && statementOpen ? (
+            <iframe
+              ref={statementFrameRef}
+              src={`/bilty/parties/${activeParty.id}/statement?embed=1`}
+              title="Statement of Account"
+              className="min-h-0 flex-1 bg-white"
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>
