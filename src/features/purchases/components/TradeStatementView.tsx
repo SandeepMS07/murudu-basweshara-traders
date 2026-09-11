@@ -6,7 +6,6 @@ import { Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-  partyOptions,
   summariseRecords,
   type LedgerFilter,
   type LedgerRecord,
@@ -140,37 +139,6 @@ export function TradeStatementView<T extends LedgerRecord>({
   );
 
   const totals = useMemo(() => summariseRecords(records), [records]);
-
-  // Grouped by counterparty so a statement run across everyone still shows the
-  // split — the same role the issuer breakdown plays on the Sales statement.
-  const partyBreakdown = useMemo(() => {
-    const map = new Map<
-      string,
-      { name: string; count: number; bags: number; netWeight: number; total: number }
-    >();
-    for (const record of records) {
-      const name = (partyOf(record) || "").trim() || "Unnamed";
-      const key = name.toLowerCase();
-      const row = map.get(key) ?? {
-        name,
-        count: 0,
-        bags: 0,
-        netWeight: 0,
-        total: 0,
-      };
-      row.count += 1;
-      row.bags += record.bags;
-      row.netWeight += record.net_weight;
-      row.total += record.final_total;
-      map.set(key, row);
-    }
-    return [...map.values()].sort((a, b) => b.total - a.total);
-  }, [records, partyOf]);
-
-  const distinctParties = useMemo(
-    () => partyOptions(records, partyOf).length,
-    [records, partyOf],
-  );
 
   const widths = showBagLess
     ? WIDTHS_WITH_BAG_LESS
@@ -425,43 +393,6 @@ export function TradeStatementView<T extends LedgerRecord>({
                 </div>
               )}
             </section>
-
-            {distinctParties > 1 ? (
-              <section className="mt-5 break-inside-avoid">
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                  {partyLabel}-wise Summary
-                </h2>
-                <table className="w-full max-w-2xl border-collapse text-[10px]">
-                  <thead>
-                    <tr className="bg-zinc-100 text-left text-[9px] uppercase tracking-wide text-zinc-600">
-                      <Th>{partyLabel}</Th>
-                      <Th className="text-right">Records</Th>
-                      <Th className="text-right">Bags</Th>
-                      <Th className="text-right">Net Wt</Th>
-                      <Th className="text-right">Total</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {partyBreakdown.map((row) => (
-                      <tr
-                        key={row.name}
-                        className="border-b border-zinc-200 last:border-0"
-                      >
-                        <Td>{row.name}</Td>
-                        <Td className="num text-right">{whole(row.count)}</Td>
-                        <Td className="num text-right">{whole(row.bags)}</Td>
-                        <Td className="num text-right">
-                          {whole(row.netWeight)}
-                        </Td>
-                        <Td className="num text-right font-semibold">
-                          {money(row.total)}
-                        </Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            ) : null}
 
             <footer className="mt-6 border-t border-zinc-200 pt-3 text-[9px] text-zinc-400">
               Total = Amount{showBagLess ? " − Bag Less" : ""} + Add − Paid, so
