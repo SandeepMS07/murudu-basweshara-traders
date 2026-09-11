@@ -1,87 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  endOfMonth,
-  format,
-  startOfMonth,
-  subDays,
-  subMonths,
-} from "date-fns";
 
 import { cn } from "@/lib/utils";
-import { getFinancialYearBounds } from "@/lib/financial-year";
-
-/** Inclusive `yyyy-MM-dd` bounds. An empty string means "unbounded". */
-export type DateRange = { from: string; to: string };
-
-export type DateRangePresetKey =
-  | "this_month"
-  | "last_month"
-  | "last_90"
-  | "this_fy"
-  | "all";
-
-const ISO = "yyyy-MM-dd";
-
-/**
- * Resolved against a caller-supplied "today" so the server and client agree —
- * this app works in IST, and the page already computes an IST-adjusted now.
- */
-export function resolvePreset(key: DateRangePresetKey, today: Date): DateRange {
-  switch (key) {
-    case "this_month":
-      return {
-        from: format(startOfMonth(today), ISO),
-        to: format(endOfMonth(today), ISO),
-      };
-    case "last_month": {
-      const previous = subMonths(today, 1);
-      return {
-        from: format(startOfMonth(previous), ISO),
-        to: format(endOfMonth(previous), ISO),
-      };
-    }
-    case "last_90":
-      return {
-        from: format(subDays(today, 89), ISO),
-        to: format(today, ISO),
-      };
-    case "this_fy": {
-      const { start, end } = getFinancialYearBounds(today);
-      return { from: start, to: end };
-    }
-    case "all":
-      return { from: "", to: "" };
-  }
-}
-
-const PRESETS: { key: DateRangePresetKey; label: string }[] = [
-  { key: "this_month", label: "This month" },
-  { key: "last_month", label: "Last month" },
-  { key: "last_90", label: "Last 90 days" },
-  { key: "this_fy", label: "This FY" },
-  { key: "all", label: "All time" },
-];
-
-/** True when the range is exactly what a preset resolves to. */
-function matchingPreset(
-  range: DateRange,
-  today: Date,
-): DateRangePresetKey | null {
-  for (const { key } of PRESETS) {
-    const resolved = resolvePreset(key, today);
-    if (resolved.from === range.from && resolved.to === range.to) return key;
-  }
-  return null;
-}
-
-/** Inclusive date test. An empty bound is open-ended. */
-export function isWithinRange(date: string, range: DateRange): boolean {
-  if (range.from && date < range.from) return false;
-  if (range.to && date > range.to) return false;
-  return true;
-}
+import {
+  DATE_RANGE_PRESETS,
+  matchingPreset,
+  resolvePreset,
+  type DateRange,
+} from "@/lib/date-range";
 
 interface DateRangeFilterProps {
   value: DateRange;
@@ -107,7 +34,7 @@ export function DateRangeFilter({
       {/* shrink-0 + nowrap: the pills must stay on one line, so when space runs
           short the selects beside them shrink and this group wraps whole. */}
       <div className="flex h-9 shrink-0 items-center gap-0.5 overflow-x-auto rounded-lg bg-[#0f1115] p-1 ring-1 ring-inset ring-[#242832]">
-        {PRESETS.map((preset) => {
+        {DATE_RANGE_PRESETS.map((preset) => {
           const isActive = activePreset === preset.key;
           return (
             <button

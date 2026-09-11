@@ -1,18 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { parseISO } from "date-fns";
+import { useMemo, useRef, useState } from "react";
+import { format, parseISO } from "date-fns";
+import { FileText, Printer } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DateRangeFilter,
-  isWithinRange,
-  type DateRange,
-} from "@/components/shared/DateRangeFilter";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DateRangeFilter } from "@/components/shared/DateRangeFilter";
 import { SalesTableClient } from "@/features/sales/components/SalesTableClient";
+import {
+  filterSales,
+  salesFilterToParams,
+  summariseSales,
+  type SalesFilter,
+} from "@/features/sales/lib/sales-filter";
 import type { Sale } from "@/features/sales/schemas";
 import type { Company } from "@/features/companies/schemas";
+import type { DateRange } from "@/lib/date-range";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import { printIframeAs } from "@/lib/print-iframe";
 
 interface SalesOverviewClientProps {
   /** Every sale; the date filter decides what is in view. */
@@ -43,38 +50,25 @@ export function SalesOverviewClient({
   const [range, setRange] = useState<DateRange>(initialRange);
   const [issuerId, setIssuerId] = useState("");
   const [buyerId, setBuyerId] = useState("");
+  const [statementOpen, setStatementOpen] = useState(false);
+  const statementFrameRef = useRef<HTMLIFrameElement>(null);
+
+  const filter: SalesFilter = useMemo(
+    () => ({ range, issuerId, buyerId }),
+    [range, issuerId, buyerId],
+  );
 
   const filteredSales = useMemo(
-    () =>
-      sales.filter((sale) => {
-        if (!isWithinRange(sale.sale_date, range)) return false;
-        if (issuerId && sale.issuer_company_id !== issuerId) return false;
-        if (buyerId && sale.sale_company_id !== buyerId) return false;
-        return true;
-      }),
-    [sales, range, issuerId, buyerId],
+    () => filterSales(sales, filter),
+    [sales, filter],
   );
 
   // Every card reflects the sales currently in view, so the filter bar and the
-  // totals can never disagree.
-  const totals = useMemo(() => {
-    let netWeight = 0;
-    let amount = 0;
-    let pending = 0;
-    for (const sale of filteredSales) {
-      netWeight += sale.net_weight;
-      amount += sale.amount;
-      pending += pendingBySaleId[sale.id] ?? sale.pending_amount;
-    }
-    return {
-      count: filteredSales.length,
-      netWeight,
-      amount,
-      pending,
-      // What has actually been settled against the bills in view.
-      received: amount - pending,
-    };
-  }, [filteredSales, pendingBySaleId]);
+  // totals can never disagree. The statement runs the same two helpers.
+  const totals = useMemo(
+    () => summariseSales(filteredSales, pendingBySaleId),
+    [filteredSales, pendingBySaleId],
+  );
 
   const cards = [
     { title: "Total Sales", value: formatNumberIN(totals.count, WHOLE) },
@@ -116,6 +110,20 @@ export function SalesOverviewClient({
     setIssuerId("");
     setBuyerId("");
   };
+
+  // The statement is a real server-rendered page, so the filter travels as a
+  // query string rather than as client state. That also makes the URL
+  // shareable and the print output reproducible.
+  const statementHref = useMemo(() => {
+    const params = salesFilterToParams(filter);
+    params.set("embed", "1");
+    return `/sales/statement?${params.toString()}`;
+  }, [filter]);
+
+  const statementFileName = useMemo(() => {
+    const scope = selectedIssuerName ?? "All Issuers";
+    return `Sales Statement ${scope} ${format(new Date(), "dd-MM-yyyy")}`;
+  }, [selectedIssuerName]);
 
   const selectClassName =
     "h-9 min-w-36 flex-1 cursor-pointer truncate rounded-lg bg-[#0f1115] px-2.5 text-xs text-zinc-100 ring-1 ring-inset ring-[#242832] outline-none sm:max-w-60 focus-visible:ring-[#ff6a3d]";
@@ -191,6 +199,14 @@ export function SalesOverviewClient({
                 Clear filters
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setStatementOpen(true)}
+              className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#ff6a3d] px-2.5 py-1.5 text-xs font-semibold text-white shadow-[0_1px_6px_rgba(255,106,61,0.35)] transition-colors hover:bg-[#ff5a28]"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              View Statement
+            </button>
           </div>
         </div>
       </div>
@@ -202,6 +218,52 @@ export function SalesOverviewClient({
         pendingBySaleId={pendingBySaleId}
         addSaleHref={addSaleHref}
       />
+
+      <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="flex h-[92vh] w-[97vw] max-w-7xl flex-col gap-0 overflow-hidden rounded-xl border border-[#2a2d34] bg-[#15171c] p-0 sm:max-w-7xl"
+        >
+          <div className="flex items-center justify-between border-b border-[#2a2d34] px-4 py-2.5">
+            <span className="text-sm font-medium text-zinc-200">
+              Sales Statement
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() =>
+                  printIframeAs(
+                    statementFrameRef.current?.contentWindow,
+                    statementFileName,
+                  )
+                }
+                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setStatementOpen(false)}
+                className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+          {statementOpen ? (
+            <iframe
+              ref={statementFrameRef}
+              src={statementHref}
+              title="Sales Statement"
+              className="min-h-0 flex-1 bg-white"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
