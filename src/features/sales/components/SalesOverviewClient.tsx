@@ -96,8 +96,29 @@ export function SalesOverviewClient({
     },
   ];
 
+  // Company names here are long ("SRI MURUDA BASAVESHWARA TRADERS"), so the
+  // select is allowed to shrink and the full name goes in a tooltip.
+  const selectedIssuer = issuerCompanies.find((c) => c.id === issuerId);
+  const selectedIssuerName = selectedIssuer
+    ? selectedIssuer.display_name || selectedIssuer.name
+    : null;
+  const selectedBuyerName =
+    buyerCompanies.find((c) => c.id === buyerId)?.name ?? null;
+
+  const isFiltered =
+    range.from !== initialRange.from ||
+    range.to !== initialRange.to ||
+    issuerId !== "" ||
+    buyerId !== "";
+
+  const resetFilters = () => {
+    setRange(initialRange);
+    setIssuerId("");
+    setBuyerId("");
+  };
+
   const selectClassName =
-    "h-10 w-full rounded-md border border-[#2a2d34] bg-[#14161b] px-3 text-sm text-zinc-100 lg:max-w-[280px]";
+    "h-9 min-w-36 flex-1 cursor-pointer truncate rounded-lg bg-[#0f1115] px-2.5 text-xs text-zinc-100 ring-1 ring-inset ring-[#242832] outline-none sm:max-w-60 focus-visible:ring-[#ff6a3d]";
 
   return (
     <>
@@ -121,13 +142,17 @@ export function SalesOverviewClient({
         ))}
       </div>
 
-      <div className="mb-3 flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-        <DateRangeFilter value={range} onChange={setRange} today={today} />
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="mb-3 rounded-xl border border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] p-2.5 shadow-[0_12px_30px_rgba(0,0,0,0.3)]">
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangeFilter value={range} onChange={setRange} today={today} />
+
+          {/* flex-1 with a min width: these give up space first, so the pills
+              and date inputs keep their size instead of wrapping. */}
           <select
             value={issuerId}
             onChange={(event) => setIssuerId(event.target.value)}
             aria-label="Filter by issuer company"
+            title={selectedIssuerName ?? "All issuer companies"}
             className={selectClassName}
           >
             <option value="">All issuer companies</option>
@@ -141,6 +166,7 @@ export function SalesOverviewClient({
             value={buyerId}
             onChange={(event) => setBuyerId(event.target.value)}
             aria-label="Filter by buyer company"
+            title={selectedBuyerName ?? "All buyer companies"}
             className={selectClassName}
           >
             <option value="">All buyer companies</option>
@@ -150,6 +176,22 @@ export function SalesOverviewClient({
               </option>
             ))}
           </select>
+
+          <div className="ml-auto flex items-center gap-2 pl-1">
+            <span className="whitespace-nowrap text-xs text-zinc-500">
+              {formatNumberIN(totals.count, WHOLE)} of{" "}
+              {formatNumberIN(sales.length, WHOLE)} sales
+            </span>
+            {isFiltered ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-[#242832] transition-colors hover:bg-[#1b1e25] hover:text-zinc-100"
+              >
+                Clear filters
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 

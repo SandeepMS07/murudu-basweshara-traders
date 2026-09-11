@@ -103,13 +103,10 @@ export function DateRangeFilter({
   );
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3",
-        className,
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[#2a2d34] bg-[#14161b] p-1">
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      {/* shrink-0 + nowrap: the pills must stay on one line, so when space runs
+          short the selects beside them shrink and this group wraps whole. */}
+      <div className="flex h-9 shrink-0 items-center gap-0.5 overflow-x-auto rounded-lg bg-[#0f1115] p-1 ring-1 ring-inset ring-[#242832]">
         {PRESETS.map((preset) => {
           const isActive = activePreset === preset.key;
           return (
@@ -119,10 +116,10 @@ export function DateRangeFilter({
               onClick={() => onChange(resolvePreset(preset.key, today))}
               aria-pressed={isActive}
               className={cn(
-                "cursor-pointer whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "cursor-pointer whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                 isActive
-                  ? "bg-[#ff6a3d] text-white"
-                  : "text-zinc-400 hover:bg-[#1d2026] hover:text-zinc-100",
+                  ? "bg-[#ff6a3d] text-white shadow-[0_1px_6px_rgba(255,106,61,0.35)]"
+                  : "text-zinc-400 hover:bg-[#1b1e25] hover:text-zinc-100",
               )}
             >
               {preset.label}
@@ -131,30 +128,32 @@ export function DateRangeFilter({
         })}
       </div>
 
-      <div className="flex items-center gap-2 rounded-lg border border-[#2a2d34] bg-[#14161b] px-3 py-1.5">
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#0f1115] px-2.5 ring-1 ring-inset ring-[#242832]">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
           From
-        </label>
+        </span>
         <input
           type="date"
           value={value.from}
           max={value.to || undefined}
           onChange={(event) => onChange({ ...value, from: event.target.value })}
-          className="h-7 cursor-pointer rounded border border-transparent bg-transparent text-xs text-zinc-100 outline-none focus:border-[#2a2d34]"
+          aria-label="From date"
+          className="w-30 cursor-pointer rounded bg-transparent text-xs text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-[#ff6a3d]"
         />
-        <span className="text-zinc-600">|</span>
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        <span className="h-4 w-px bg-[#242832]" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
           To
-        </label>
+        </span>
         <input
           type="date"
           value={value.to}
           min={value.from || undefined}
           onChange={(event) => onChange({ ...value, to: event.target.value })}
-          className="h-7 cursor-pointer rounded border border-transparent bg-transparent text-xs text-zinc-100 outline-none focus:border-[#2a2d34]"
+          aria-label="To date"
+          className="w-30 cursor-pointer rounded bg-transparent text-xs text-zinc-100 outline-none focus-visible:ring-1 focus-visible:ring-[#ff6a3d]"
         />
         {activePreset === null ? (
-          <span className="ml-1 whitespace-nowrap rounded border border-[#3d3418] bg-[#2a2412]/40 px-1.5 py-0.5 text-[10px] text-[#f7e3b0]">
+          <span className="ml-0.5 whitespace-nowrap rounded bg-[#2a2412] px-1.5 py-0.5 text-[10px] font-medium text-[#f7e3b0]">
             Custom
           </span>
         ) : null}
