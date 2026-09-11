@@ -51,14 +51,14 @@ const COLUMN_WIDTHS = [
   "4%", // #
   "4%", // Bill
   "8.5%", // Date
-  "19%", // Party
-  "11%", // Lorry
+  "24%", // Party — the only column whose content genuinely needs the room
+  "12%", // Lorry — wide enough for "KA-51-AK-1892" to stay on one line
   "6%", // Bags
   "8.5%", // Net Wt
-  "9%", // Factory Wt
+  "9%", // Factory
   "5%", // Rate
-  "12%", // Amount
-  "13%", // Received
+  "10%", // Amount
+  "9%", // Received
 ];
 
 interface SalesStatementViewProps {
@@ -163,6 +163,9 @@ export function SalesStatementView({
         /* Only the two free-text columns may wrap; a wrapped figure reads as
            two different numbers ("58,27" over "8"). */
         .sales-table .num { white-space: nowrap; overflow-wrap: normal; }
+        /* Column titles stay on one line so the header row keeps an even
+           height; widths below are sized to the longest of them. */
+        .sales-table th { white-space: nowrap; vertical-align: bottom; }
         @page { size: A4 portrait; margin: 10mm; }
         @media print {
           html, body { height: auto !important; }
@@ -304,7 +307,10 @@ export function SalesStatementView({
                         <Th>Lorry</Th>
                         <Th className="text-right">Bags</Th>
                         <Th className="text-right">Net Wt</Th>
-                        <Th className="text-right">Factory Wt</Th>
+                        {/* "Factory", not "Factory Wt": the longer label was the
+                            only header that wrapped, leaving the row uneven.
+                            It also matches what the Sales table calls it. */}
+                        <Th className="text-right">Factory</Th>
                         <Th className="text-right">Rate</Th>
                         <Th className="text-right">Amount</Th>
                         <Th className="text-right">Received</Th>
