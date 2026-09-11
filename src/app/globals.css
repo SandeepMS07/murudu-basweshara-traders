@@ -157,6 +157,41 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/*
+ * Date/time inputs: Chrome draws the calendar picker icon dark by default,
+ * which is all but invisible on this app's dark surfaces. `color-scheme: dark`
+ * is the fix rather than a filter — it makes the browser render the icon light
+ * *and* darkens the native picker popup it opens. Do not add
+ * `filter: invert()` on top; that flips the now-light icon back to black.
+ *
+ * Applied globally because every date field in the app sits on a dark ground.
+ */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover,
+input[type="week"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 .bill-print-root {
   display: none;
 }

@@ -874,12 +874,14 @@ export function ExpensesManager({
           <div className="grid gap-3">
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Date</label>
+              {/* color-scheme and the picker-icon styling are global now; the
+                  `invert` that used to be here flipped the light icon back to
+                  black. See src/app/globals.css. */}
               <Input
                 type="date"
                 value={expenseDate}
                 onChange={(event) => setExpenseDate(event.target.value)}
-                style={{ colorScheme: "dark" }}
-                className="border-[#2a2d34] bg-[#111214] text-zinc-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert"
+                className="border-[#2a2d34] bg-[#111214] text-zinc-100"
               />
             </div>
             {tab === "salary" ? (
