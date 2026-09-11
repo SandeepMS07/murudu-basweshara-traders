@@ -34,20 +34,27 @@ git push origin prod
 
 ## 2. Database migrations (run BEFORE deploying the code)
 
-Run these in the Supabase SQL editor. **Production project: `pb-manager-prod`.**
-(Local/dev project `hpeioufrdqrvaymkoggs` should get the same migrations to stay in sync.)
+Run these in the Supabase SQL editor. **The live project is `hpeioufrdqrvaymkoggs`**
+— there is only one, so migrations run there take effect in production immediately.
+
+> Earlier versions of this guide named a separate production project,
+> `pb-manager-prod` (`sexjbsgfkatkegualoxh`). **That project no longer exists**
+> (its hostname does not resolve); `hpeioufrdqrvaymkoggs` is the live database.
+> The commented-out block still sitting in `.env` points at the dead project and
+> can be deleted. Since there is no separate staging database, treat every
+> migration below as running against live data.
 
 ### 2.1 RBAC permissions table — required for `feat/rbac`
 
 Run [`supabase/rbac-user-permissions.sql`](../supabase/rbac-user-permissions.sql).
 Creates `user_permissions (user_id, module, level)` used by the new login/permission system.
 
-### 2.2 Bill numbers per issuer per financial year — already applied to prod
+### 2.2 Bill numbers per issuer per financial year — already applied
 
 [`supabase/fix-sales-bill-number-per-issuer-fy.sql`](../supabase/fix-sales-bill-number-per-issuer-fy.sql)
 
-- Already run on **prod** (it also drops the rogue `ux_sales_bill_number` global index that caused the "add sales" 500).
-- Run it on local/dev if sales inserts fail there with duplicate bill_number errors.
+- Already run on the live project (it also drops the rogue `ux_sales_bill_number` global index that caused the "add sales" 500).
+- Run it on any new environment if sales inserts fail there with duplicate bill_number errors.
 - Safe to re-run: it only drops/creates indexes (`if exists` / `if not exists`).
 
 ### 2.3 `company_payments.credit_hold_amount` — required for the "hold as credit" payment option
@@ -79,7 +86,8 @@ every statement is `create ... if not exists`, there is no `alter table` against
 any maize table, no `soya_*` table has a foreign key into a maize table, and no
 sequence is shared. Re-running them is a no-op.
 
-Run both in the Supabase SQL editor, **dev first**:
+Run both in the Supabase SQL editor. **Already applied to the live project on
+2026-09-11** — listed here for the record and for any future environment:
 
 | File | Creates |
 |---|---|
@@ -89,14 +97,15 @@ Run both in the Supabase SQL editor, **dev first**:
 Until they are applied, the Soya pages render an "Unavailable" notice naming the
 file to run rather than erroring — the maize side is unaffected either way.
 
-**If you ran an earlier version of these two files**, they created a first cut
-modelled on the maize column sets (`soya_companies`, `soya_sales`,
-`soya_sale_payments`, `soya_sale_payment_allocations`, `soya_bilty`,
-`soya_bilty_parties`, `soya_bilty_party_payments`). Nothing reads those any
-more. Drop them with
+An earlier version of these two files created a first cut modelled on the maize
+column sets (`soya_companies`, `soya_sales`, `soya_sale_payments`,
+`soya_sale_payment_allocations`, `soya_bilty`, `soya_bilty_parties`,
+`soya_bilty_party_payments`). Nothing reads those any more, and they were
+dropped from the live project on 2026-09-11 with
 [`supabase/soya-drop-superseded-tables.sql`](../supabase/soya-drop-superseded-tables.sql),
 which **aborts without dropping anything** if any of them turns out to hold
-rows.
+rows. Nothing further to do unless you find those tables in some other
+environment.
 
 Two deliberate differences from the maize schema:
 
@@ -131,7 +140,7 @@ npm run start              # or restart the hosting service that runs it
 
 Environment variables required (same as today; nothing new was added):
 
-- `NEXT_PUBLIC_SUPABASE_URL` / Supabase service-role key (see `.env`) — **must point to `pb-manager-prod`**
+- `NEXT_PUBLIC_SUPABASE_URL` / Supabase service-role key (see `.env`) — **must point to `hpeioufrdqrvaymkoggs`**
 - JWT session secret used by `src/features/auth/lib/session.ts`
 
 To run locally on a specific port: `npm run dev -- -p 3002`.
