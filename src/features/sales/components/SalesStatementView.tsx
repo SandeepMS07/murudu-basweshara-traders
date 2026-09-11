@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { addDays, format, isValid, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,14 +42,24 @@ const displayDate = (value: string) => {
   }
 };
 
-const parseTermDays = (terms: string | null | undefined) => {
-  const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return 0;
-  return parsed;
-};
-
-const startOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+/**
+ * Percentage widths for the eleven printed columns, summing to 100. Paired
+ * with `table-layout: fixed` so the table fills A4 portrait exactly and long
+ * party names wrap inside their cell instead of stretching the page.
+ */
+const COLUMN_WIDTHS = [
+  "4%", // #
+  "4%", // Bill
+  "8.5%", // Date
+  "19%", // Party
+  "11%", // Lorry
+  "6%", // Bags
+  "8.5%", // Net Wt
+  "9%", // Factory Wt
+  "5%", // Rate
+  "12%", // Amount
+  "13%", // Received
+];
 
 interface SalesStatementViewProps {
   sales: Sale[];
@@ -84,19 +94,6 @@ export function SalesStatementView({
     [issuerCompanies],
   );
 
-  const issuerShortById = useMemo(
-    () =>
-      new Map(
-        issuerCompanies.map((company) => [
-          company.id,
-          company.code?.trim().toUpperCase() ||
-            company.display_name ||
-            company.name,
-        ]),
-      ),
-    [issuerCompanies],
-  );
-
   const sortedSales = useMemo(
     () =>
       [...sales].sort(
@@ -113,21 +110,6 @@ export function SalesStatementView({
     () => summariseSales(sales, pendingBySaleId),
     [sales, pendingBySaleId],
   );
-
-  const todayStart = startOfDay(new Date());
-
-  const dueDateOf = (sale: Sale) => {
-    const saleDate = parseISO(sale.sale_date);
-    if (!isValid(saleDate)) return null;
-    return addDays(saleDate, parseTermDays(sale.payment_terms));
-  };
-
-  const isOverdue = (sale: Sale, pending: number) => {
-    if (pending <= 0) return false;
-    const dueDate = dueDateOf(sale);
-    if (!dueDate) return false;
-    return startOfDay(dueDate).getTime() < todayStart.getTime();
-  };
 
   // Grouped by issuer because the overview now filters by it: a statement run
   // across all issuers would otherwise give no way to read the split.
@@ -174,18 +156,32 @@ export function SalesStatementView({
     <div className="min-h-screen bg-zinc-100 print:min-h-0 print:bg-white">
       <style>{`
         .statement-doc { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        /* Landscape: the statement carries the overview's numeric columns and
-           will not fit A4 portrait legibly. */
-        @page { size: A4 landscape; margin: 8mm; }
+        /* Fixed layout + the percentage colgroup keeps the eleven columns
+           inside A4 portrait; party names wrap rather than widen the page. */
+        .sales-table { table-layout: fixed; width: 100%; }
+        .sales-table td { overflow-wrap: anywhere; }
+        /* Only the two free-text columns may wrap; a wrapped figure reads as
+           two different numbers ("58,27" over "8"). */
+        .sales-table .num { white-space: nowrap; overflow-wrap: normal; }
+        @page { size: A4 portrait; margin: 10mm; }
         @media print {
           html, body { height: auto !important; }
           /* Repeats the column headers on every printed page. */
           thead { display: table-header-group; }
+          /* ...but NOT the totals: a tfoot repeats by default, which would put
+             the grand total at the foot of every page where it reads as a page
+             subtotal. As a row group it prints once, after the last sale. */
+          tfoot { display: table-row-group; }
           tr { break-inside: avoid; }
+          /* pt, not px: print sizing should follow the paper, not the screen. */
+          .sales-table { font-size: 7pt; }
+          .sales-table th, .sales-table td { padding: 2px 3px; }
         }
       `}</style>
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6 print:max-w-none print:px-0 print:py-0">
+      {/* max-w-4xl, not wider: the on-screen preview should be roughly the
+          shape of the A4 portrait page it prints to. */}
+      <div className="mx-auto max-w-4xl px-4 py-6 print:max-w-none print:px-0 print:py-0">
         <div className="mb-4 flex items-center justify-between print:hidden">
           {embedded ? (
             <span />
@@ -240,25 +236,27 @@ export function SalesStatementView({
 
             <section className="mt-4 grid grid-cols-1 gap-x-6 gap-y-1.5 text-xs sm:grid-cols-3 print:grid-cols-3">
               <div className="flex gap-2">
-                <span className="w-16 shrink-0 text-zinc-400">Period</span>
-                <span className="font-semibold text-zinc-900">
+                <span className="w-12 shrink-0 text-zinc-400">Period</span>
+                {/* nowrap: a date range broken across two lines ("31-03-" /
+                    "2027") is unreadable at print size. */}
+                <span className="whitespace-nowrap font-semibold text-zinc-900">
                   {formatRangeLabel(filter.range)}
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 shrink-0 text-zinc-400">Issuer</span>
+                <span className="w-12 shrink-0 text-zinc-400">Issuer</span>
                 <span className="font-semibold text-zinc-900">
                   {issuerLabel}
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 shrink-0 text-zinc-400">Buyer</span>
+                <span className="w-12 shrink-0 text-zinc-400">Buyer</span>
                 <span className="font-semibold text-zinc-900">
                   {buyerLabel}
                 </span>
               </div>
               <div className="flex gap-2">
-                <span className="w-16 shrink-0 text-zinc-400">Bills</span>
+                <span className="w-12 shrink-0 text-zinc-400">Bills</span>
                 <span className="text-zinc-700">
                   {whole(totals.count)} of {whole(totalSalesCount)} sales
                 </span>
@@ -291,14 +289,18 @@ export function SalesStatementView({
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-[10px]">
+                  <table className="sales-table w-full border-collapse text-[10px]">
+                    <colgroup>
+                      {COLUMN_WIDTHS.map((width, index) => (
+                        <col key={index} style={{ width }} />
+                      ))}
+                    </colgroup>
                     <thead>
                       <tr className="bg-zinc-100 text-left text-[9px] uppercase tracking-wide text-zinc-600">
                         <Th className="text-right">#</Th>
                         <Th>Bill</Th>
                         <Th>Date</Th>
                         <Th>Party</Th>
-                        <Th>Issuer</Th>
                         <Th>Lorry</Th>
                         <Th className="text-right">Bags</Th>
                         <Th className="text-right">Net Wt</Th>
@@ -306,22 +308,18 @@ export function SalesStatementView({
                         <Th className="text-right">Rate</Th>
                         <Th className="text-right">Amount</Th>
                         <Th className="text-right">Received</Th>
-                        <Th className="text-right">Pending</Th>
-                        <Th>Due Date</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedSales.map((sale, index) => {
-                        const pending = effectivePending(sale, pendingBySaleId);
-                        const received = sale.amount - pending;
-                        const dueDate = dueDateOf(sale);
-                        const overdue = isOverdue(sale, pending);
+                        const received =
+                          sale.amount - effectivePending(sale, pendingBySaleId);
                         return (
                           <tr
                             key={sale.id}
                             className="border-b border-zinc-200 last:border-0"
                           >
-                            <Td className="text-right text-zinc-400">
+                            <Td className="num text-right text-zinc-400">
                               {index + 1}
                             </Td>
                             <Td className="font-semibold">
@@ -331,74 +329,44 @@ export function SalesStatementView({
                               {displayDate(sale.sale_date)}
                             </Td>
                             <Td>{sale.party || "-"}</Td>
-                            <Td>
-                              {sale.issuer_company_id
-                                ? (issuerShortById.get(
-                                    sale.issuer_company_id,
-                                  ) ?? "-")
-                                : "-"}
-                            </Td>
-                            <Td className="whitespace-nowrap">
-                              {sale.lorry_number || "-"}
-                            </Td>
-                            <Td className="text-right">{whole(sale.bags)}</Td>
-                            <Td className="text-right">
+                            <Td>{sale.lorry_number || "-"}</Td>
+                            <Td className="num text-right">{whole(sale.bags)}</Td>
+                            <Td className="num text-right">
                               {whole(sale.net_weight)}
                             </Td>
-                            <Td className="text-right">
+                            <Td className="num text-right">
                               {whole(sale.factory_weight)}
                             </Td>
-                            <Td className="text-right">{rate(sale.rate)}</Td>
-                            <Td className="text-right font-semibold">
+                            <Td className="num text-right">{rate(sale.rate)}</Td>
+                            <Td className="num text-right font-semibold">
                               {money(sale.amount)}
                             </Td>
-                            <Td className="text-right text-emerald-700">
+                            <Td className="num text-right text-emerald-700">
                               {money(received)}
-                            </Td>
-                            <Td
-                              className={
-                                pending > 0
-                                  ? "text-right font-semibold text-red-600"
-                                  : "text-right text-zinc-400"
-                              }
-                            >
-                              {money(pending)}
-                            </Td>
-                            <Td
-                              className={
-                                overdue
-                                  ? "whitespace-nowrap font-semibold text-red-600"
-                                  : "whitespace-nowrap"
-                              }
-                            >
-                              {dueDate ? format(dueDate, "dd-MM-yyyy") : "-"}
                             </Td>
                           </tr>
                         );
                       })}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-zinc-300 bg-zinc-100 text-[10px] font-bold">
-                        <Td colSpan={6} className="uppercase tracking-wide">
+                      <tr className="border-t-2 border-zinc-300 bg-zinc-100 font-bold">
+                        {/* 5 + 6 = the eleven columns above. */}
+                        <Td colSpan={5} className="uppercase tracking-wide">
                           Total — {whole(totals.count)}{" "}
                           {totals.count === 1 ? "bill" : "bills"}
                         </Td>
-                        <Td className="text-right">{whole(totals.bags)}</Td>
-                        <Td className="text-right">
+                        <Td className="num text-right">{whole(totals.bags)}</Td>
+                        <Td className="num text-right">
                           {whole(totals.netWeight)}
                         </Td>
-                        <Td className="text-right">
+                        <Td className="num text-right">
                           {whole(totals.factoryWeight)}
                         </Td>
                         <Td />
-                        <Td className="text-right">{money(totals.amount)}</Td>
-                        <Td className="text-right text-emerald-700">
+                        <Td className="num text-right">{money(totals.amount)}</Td>
+                        <Td className="num text-right text-emerald-700">
                           {money(totals.received)}
                         </Td>
-                        <Td className="text-right text-red-600">
-                          {money(totals.pending)}
-                        </Td>
-                        <Td />
                       </tr>
                     </tfoot>
                   </table>

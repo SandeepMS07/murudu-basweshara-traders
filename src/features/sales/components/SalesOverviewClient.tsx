@@ -222,7 +222,7 @@ export function SalesOverviewClient({
       <Dialog open={statementOpen} onOpenChange={setStatementOpen}>
         <DialogContent
           showCloseButton={false}
-          className="flex h-[92vh] w-[97vw] max-w-7xl flex-col gap-0 overflow-hidden rounded-xl border border-[#2a2d34] bg-[#15171c] p-0 sm:max-w-7xl"
+          className="flex h-[92vh] w-[95vw] max-w-5xl flex-col gap-0 overflow-hidden rounded-xl border border-[#2a2d34] bg-[#15171c] p-0 sm:max-w-5xl"
         >
           <div className="flex items-center justify-between border-b border-[#2a2d34] px-4 py-2.5">
             <span className="text-sm font-medium text-zinc-200">
