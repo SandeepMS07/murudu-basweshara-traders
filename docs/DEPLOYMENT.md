@@ -64,7 +64,52 @@ as an unapplied credit (instead of it auto-rolling onto the next bill) when
 recording a payment in Companies → Payment Ledger. Shows as "Credit Balance" in
 the app only — intentionally not shown on the customer-facing Statement of Account.
 
-### 2.4 Cleanup (optional, after confidence)
+### 2.4 Soya business line — required for the Soya workspace
+
+Soya is a **second, independent business line** (admin-only, everything under
+`/soya`) with two modules, **Factory** (the buy side) and **Parties** (the sell
+side). Its columns come from the customer's own workbook (`OM SRI ENTERPRISES.xlsx`,
+SALES sheet): SL NO · FACTORY · DATE · P B NO · LORRY · BAGS · WEIGHT · RATE ·
+AMOUNT · GST 5 % · TCS · AMOUNT on the Factory side, and SL NO · DATE · BILL NO ·
+BAGS · NET WT · RATE · AMOUNT · 2.5%CGST · 2.5%SGST · TCS · AMOUNT · FREIGHT ·
+PARTY · FRIGHT on the Parties side.
+
+It has its own tables and shares none with maize, so these files are additive:
+every statement is `create ... if not exists`, there is no `alter table` against
+any maize table, no `soya_*` table has a foreign key into a maize table, and no
+sequence is shared. Re-running them is a no-op.
+
+Run both in the Supabase SQL editor, **dev first**:
+
+| File | Creates |
+|---|---|
+| `supabase/soya-factory.sql` | `soya_factories` · `soya_factory_entries` · `soya_factory_payments` |
+| `supabase/soya-parties.sql` | `soya_parties` · `soya_party_entries` · `soya_party_payments` |
+
+Until they are applied, the Soya pages render an "Unavailable" notice naming the
+file to run rather than erroring — the maize side is unaffected either way.
+
+**If you ran an earlier version of these two files**, they created a first cut
+modelled on the maize column sets (`soya_companies`, `soya_sales`,
+`soya_sale_payments`, `soya_sale_payment_allocations`, `soya_bilty`,
+`soya_bilty_parties`, `soya_bilty_party_payments`). Nothing reads those any
+more. Drop them with
+[`supabase/soya-drop-superseded-tables.sql`](../supabase/soya-drop-superseded-tables.sql),
+which **aborts without dropping anything** if any of them turns out to hold
+rows.
+
+Two deliberate differences from the maize schema:
+
+- **No shared sequence.** Maize bilty's "Generate Bill" writes `public.bills`,
+  whose `bills_bill_no_seq` is shared with maize Purchases — a Soya bill written
+  there would silently consume a maize bill number. Soya Factory therefore has
+  **no bill-generation flow and no sequence**: identifiers are supplied by the
+  app. Nothing on the maize side can be advanced by Soya activity.
+- **Soya BILL NO is text and restarts each April** (unique per financial year),
+  because the workbook opens a year with values like `29*1`. Maize's
+  global-unique `idx_bilty_bill_no_unique` is left untouched.
+
+### 2.5 Cleanup (optional, after confidence)
 
 ```sql
 -- backup created during the SRI LAKSHMI '*' bill-number cleanup (2026-08-19)
@@ -110,6 +155,16 @@ To run locally on a specific port: `npm run dev -- -p 3002`.
    scoped per issuer per financial year (Apr–Mar).
 5. **Landing page:** open `/` logged-out — the public marketing page should
    render (no redirect to `/login`). `Staff login →` is in the footer.
+6. **Soya (admin only):** as admin, the sidebar shows a Maize/Soya switcher →
+   Soya has Dashboard, **Factory** (buy side) and **Parties** (sell side), with
+   the workbook's own column headers. Add one entry on each side and check the
+   computed columns against the sheet: Factory AMOUNT = WEIGHT x RATE,
+   GST 5 % = 5% of it; Parties AMOUNT = NET WT x RATE, with 2.5%CGST and
+   2.5%SGST each 2.5% of it. Confirm a non-admin sees **no** switcher and is
+   redirected off `/soya/*`. Then confirm maize is untouched: **Purchases →
+   Generate Bill still produces `max+1`** (this is the check that catches any
+   shared-sequence regression) and the maize Bilty/Sales bill numbers are
+   unchanged.
 
 ---
 

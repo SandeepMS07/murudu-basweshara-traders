@@ -1,8 +1,15 @@
 import { JWTPayload, SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { env } from "@/lib/env";
+import { supabaseServer } from "@/lib/supabase/server";
 import { SessionUser } from "../types";
-import { can, type ModuleKey, type PermissionAction } from "./permissions";
+import {
+  can,
+  type ModuleKey,
+  type PermissionAction,
+  type PermissionLevel,
+  type PermissionMap,
+} from "./permissions";
 
 const secretKey = new TextEncoder().encode(env.SESSION_SECRET);
 
@@ -44,11 +51,39 @@ export async function clearSessionCookie() {
   cookieStore.delete("session");
 }
 
+/** Load a user's per-module permission levels into a map. */
+export async function loadUserPermissions(userId: string): Promise<PermissionMap> {
+  const { data, error } = await supabaseServer
+    .from("user_permissions")
+    .select("module, level")
+    .eq("user_id", userId);
+
+  if (error || !data) return {};
+
+  const perms: PermissionMap = {};
+  for (const row of data as { module: string; level: string }[]) {
+    if (row.level === "none" || row.level === "view" || row.level === "edit") {
+      perms[row.module as ModuleKey] = row.level as PermissionLevel;
+    }
+  }
+  return perms;
+}
+
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const session = cookieStore.get("session")?.value;
   if (!session) return null;
-  return verifySession(session);
+  const user = await verifySession(session);
+  if (!user) return null;
+
+  // Permissions are re-checked against the database on every call instead of
+  // trusting what was baked into the token at login, so an admin changing a
+  // user's access in /users takes effect immediately without requiring the
+  // affected user to log out and back in. Admins always pass every check
+  // (see can()), so there's nothing to refresh for them.
+  if (user.role === "admin") return user;
+  const perms = await loadUserPermissions(user.id);
+  return { ...user, perms };
 }
 
 export async function requireAuth(): Promise<SessionUser> {

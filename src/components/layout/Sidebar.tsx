@@ -26,6 +26,9 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { SessionUser } from "@/features/auth/types";
 import { can, type ModuleKey } from "@/features/auth/lib/permissions";
+import { workspaceForPath } from "@/features/soya/lib/constants";
+import { CropSwitcher } from "./CropSwitcher";
+import { SoyaNav } from "./SoyaNav";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -115,6 +118,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
+  // Soya is a separate, admin-only business line living entirely under /soya.
+  const workspace = workspaceForPath(pathname);
+  const isAdmin = userInfo?.role === "admin";
   // Only show modules the user can view. Empty until the user loads.
   const visibleNavItems = useMemo(
     () => (userInfo ? navItems.filter((item) => can(userInfo, item.module, "view")) : []),
@@ -163,8 +169,17 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
     fetchUser();
 
+    // Permissions are checked live on the server, but this client copy is
+    // only fetched once on mount — refetch on focus so a permission change
+    // shows/hides nav items without requiring a page reload.
+    const onFocus = () => fetchUser();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     return () => {
       active = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
     };
   }, []);
 
@@ -209,6 +224,13 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         </span>
       </div>
 
+      {isAdmin ? (
+        <CropSwitcher workspace={workspace} onNavigate={onNavigate} />
+      ) : null}
+
+      {workspace === "soya" ? (
+        <SoyaNav onNavigate={onNavigate} />
+      ) : (
       <nav className="flex-1 space-y-1">
         {visibleNavItems.map((item) => {
           const isActive =
@@ -296,6 +318,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           );
         })}
       </nav>
+      )}
 
       <div className="mt-auto border-t border-[#1d1f24] pt-4">
         <button
