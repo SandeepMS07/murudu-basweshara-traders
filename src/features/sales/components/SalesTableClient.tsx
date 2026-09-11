@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { addDays, isValid, parseISO } from "date-fns";
 
 import Link from "next/link";
@@ -13,7 +13,12 @@ import { Company } from "@/features/companies/schemas";
 import { useCanEdit } from "@/features/auth/components/AuthProvider";
 
 interface SalesTableClientProps {
+  /**
+   * Already filtered by SalesOverviewClient, which owns the date-range, issuer
+   * and buyer filters so the KPI cards and the table always agree.
+   */
   data: Sale[];
+  /** Still needed to resolve buyer phone numbers for the search box. */
   buyerCompanies: Company[];
   issuerCompanies: Company[];
   pendingBySaleId: Record<string, number>;
@@ -27,26 +32,19 @@ export function SalesTableClient({
   pendingBySaleId,
   addSaleHref,
 }: SalesTableClientProps) {
-  const [selectedBuyerId, setSelectedBuyerId] = useState("");
   const buyerPhoneById = useMemo(
     () => Object.fromEntries(buyerCompanies.map((company) => [company.id, company.phone || ""])),
     [buyerCompanies]
   );
 
-  const filteredData = useMemo(() => {
-    if (!selectedBuyerId) return data;
-    return data.filter((sale) => sale.sale_company_id === selectedBuyerId);
-  }, [data, selectedBuyerId]);
-
   const columns = useMemo(
     () => createSaleColumns(issuerCompanies, pendingBySaleId),
     [issuerCompanies, pendingBySaleId]
   );
-  const today = new Date();
-  const todayStart = useMemo(
-    () => new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-    [today]
-  );
+  const todayStart = useMemo(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }, []);
 
   const parseTermDays = useCallback((terms: string | null | undefined) => {
     const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
@@ -106,6 +104,7 @@ export function SalesTableClient({
   const toolbarBelow = (
     <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+        {/* Buyer/issuer/date filters live above the table, in SalesOverviewClient. */}
         <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-[#3b1b1b] bg-[#2a1111]/40 px-2 py-1 text-xs text-zinc-200">
           <span className="h-2 w-2 rounded-full bg-[#ef4444]" />
           Overdue (date crossed)
@@ -123,20 +122,6 @@ export function SalesTableClient({
           Upcoming
         </div>
       </div>
-      <select
-        value={selectedBuyerId}
-        onChange={(event) => {
-          setSelectedBuyerId(event.target.value);
-        }}
-        className="h-10 w-full rounded-md border border-[#2a2d34] bg-[#14161b] px-3 text-sm text-zinc-100 lg:max-w-[320px]"
-      >
-        <option value="">All buyer companies</option>
-        {buyerCompanies.map((company) => (
-          <option key={company.id} value={company.id}>
-            {company.name}
-          </option>
-        ))}
-      </select>
     </div>
   );
 
@@ -144,7 +129,7 @@ export function SalesTableClient({
     <>
       <DataTable
         columns={columns}
-        data={filteredData}
+        data={data}
         exportFileName="sales_overview"
         disablePagination
         scrollContainerClassName="max-h-[70vh]"
