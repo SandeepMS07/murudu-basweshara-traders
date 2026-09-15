@@ -8,6 +8,10 @@ import {
   getSoyaPartyEntries,
   getSoyaPartyPayments,
 } from "@/features/soya-parties/service/soya-party.service";
+import { CounterpartyGstCard } from "@/features/soya/components/CounterpartyGstCard";
+import { getSoyaCounterparties } from "@/features/soya/service/counterparty-gst.service";
+import { getSoyaCompanies } from "@/features/soya-companies/service/soya-company.service";
+import { getActiveSoyaCompanyId } from "@/features/soya/lib/active-company";
 
 export default async function SoyaPartyMasterPage() {
   await requireSoyaAdminPage();
@@ -46,6 +50,14 @@ export default async function SoyaPartyMasterPage() {
   const payments =
     paymentsResult.status === "fulfilled" ? paymentsResult.value : [];
 
+  // The GST card is additive: if the company layer is not migrated yet it is
+  // simply absent, and the trading ledger below carries on exactly as before.
+  const [gstRows, companies, activeCompanyId] = await Promise.all([
+    getSoyaCounterparties("party").catch(() => null),
+    getSoyaCompanies().catch(() => []),
+    getActiveSoyaCompanyId().catch(() => ""),
+  ]);
+
   return (
     <AppShell>
       <div className="mb-4">
@@ -56,6 +68,17 @@ export default async function SoyaPartyMasterPage() {
           The party master, its entries, and the payments received from it.
         </p>
       </div>
+
+      {gstRows ? (
+        <CounterpartyGstCard
+          kind="party"
+          rows={gstRows}
+          companies={companies.map((company) => ({ id: company.id, name: company.name }))}
+          activeCompanyId={activeCompanyId}
+          label="Party"
+        />
+      ) : null}
+
       <SoyaPartyLedger
         parties={partiesResult.value}
         entries={entriesResult.status === "fulfilled" ? entriesResult.value : []}

@@ -8,12 +8,16 @@ import {
   ChevronDown,
   ChevronRight,
   Factory,
+  FileText,
+  Landmark,
   LayoutDashboard,
   LayoutList,
+  Package,
   Users,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { SoyaCompanySwitcher } from "./SoyaCompanySwitcher";
 
 type SoyaNavChild = {
   name: string;
@@ -29,19 +33,25 @@ type SoyaNavItem = {
 };
 
 /**
- * Soya runs two record modules, both clones of a maize module: Factory (the
- * bilty shape) and Parties (the sales shape). Each mirrors its maize
- * counterpart's Overview + master-data pair.
+ * Soya runs two record modules: Factory (who we buy from) and Parties (who we
+ * sell to), each with an Overview and a master list, both scoped to the open
+ * company.
+ *
+ * The master links are labelled "Factory master" / "Party master" rather than
+ * by their route segments, which read backwards — /soya/factory/parties is the
+ * factory list and /soya/parties/companies is the party list. "Companies" at
+ * the top means something else again: the firms we invoice from.
  */
 const soyaNavItems: SoyaNavItem[] = [
   { name: "Dashboard", href: "/soya/dashboard", icon: LayoutDashboard },
+  { name: "Companies", href: "/soya/companies", icon: Landmark },
   {
     name: "Factory",
     href: "/soya/factory",
     icon: Factory,
     children: [
       { name: "Overview", href: "/soya/factory", icon: LayoutList },
-      { name: "Parties", href: "/soya/factory/parties", icon: Building2 },
+      { name: "Factory master", href: "/soya/factory/parties", icon: Building2 },
     ],
   },
   {
@@ -50,9 +60,11 @@ const soyaNavItems: SoyaNavItem[] = [
     icon: Users,
     children: [
       { name: "Overview", href: "/soya/parties", icon: LayoutList },
-      { name: "Companies", href: "/soya/parties/companies", icon: Building2 },
+      { name: "Party master", href: "/soya/parties/companies", icon: Building2 },
     ],
   },
+  { name: "Items", href: "/soya/items", icon: Package },
+  { name: "Invoices", href: "/soya/invoices", icon: FileText },
 ];
 
 /**
@@ -75,6 +87,11 @@ export function SoyaNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="flex-1 space-y-1">
+      {/* Which firm is open decides which ledgers and which GSTIN an invoice
+          uses, and it lives in a cookie rather than the URL — so it is shown
+          on every Soya screen rather than hidden behind a menu. */}
+      <SoyaCompanySwitcher onNavigate={onNavigate} />
+
       {soyaNavItems.map((item) => {
         const isActive =
           pathname.startsWith(item.href) ||

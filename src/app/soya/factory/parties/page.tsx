@@ -8,6 +8,10 @@ import {
   getSoyaFactoryEntries,
   getSoyaFactoryPayments,
 } from "@/features/soya-factory/service/soya-factory.service";
+import { CounterpartyGstCard } from "@/features/soya/components/CounterpartyGstCard";
+import { getSoyaCounterparties } from "@/features/soya/service/counterparty-gst.service";
+import { getSoyaCompanies } from "@/features/soya-companies/service/soya-company.service";
+import { getActiveSoyaCompanyId } from "@/features/soya/lib/active-company";
 
 export default async function SoyaFactoryMasterPage() {
   await requireSoyaAdminPage();
@@ -46,6 +50,14 @@ export default async function SoyaFactoryMasterPage() {
   const payments =
     paymentsResult.status === "fulfilled" ? paymentsResult.value : [];
 
+  // Additive: absent if the company layer is not migrated, leaving the trading
+  // ledger below untouched.
+  const [gstRows, companies, activeCompanyId] = await Promise.all([
+    getSoyaCounterparties("factory").catch(() => null),
+    getSoyaCompanies().catch(() => []),
+    getActiveSoyaCompanyId().catch(() => ""),
+  ]);
+
   return (
     <AppShell>
       <div className="mb-4">
@@ -56,6 +68,17 @@ export default async function SoyaFactoryMasterPage() {
           The factory master, its entries, and the payments made to it.
         </p>
       </div>
+
+      {gstRows ? (
+        <CounterpartyGstCard
+          kind="factory"
+          rows={gstRows}
+          companies={companies.map((company) => ({ id: company.id, name: company.name }))}
+          activeCompanyId={activeCompanyId}
+          label="Factory"
+        />
+      ) : null}
+
       <SoyaFactoryLedger
         factories={factoriesResult.value}
         entries={entriesResult.status === "fulfilled" ? entriesResult.value : []}

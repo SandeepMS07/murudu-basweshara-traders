@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Company Ledgers &amp; GST Invoicing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground:        #eef0f3;
+    --surface:       #ffffff;
+    --surface-sunk:  #f5f6f8;
+    --ink:           #14161d;
+    --ink-soft:      #4a5060;
+    --ink-faint:     #7b8296;
+    --rule:          #d8dbe2;
+    --rule-soft:     #e7e9ee;
+    --statute:       #1d4e89;
+    --statute-soft:  #e8eff7;
+    --accent:        #ff6a3d;
+    --intra:         #0f7b5f;
+    --intra-soft:    #e3f3ed;
+    --inter:         #6d4aa8;
+    --inter-soft:    #eee9f7;
+    --warn:          #9a5b00;
+    --warn-soft:     #fbf0dd;
+    --shadow:        0 1px 2px rgba(20,22,29,.05), 0 8px 24px -12px rgba(20,22,29,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:       #0f1116;
+      --surface:      #171a21;
+      --surface-sunk: #1e222b;
+      --ink:          #e8eaf0;
+      --ink-soft:     #a7aebf;
+      --ink-faint:    #767d90;
+      --rule:         #2c313c;
+      --rule-soft:    #232831;
+      --statute:      #7fa9dc;
+      --statute-soft: #1a2634;
+      --accent:       #ff835d;
+      --intra:        #4cc2a0;
+      --intra-soft:   #12281f;
+      --inter:        #b79ae4;
+      --inter-soft:   #211a30;
+      --warn:         #e0a651;
+      --warn-soft:    #2b2213;
+      --shadow:       0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:       #0f1116;
+    --surface:      #171a21;
+    --surface-sunk: #1e222b;
+    --ink:          #e8eaf0;
+    --ink-soft:     #a7aebf;
+    --ink-faint:    #767d90;
+    --rule:         #2c313c;
+    --rule-soft:    #232831;
+    --statute:      #7fa9dc;
+    --statute-soft: #1a2634;
+    --accent:       #ff835d;
+    --intra:        #4cc2a0;
+    --intra-soft:   #12281f;
+    --inter:        #b79ae4;
+    --inter-soft:   #211a30;
+    --warn:         #e0a651;
+    --warn-soft:    #2b2213;
+    --shadow:       0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 24px 96px; }
+  .col  { max-width: 68ch; }
+
+  h1, h2, h3, h4, .ui { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; }
+  h1 { font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.04; letter-spacing: -.025em; font-weight: 700; margin: 0; text-wrap: balance; }
+  h2 { font-size: clamp(1.35rem, 2.4vw, 1.85rem); line-height: 1.14; letter-spacing: -.018em; font-weight: 600; margin: 0 0 .2em; text-wrap: balance; }
+  h3 { font-size: 1.08rem; letter-spacing: -.008em; font-weight: 600; margin: 0 0 .35em; }
+  p  { margin: 0 0 1em; }
+  a  { color: var(--statute); }
+  strong { font-weight: 600; }
+  code, .mono, .num { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  code { font-size: .88em; background: var(--surface-sunk); padding: .12em .38em; border-radius: 3px; border: 1px solid var(--rule-soft); }
+
+  .eyebrow {
+    font-family: "Archivo", sans-serif; font-size: .69rem; font-weight: 600;
+    letter-spacing: .15em; text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  /* ---- masthead ---- */
+  header.top { padding: 72px 0 40px; border-bottom: 2px solid var(--ink); margin-bottom: 44px; }
+  .top .lede { font-size: 1.16rem; color: var(--ink-soft); margin-top: 1.1em; }
+  .srcline {
+    display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 28px;
+    font-family: "IBM Plex Mono", monospace; font-size: .76rem; color: var(--ink-faint);
+  }
+  .srcline span { display: flex; gap: 7px; align-items: baseline; }
+  .srcline b { color: var(--ink-soft); font-weight: 500; }
+
+  section { margin: 0 0 64px; scroll-margin-top: 20px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
+  .sec-head .eyebrow { flex: none; padding-top: 4px; }
+
+  /* ---- the correction callout ---- */
+  .alert {
+    border: 1px solid var(--warn); background: var(--warn-soft);
+    border-left-width: 5px; border-radius: 4px; padding: 20px 24px; margin: 0 0 26px;
+  }
+  .alert h3 { color: var(--warn); margin-bottom: .3em; }
+  .alert p:last-child { margin-bottom: 0; }
+
+  .note { border-left: 3px solid var(--rule); padding-left: 18px; color: var(--ink-soft); font-size: .95rem; }
+
+  /* ---- tables ---- */
+  .tblwrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 5px; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; font-family: "Archivo", sans-serif; font-size: .84rem; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-size: .68rem; letter-spacing: .09em; text-transform: uppercase; font-weight: 600;
+    color: var(--ink-faint); background: var(--surface-sunk); border-bottom: 1px solid var(--rule); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.n, th.n { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .pill {
+    display: inline-block; font-family: "Archivo", sans-serif; font-size: .66rem; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; white-space: nowrap;
+  }
+  .pill.intra { background: var(--intra-soft); color: var(--intra); }
+  .pill.inter { background: var(--inter-soft); color: var(--inter); }
+  .pill.gap   { background: var(--warn-soft);  color: var(--warn); }
+  .pill.have  { background: var(--statute-soft); color: var(--statute); }
+
+  /* ---- tax demo ---- */
+  .demo { border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+  .demo-bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); background: var(--surface-sunk); }
+  .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; }
+  .seg button {
+    font-family: "Archivo", sans-serif; font-size: .8rem; font-weight: 600; cursor: pointer;
+    padding: 8px 15px; border: 0; background: var(--surface); color: var(--ink-soft);
+  }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .demo-grid { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .demo-grid { grid-template-columns: 1fr 1fr; } }
+  .demo-pane { padding: 20px 22px; }
+  .demo-pane + .demo-pane { border-top: 1px solid var(--rule); }
+  @media (min-width: 860px) { .demo-pane + .demo-pane { border-top: 0; border-left: 1px solid var(--rule); } }
+  .kv { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 5px 16px; font-family: "Archivo", sans-serif; font-size: .84rem; }
+  .kv dt { color: var(--ink-faint); }
+  .kv dd { margin: 0; font-weight: 500; }
+  .taxrow { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px dashed var(--rule-soft); font-family: "Archivo", sans-serif; font-size: .87rem; }
+  .taxrow .lbl { display: flex; align-items: center; gap: 9px; }
+  .taxrow .amt { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+  .taxrow.off { opacity: .3; }
+  .taxrow.tot { border-bottom: 0; border-top: 2px solid var(--ink); margin-top: 6px; padding-top: 11px; font-weight: 700; font-size: 1rem; }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+
+  /* ---- nav tree mock ---- */
+  .mock {
+    border: 1px solid var(--rule); border-radius: 6px; overflow: hidden;
+    box-shadow: var(--shadow); background: var(--surface); font-family: "Archivo", sans-serif;
+  }
+  .mock-chrome {
+    display: flex; align-items: center; gap: 9px; padding: 9px 14px;
+    background: var(--surface-sunk); border-bottom: 1px solid var(--rule);
+    font-size: .72rem; color: var(--ink-faint); font-family: "IBM Plex Mono", monospace;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); flex: none; }
+  .tree { padding: 16px 18px; font-size: .86rem; }
+  .tree ul { list-style: none; margin: 0; padding: 0 0 0 20px; }
+  .tree > ul { padding-left: 0; }
+  .tree li { padding: 3px 0; }
+  .tree .lv0 { font-weight: 700; letter-spacing: -.01em; }
+  .tree .co { display: flex; align-items: center; gap: 9px; padding: 5px 9px; border-radius: 4px; }
+  .tree .co.on { background: var(--statute-soft); color: var(--statute); font-weight: 600; }
+  .tree .gstin { font-family: "IBM Plex Mono", monospace; font-size: .72rem; color: var(--ink-faint); margin-left: auto; }
+  .tree .leaf { color: var(--ink-soft); }
+  .tree .new { color: var(--accent); font-weight: 600; }
+
+  /* ---- invoice mock ---- */
+  .inv { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; box-shadow: var(--shadow); overflow: hidden; }
+  .inv-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; padding: 20px 22px; border-bottom: 2px solid var(--ink); }
+  .inv-title { font-family: "Archivo", sans-serif; font-size: .74rem; font-weight: 700; letter-spacing: .17em; text-transform: uppercase; color: var(--statute); }
+  .inv-body { padding: 20px 22px; }
+  .irnbox { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 14px 22px; background: var(--statute-soft); border-bottom: 1px solid var(--rule); }
+  .qr { width: 62px; height: 62px; flex: none; border-radius: 3px; }
+
+  /* ---- phases ---- */
+  ol.phases { list-style: none; counter-reset: ph; margin: 0; padding: 0; display: grid; gap: 2px; }
+  ol.phases li {
+    counter-increment: ph; position: relative; background: var(--surface);
+    border: 1px solid var(--rule); padding: 18px 22px 18px 66px;
+  }
+  ol.phases li:first-child { border-radius: 5px 5px 0 0; }
+  ol.phases li:last-child  { border-radius: 0 0 5px 5px; }
+  ol.phases li::before {
+    content: counter(ph); position: absolute; left: 20px; top: 17px;
+    font-family: "IBM Plex Mono", monospace; font-size: .82rem; font-weight: 600;
+    color: var(--ground); background: var(--ink); width: 26px; height: 26px;
+    border-radius: 50%; display: grid; place-items: center;
+  }
+  ol.phases h3 { margin-bottom: .15em; }
+  ol.phases p { margin: 0; font-size: .94rem; color: var(--ink-soft); }
+  .ship { font-family: "Archivo", sans-serif; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--intra); margin-top: 7px; display: block; }
+
+  .grid2 { display: grid; gap: 20px; }
+  @media (min-width: 820px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+  .decision { border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 4px; background: var(--surface); padding: 16px 20px; }
+  .decision h3 { margin-bottom: .25em; }
+  .decision p { margin: 0; font-size: .93rem; color: var(--ink-soft); }
+
+  hr.rule { border: 0; border-top: 1px solid var(--rule); margin: 44px 0; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Implementation plan &middot; MB Groups</div>
+  <h1>Company Ledgers &amp; GST Invoicing</h1>
+  <p class="lede col">Restructuring Bilty so that <strong>company</strong> sits at the top, Factory and Parties sit beneath it, and every invoice computes GST from place of supply &mdash; ready for the government e-invoice portal.</p>
+  <div class="srcline">
+    <span><b>Source</b> 13 min 48 s screen recording, Tally Prime walkthrough</span>
+    <span><b>Presented by</b> OM SAI RAM ENTERPRISES</span>
+    <span><b>Company shown</b> SREE GURU TRADING Co.</span>
+    <span><b>Dated</b> 11 Sep 2026</span>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">01</span><h2>One correction before anything else</h2></div>
+  <div class="alert col">
+    <h3>The rate in your Tally is 5%, not 18%</h3>
+    <p>You said 18% &mdash; 9 + 9 split, or 18 as IGST. Every voucher in the recording says otherwise. On a taxable value of <span class="mono">₹13,47,625.00</span> of <strong>SOYA BEAN MEAL</strong>:</p>
+    <p style="margin:.8em 0"><span class="mono">CGST ₹33,690.63 + SGST ₹33,690.63</span> &mdash; that is <strong>2.5% + 2.5%</strong>. And on the inter-state voucher to BETUL OIL LTD, <span class="mono">IGST ₹67,381.25</span> &mdash; <strong>5%</strong>.</p>
+    <p>5% is also the correct statutory rate for oil-cake and solvent-extracted meal under HSN 2304, and it is what your existing Soya module already uses (CGST 2.5 / SGST 2.5). I have planned for <strong>5%, stored per item as an HSN-linked rate</strong> rather than hard-coded &mdash; so if some other item genuinely is 18%, it is a field, not a code change. Tell me if 18% was meant for a specific product and I will set that item's rate.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">02</span><h2>What the recording establishes</h2></div>
+  <div class="col">
+    <p>Tally's whole hierarchy hangs off the company. The Gateway names one open company &mdash; SREE GURU TRADING Co. &mdash; with its own financial year (1-Apr-26 to 31-Mar-27), its own masters, its own vouchers. <code>F3: Company</code> switches to another. That is exactly the shape you are asking for.</p>
+    <p>Beneath it, the ledger list splits cleanly in two, even though Tally files them together under Sundry Debtors and Creditors:</p>
+  </div>
+  <div class="grid2" style="margin:22px 0">
+    <div>
+      <h3>Factories &mdash; who you buy from</h3>
+      <p class="note">BETUL OIL LTD &middot; A D M AGRO &middot; DARSHANA SOLVENT LTD &middot; DHANRAJ SOLVEX PVT LTD &middot; ANNAPURNA ORGANICS INDIA PVT LTD</p>
+    </div>
+    <div>
+      <h3>Parties &mdash; who you sell to</h3>
+      <p class="note">ANNAM FARM PVT LTD &middot; MANJUSHREE POULTRY FARM &middot; FRESKO CHOICE MEAT PRODUCTS &middot; GAYATHRI INDUSTRIES &middot; GOKULA NARAYANASWAMY FARMS</p>
+    </div>
+  </div>
+  <div class="col">
+    <p>Solvent plants and oil mills on one side, poultry farms on the other. Same two-sided structure your Soya module already has.</p>
+    <p>The tax decision is made by a single field on the voucher: <strong>Place of Supply</strong>. Tally proposes it from the buyer's state and lets you override it. That override matters &mdash; ship-to and bill-to can differ, and the law follows place of supply, not the billing address.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">03</span><h2>How it would look</h2></div>
+  <p class="col">Company becomes the outermost switch, the way it is in Tally. Everything below is scoped to whichever company is open, and the sidebar re-roots when you change it.</p>
+
+  <div class="mock" style="margin:22px 0">
+    <div class="mock-chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>/bilty &mdash; MB Groups</span></div>
+    <div class="tree">
+      <ul>
+        <li class="lv0" style="margin-bottom:6px">COMPANY</li>
+        <li><div class="co on">SREE GURU TRADING Co. <span class="gstin">29CVOPS8598C1ZJ</span></div>
+          <ul style="margin-top:4px">
+            <li class="lv0" style="font-size:.78rem;letter-spacing:.09em;color:var(--ink-faint);padding-top:8px">FACTORY</li>
+            <ul>
+              <li class="leaf">Overview &mdash; purchases from mills</li>
+              <li class="leaf">Factories &mdash; master &amp; ledger</li>
+              <li class="new">Purchase invoices &middot; GST</li>
+            </ul>
+            <li class="lv0" style="font-size:.78rem;letter-spacing:.09em;color:var(--ink-faint);padding-top:10px">PARTIES</li>
+            <ul>
+              <li class="leaf">Overview &mdash; sales to farms</li>
+              <li class="leaf">Parties &mdash; master &amp; ledger</li>
+              <li class="new">Tax invoices &middot; GST &middot; e-invoice</li>
+              <li class="new">Credit notes</li>
+            </ul>
+            <li class="lv0" style="font-size:.78rem;letter-spacing:.09em;color:var(--ink-faint);padding-top:10px">MASTERS</li>
+            <ul>
+              <li class="new">Items &mdash; HSN, unit, GST rate</li>
+              <li class="new">e-Invoice &amp; e-Way Bill queue</li>
+            </ul>
+          </ul>
+        </li>
+        <li style="margin-top:10px"><div class="co">OM SAI RAM ENTERPRISES <span class="gstin">29&hellip;</span></div></li>
+        <li><div class="co">SRI LAKSHMI TRADING COMPANY <span class="gstin">29QWAPS4490E1ZU</span></div></li>
+        <li><div class="co">SRI MURUDA BASAVESHWARA TRADERS <span class="gstin">29AETPM9487N1Z0</span></div></li>
+      </ul>
+    </div>
+  </div>
+  <p class="note col">Orange marks what does not exist yet. The two existing firms are already in your database as issuer companies with GSTINs and invoice prefixes &mdash; they slot into this structure without a migration.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">04</span><h2>The tax rule, on your real numbers</h2></div>
+  <p class="col">Compare the supplier's state code with the place of supply. Same &rarr; CGST + SGST, split half and half. Different &rarr; IGST at the full rate. Switch the buyer below &mdash; these are the two vouchers from the recording, unchanged.</p>
+
+  <div class="demo" style="margin:22px 0">
+    <div class="demo-bar">
+      <span class="eyebrow">Buyer</span>
+      <div class="seg" role="group" aria-label="Choose buyer">
+        <button type="button" id="b-intra" aria-pressed="true">ANNAM FARM PVT LTD &middot; Karnataka</button>
+        <button type="button" id="b-inter" aria-pressed="false">BETUL OIL LTD &middot; Madhya Pradesh</button>
+      </div>
+      <span class="pill" id="verdict">Intra-state</span>
+    </div>
+    <div class="demo-grid">
+      <div class="demo-pane">
+        <div class="eyebrow" style="margin-bottom:11px">Determination</div>
+        <dl class="kv">
+          <dt>Supplier</dt><dd>SREE GURU TRADING Co.</dd>
+          <dt>Supplier GSTIN</dt><dd class="mono" style="font-size:.8rem">29CVOPS8598C1ZJ</dd>
+          <dt>Supplier state</dt><dd>Karnataka &mdash; <span class="mono">29</span></dd>
+          <dt style="padding-top:8px">Buyer</dt><dd style="padding-top:8px" id="d-buyer">ANNAM FARM PVT LTD</dd>
+          <dt>Buyer GSTIN</dt><dd class="mono" style="font-size:.8rem" id="d-gstin">29AAWCA5892P1ZB</dd>
+          <dt>Place of supply</dt><dd id="d-pos">Karnataka &mdash; <span class="mono">29</span></dd>
+          <dt style="padding-top:8px;color:var(--ink)">Result</dt><dd style="padding-top:8px" id="d-result"><strong>29 = 29</strong> &rarr; CGST + SGST</dd>
+        </dl>
+      </div>
+      <div class="demo-pane">
+        <div class="eyebrow" style="margin-bottom:11px">Tax invoice</div>
+        <div class="taxrow"><span class="lbl">SOYA BEAN MEAL &middot; <span class="mono" style="font-size:.8rem">HSN 2304</span></span><span class="amt">25.000 MTS</span></div>
+        <div class="taxrow"><span class="lbl" style="color:var(--ink-faint)">Rate per MT</span><span class="amt">53,905.00</span></div>
+        <div class="taxrow"><span class="lbl">Taxable value</span><span class="amt">13,47,625.00</span></div>
+        <div class="taxrow" id="r-cgst"><span class="lbl"><span class="swatch" style="background:var(--intra)"></span>CGST @ 2.5%</span><span class="amt" id="a-cgst">33,690.63</span></div>
+        <div class="taxrow" id="r-sgst"><span class="lbl"><span class="swatch" style="background:var(--intra)"></span>SGST @ 2.5%</span><span class="amt" id="a-sgst">33,690.63</span></div>
+        <div class="taxrow off" id="r-igst"><span class="lbl"><span class="swatch" style="background:var(--inter)"></span>IGST @ 5%</span><span class="amt" id="a-igst">&mdash;</span></div>
+        <div class="taxrow"><span class="lbl" style="color:var(--ink-faint)">Round off</span><span class="amt" id="a-round">(&minus;)0.26</span></div>
+        <div class="taxrow tot"><span class="lbl">Invoice total</span><span class="amt">14,15,006.00</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="note col">Both land on <span class="mono">₹14,15,006</span>. The tax collected is identical &mdash; only the split between centre and state changes. Getting it wrong doesn't change what the customer pays; it files the money to the wrong government, which is why it has to be derived, never typed.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">05</span><h2>What your data is missing today</h2></div>
+  <p class="col">I checked the live database. None of this is blocking, but all of it has to be filled before a single compliant invoice can be raised.</p>
+  <div class="tblwrap" style="margin:20px 0">
+    <table>
+      <thead><tr><th>What's needed</th><th>Status today</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td>Supplier GSTIN</td><td><span class="pill have">Present</span> both firms, Karnataka 29</td><td>Ready</td></tr>
+        <tr><td>Buyer GSTIN</td><td><span class="pill gap">Partial</span> 4 buyers have none</td><td>Unregistered &rarr; B2C invoice, no IRN</td></tr>
+        <tr><td>Valid GSTIN format</td><td><span class="pill gap">1 bad</span> SANTHOSH POULTRY FARM is <span class="mono">BVMPS6534F</span></td><td>A PAN, not a GSTIN. State cannot be derived &mdash; needs validation on entry</td></tr>
+        <tr><td>State / place of supply</td><td><span class="pill gap">Missing</span> no state column anywhere</td><td>Cannot choose CGST+SGST vs IGST</td></tr>
+        <tr><td>Pincode</td><td><span class="pill gap">Missing</span></td><td>Required by the e-invoice schema and for e-way bill distance</td></tr>
+        <tr><td>Bilty party master</td><td><span class="pill gap">Thin</span> name, place, mobile only</td><td>No GSTIN, no state, no address &mdash; cannot be invoiced</td></tr>
+        <tr><td>Item master with HSN</td><td><span class="pill gap">None</span></td><td>Every e-invoice line needs HSN + UQC + rate</td></tr>
+        <tr><td>Tax fields on invoices</td><td><span class="pill gap">None</span> 349 invoices, all <span class="mono">subtotal = total</span></td><td>Zero tax recorded to date</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note col">One buyer already forces the inter-state path: <strong>VISHNU</strong>, GSTIN <span class="mono">37ABECS8196H1ZQ</span> &mdash; state 37, Andhra Pradesh. IGST is not hypothetical for you.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">06</span><h2>The e-invoice, and how far to go</h2></div>
+  <div class="col">
+    <p>Your sales ledger stands at <span class="mono">₹14,27,66,780</span> &mdash; well past the <span class="mono">₹5 crore</span> turnover threshold, so e-invoicing is mandatory, not optional. The recording shows you already working the NIC portal directly, including the pin-to-pin distance lookup (<span class="mono">413531 &rarr; 577217 = 587 km</span>) for the e-way bill.</p>
+    <p>I would keep that workflow and remove the retyping, rather than buying a GSP integration on day one:</p>
+  </div>
+
+  <div class="inv" style="margin:22px 0">
+    <div class="irnbox">
+      <svg class="qr" viewBox="0 0 29 29" role="img" aria-label="Signed QR code placeholder" shape-rendering="crispEdges">
+        <rect width="29" height="29" fill="#ffffff"/>
+        <g fill="#14161d">
+          <rect x="1" y="1" width="7" height="7"/><rect x="2" y="2" width="5" height="5" fill="#ffffff"/><rect x="3" y="3" width="3" height="3"/>
+          <rect x="21" y="1" width="7" height="7"/><rect x="22" y="2" width="5" height="5" fill="#ffffff"/><rect x="23" y="3" width="3" height="3"/>
+          <rect x="1" y="21" width="7" height="7"/><rect x="2" y="22" width="5" height="5" fill="#ffffff"/><rect x="3" y="23" width="3" height="3"/>
+          <rect x="10" y="2" width="1" height="1"/><rect x="12" y="2" width="1" height="1"/><rect x="14" y="3" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/>
+          <rect x="13" y="5" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="15" y="6" width="1" height="1"/><rect x="12" y="7" width="1" height="1"/>
+          <rect x="2" y="10" width="1" height="1"/><rect x="4" y="11" width="1" height="1"/><rect x="6" y="10" width="1" height="1"/><rect x="3" y="13" width="1" height="1"/>
+          <rect x="5" y="14" width="1" height="1"/><rect x="1" y="15" width="1" height="1"/><rect x="7" y="16" width="1" height="1"/><rect x="4" y="17" width="1" height="1"/>
+          <rect x="10" y="10" width="2" height="2"/><rect x="14" y="11" width="1" height="1"/><rect x="17" y="10" width="1" height="1"/><rect x="12" y="13" width="1" height="1"/>
+          <rect x="16" y="14" width="2" height="2"/><rect x="10" y="16" width="1" height="1"/><rect x="13" y="17" width="1" height="1"/><rect x="19" y="12" width="1" height="1"/>
+          <rect x="21" y="10" width="1" height="1"/><rect x="24" y="11" width="1" height="1"/><rect x="26" y="13" width="1" height="1"/><rect x="22" y="14" width="1" height="1"/>
+          <rect x="25" y="16" width="1" height="1"/><rect x="21" y="17" width="1" height="1"/><rect x="27" y="18" width="1" height="1"/><rect x="23" y="19" width="1" height="1"/>
+          <rect x="10" y="21" width="1" height="1"/><rect x="13" y="22" width="1" height="1"/><rect x="16" y="21" width="1" height="1"/><rect x="11" y="24" width="1" height="1"/>
+          <rect x="15" y="25" width="1" height="1"/><rect x="18" y="23" width="1" height="1"/><rect x="12" y="27" width="1" height="1"/><rect x="17" y="26" width="1" height="1"/>
+          <rect x="21" y="22" width="1" height="1"/><rect x="24" y="21" width="1" height="1"/><rect x="26" y="24" width="1" height="1"/><rect x="22" y="26" width="1" height="1"/>
+          <rect x="25" y="27" width="1" height="1"/><rect x="27" y="22" width="1" height="1"/>
+        </g>
+      </svg>
+      <div>
+        <div class="eyebrow">Signed QR &amp; IRN &mdash; returned by the portal</div>
+        <div class="mono" style="font-size:.73rem; word-break:break-all; color:var(--ink-soft); margin-top:4px">
+          IRN &nbsp;a5c9f0e1b7d34a28e6f1c0b9d8a7e6f5c4b3a2918f7e6d5c4b3a2918f7e6d5c4<br>
+          Ack No &nbsp;112410079876543 &nbsp;&middot;&nbsp; Ack Date &nbsp;10-09-2026 14:22
+        </div>
+      </div>
+    </div>
+    <div class="inv-body">
+      <div class="eyebrow" style="margin-bottom:10px">Round trip</div>
+      <div class="tblwrap" style="box-shadow:none">
+        <table>
+          <thead><tr><th style="width:34px">#</th><th>Step</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td class="n">1</td><td>Raise the invoice; GST computed from place of supply</td><td>This app</td></tr>
+            <tr><td class="n">2</td><td>Export the INV-01 JSON &mdash; schema-valid, one file or a batch</td><td>This app</td></tr>
+            <tr><td class="n">3</td><td>Bulk upload, get IRN + Ack + signed QR</td><td>einvoice1.gst.gov.in</td></tr>
+            <tr><td class="n">4</td><td>Import the response file; IRN and QR attach to the invoice</td><td>This app</td></tr>
+            <tr><td class="n">5</td><td>Print &mdash; QR and IRN on the face of the invoice, as the law requires</td><td>This app</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin:16px 0 0;font-size:.94rem;color:var(--ink-soft)">No credentials, no vendor contract, no per-invoice fee, and nothing to re-key. The invoice record is shaped so a GSP adapter can replace steps 2&ndash;4 later without touching the invoice model or the printed document.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">07</span><h2>Build order</h2></div>
+  <p class="col">Each phase ends somewhere usable. The live maize side is never touched &mdash; this is new tables and new routes throughout, the same discipline the Soya line was built with.</p>
+  <ol class="phases" style="margin-top:20px">
+    <li>
+      <h3>Company as the top-level switch</h3>
+      <p>A company master carrying legal name, GSTIN, state code, address, pincode and invoice prefix. Sidebar re-roots on the open company. The two existing firms load straight in.</p>
+      <span class="ship">Ships: switch companies, see an empty Factory and Parties beneath each</span>
+    </li>
+    <li>
+      <h3>Masters with statutory fields</h3>
+      <p>Factory and Party masters gain GSTIN, registration type, state, pincode and address, with GSTIN format validation and state auto-derived from its first two digits. Item master with HSN, unit of measure and GST rate.</p>
+      <span class="ship">Ships: the data entry that everything downstream depends on</span>
+    </li>
+    <li>
+      <h3>Tax invoice</h3>
+      <p>Invoice entry with place of supply, line items, and CGST/SGST/IGST derived &mdash; never typed. Freight and round-off as separate lines, matching the Tally voucher. Printable tax invoice in the format you already use.</p>
+      <span class="ship">Ships: a legally-formatted tax invoice you can hand over</span>
+    </li>
+    <li>
+      <h3>e-Invoice round trip</h3>
+      <p>INV-01 JSON export, response import, IRN and signed QR stored against the invoice and printed on it. A queue screen showing which invoices are pending, registered or failed.</p>
+      <span class="ship">Ships: portal compliance without re-keying</span>
+    </li>
+    <li>
+      <h3>Credit notes &amp; e-Way Bill</h3>
+      <p>Credit notes against an original invoice, carrying the same tax treatment. E-way bill fields &mdash; transporter, distance, vehicle, Part B &mdash; on invoices that need one.</p>
+      <span class="ship">Ships: the remaining document types from the recording</span>
+    </li>
+    <li>
+      <h3>GST returns view</h3>
+      <p>B2B and B2C summaries by period, reconciling to GSTR-1 so your accountant can tie out the month without a manual extract.</p>
+      <span class="ship">Ships: the month-end that this whole structure exists to serve</span>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <div class="sec-head"><span class="eyebrow">08</span><h2>What I need from you</h2></div>
+  <p class="col">I can start on phase 1 without any of these. Each one blocks a later phase.</p>
+  <div class="grid2" style="margin-top:20px">
+    <div class="decision">
+      <h3>Which companies, exactly?</h3>
+      <p>I saw SREE GURU TRADING Co. and OM SAI RAM ENTERPRISES in the recording, and SLTC and SMBT are already in the database. Are all four in scope, and are there others? I need each one's legal name, GSTIN, address and pincode.</p>
+    </div>
+    <div class="decision">
+      <h3>Is this Soya, maize, or both?</h3>
+      <p>The recording is entirely SOYA BEAN MEAL, but you asked for it under Bilty, which is maize. If this structure is meant to replace the Soya Factory/Parties screens rather than extend Bilty, the plan is largely the same but it lands in a different place.</p>
+    </div>
+    <div class="decision">
+      <h3>Where did 18% come from?</h3>
+      <p>Everything in your Tally is 5%. If a particular item really is 18%, name it and I'll set that item's rate. If not, 5% stands.</p>
+    </div>
+    <div class="decision">
+      <h3>Invoice numbering</h3>
+      <p>Per company, restarting each financial year, is the norm and what the law expects. Your current sales invoices run <span class="mono">SLTC-0192</span> continuously. Confirm which you want for the new series.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+  (function () {
+    var intra = document.getElementById('b-intra');
+    var inter = document.getElementById('b-inter');
+    var verdict = document.getElementById('verdict');
+    var rC = document.getElementById('r-cgst'), rS = document.getElementById('r-sgst'), rI = document.getElementById('r-igst');
+    var aC = document.getElementById('a-cgst'), aS = document.getElementById('a-sgst'), aI = document.getElementById('a-igst');
+
+    function show(mode) {
+      var isIntra = mode === 'intra';
+      intra.setAttribute('aria-pressed', String(isIntra));
+      inter.setAttribute('aria-pressed', String(!isIntra));
+
+      verdict.className = 'pill ' + (isIntra ? 'intra' : 'inter');
+      verdict.textContent = isIntra ? 'Intra-state' : 'Inter-state';
+
+      document.getElementById('d-buyer').textContent = isIntra ? 'ANNAM FARM PVT LTD' : 'BETUL OIL LTD';
+      document.getElementById('d-gstin').textContent = isIntra ? '29AAWCA5892P1ZB' : '23AABCB4021M1Z8';
+      document.getElementById('d-pos').innerHTML = isIntra
+        ? 'Karnataka &mdash; <span class="mono">29</span>'
+        : 'Madhya Pradesh &mdash; <span class="mono">23</span>';
+      document.getElementById('d-result').innerHTML = isIntra
+        ? '<strong>29 = 29</strong> &rarr; CGST + SGST'
+        : '<strong>29 &ne; 23</strong> &rarr; IGST';
+
+      rC.classList.toggle('off', !isIntra);
+      rS.classList.toggle('off', !isIntra);
+      rI.classList.toggle('off', isIntra);
+      aC.textContent = isIntra ? '33,690.63' : '—';
+      aS.textContent = isIntra ? '33,690.63' : '—';
+      aI.textContent = isIntra ? '—' : '67,381.25';
+      document.getElementById('a-round').innerHTML = isIntra ? '(&minus;)0.26' : '(&minus;)0.25';
+    }
+
+    intra.addEventListener('click', function () { show('intra'); });
+    inter.addEventListener('click', function () { show('inter'); });
+  })();
+</script>
+</body>
+</html>

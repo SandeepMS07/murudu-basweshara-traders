@@ -94,6 +94,76 @@ Run both in the Supabase SQL editor. **Already applied to the live project on
 | `supabase/soya-factory.sql` | `soya_factories` · `soya_factory_entries` · `soya_factory_payments` |
 | `supabase/soya-parties.sql` | `soya_parties` · `soya_party_entries` · `soya_party_payments` |
 
+**`supabase/soya-companies.sql` — applied on dev, NOT YET ON PROD.** Run it
+third, after the two above. It adds the company layer and GST identity:
+
+- `soya_companies` — the trading firm an invoice is raised from, one per GST
+  registration (GSTIN, state code, address, invoice prefix).
+- `company_id` on all four Soya tables, so Factory and Parties become per
+  company instead of global. Nullable, because the three master rows that
+  already exist predate it; they show as "Unassigned" until moved.
+- GSTIN / state / registration type / address on the factory and party masters,
+  none of which existed.
+- IGST columns. `soya_party_entries` could only express CGST + SGST, so an
+  inter-state sale had nowhere to put its tax.
+- Name uniqueness moves from global to per-company, and the party bill-number
+  series becomes unique per company per financial year rather than globally per
+  financial year.
+
+It opens with a guard that **aborts** if a `soya_companies` table is found in
+its superseded form (see below) instead of silently leaving the wrong columns in
+place. Safe to run against empty Soya tables, which is the state today —
+`soya_factory_entries` and `soya_party_entries` both hold zero rows.
+
+**`supabase/soya-invoicing.sql` — NOT YET APPLIED ANYWHERE.** Run it fourth,
+after `soya-companies.sql`. It adds tax invoicing and the government filing
+fields:
+
+- `soya_items` — the item master. HSN, unit (a portal UQC code) and GST rate.
+  The e-Invoice portal rejects any invoice line without an HSN, which is why it
+  lives on a master rather than being retyped per invoice.
+- `soya_invoices` — the tax invoice itself. Carries the three addresses the
+  portal asks for separately (bill-to, ship-to, dispatch-from), the tax split,
+  the transport block for the e-Way Bill, and the response fields: `irn`,
+  `ack_no`, `ack_date`, `signed_qr`, `ewb_no`, `ewb_valid_until`.
+- `soya_invoice_items` — the invoice lines, with per-line tax.
+
+Two things worth knowing about the design:
+
+- **Counterparty details are snapshotted onto the invoice, not joined.** A filed
+  invoice is a legal record of what was sent to the government, so if a party
+  later moves premises, last year's invoice must still print the address that
+  was actually filed.
+- **Invoice numbers are allocated in application code as max+1 per company per
+  financial year**, not by a sequence. GST requires an unbroken series, and a
+  rolled-back transaction that consumed a sequence value leaves a gap that has
+  to be explained. The unique index on `(company_id, upper(invoice_no),
+  fy_start_year)` is what makes the read-then-write safe.
+
+It opens with a guard that **aborts** if `soya_companies` is missing or is in
+its superseded form, rather than attaching foreign keys to the wrong table.
+
+### e-Invoice portal credentials
+
+Filing with the IRP needs credentials, supplied **only** through environment
+variables — never the database, where they would sit in every backup and be one
+query away from a log:
+
+| Variable | Value |
+|---|---|
+| `SOYA_IRP_BASE_URL` | The GSP endpoint, e.g. `https://<gsp-host>/einvoice` |
+| `SOYA_IRP_CLIENT_ID` | Issued by the GSP |
+| `SOYA_IRP_CLIENT_SECRET` | Issued by the GSP |
+| `SOYA_IRP_CREDENTIALS` | `{"<GSTIN>":{"username":"…","password":"…"}}` — one entry per company, since each files under its own registration |
+
+**With none of these set the app runs normally.** Invoices are created, printed
+and checked against every rule the portal applies; the Generate button shows a
+preview of the exact payload instead of sending it. Nothing is ever silently
+half-filed.
+
+Note that the portal username for API use is a separate one created under "API
+Registration" on the e-Invoice portal — not the web login.
+
 Until they are applied, the Soya pages render an "Unavailable" notice naming the
 file to run rather than erroring — the maize side is unaffected either way.
 
