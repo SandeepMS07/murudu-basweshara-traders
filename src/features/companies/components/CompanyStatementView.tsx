@@ -171,6 +171,29 @@ const balanceStyles: Record<BillStatusTone, string> = {
   unknown: "text-zinc-600",
 };
 
+/**
+ * The weight the bill was actually priced on — what the statement calls
+ * "Gross Wt".
+ *
+ * calculateSale() prices a sale on the FACTORY weight, falling back to the net
+ * weight only when no factory weight was recorded:
+ *
+ *     effectiveWeight = factory_weight > 0 ? factory_weight : net_weight
+ *     amount          = effectiveWeight * rate
+ *
+ * The statement used to print net_weight beside Rate and Amount, so on any bill
+ * where the two weights differ the arithmetic on a customer's copy did not add
+ * up — Net Wt x Rate was not the Amount charged. That was true of 113 of the
+ * 134 bills on record. Printing the weight the amount was computed from makes
+ * the row reconcile on every bill.
+ *
+ * Kept in step with calculateSale(): if the pricing rule there changes, this
+ * has to change with it.
+ */
+function billedWeight(sale: Sale): number {
+  return sale.factory_weight > 0 ? sale.factory_weight : sale.net_weight;
+}
+
 type IssuerSummary = {
   issuerId: string;
   issuerName: string;
@@ -239,12 +262,25 @@ export function CompanyStatementView({
     return { label: `Due in ${-diffDays}d`, tone: "upcoming" };
   };
 
+  /**
+   * Oldest first, and within a single date in the order the rows were entered.
+   *
+   * The tie-break matters more than it looks. getSales() returns rows
+   * newest-first (sale_date DESC, bill_number DESC) and Array.sort is stable,
+   * so anything left to the tie-break keeps that reversed order — several
+   * bills sharing one date printed newest-entered first in the middle of an
+   * otherwise oldest-first statement. Ordering on created_at puts them back in
+   * entry order.
+   *
+   * It also retires a real bug: the old tie-break compared bill_number as a
+   * STRING, so on a shared date bill "11" sorted ahead of bill "9".
+   */
   const sortedSales = useMemo(
     () =>
       [...sales].sort(
         (a, b) =>
           a.sale_date.localeCompare(b.sale_date) ||
-          a.bill_number.localeCompare(b.bill_number),
+          (a.created_at ?? "").localeCompare(b.created_at ?? ""),
       ),
     [sales],
   );
@@ -323,8 +359,14 @@ export function CompanyStatementView({
     [issuerSummaries, companyById],
   );
 
+  /** Same rule as the bills above: oldest first, then entry order. */
   const sortedPayments = useMemo(
-    () => [...payments].sort((a, b) => a.paid_on.localeCompare(b.paid_on)),
+    () =>
+      [...payments].sort(
+        (a, b) =>
+          a.paid_on.localeCompare(b.paid_on) ||
+          (a.created_at ?? "").localeCompare(b.created_at ?? ""),
+      ),
     [payments],
   );
 
@@ -569,7 +611,7 @@ export function CompanyStatementView({
                         style={{ width: "12%" }}
                         className="px-2.5 py-1.5 text-right font-medium whitespace-nowrap"
                       >
-                        Net Wt
+                        Gross Wt
                       </th>
                       <th
                         style={{ width: "8%" }}
@@ -639,7 +681,7 @@ export function CompanyStatementView({
                               {sale.lorry_number || "-"}
                             </td>
                             <td className="px-2.5 py-1 text-right tabular-nums whitespace-nowrap text-zinc-600">
-                              {formatNumberIN(sale.net_weight, {
+                              {formatNumberIN(billedWeight(sale), {
                                 maximumFractionDigits: 2,
                               })}
                             </td>
