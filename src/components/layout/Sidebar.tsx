@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { SessionUser } from "@/features/auth/types";
+import { useAuth } from "@/features/auth/components/AuthProvider";
 import { can, type ModuleKey } from "@/features/auth/lib/permissions";
 import { workspaceForPath } from "@/features/soya/lib/constants";
 import { CropSwitcher } from "./CropSwitcher";
@@ -117,7 +117,10 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
+  // From the shared auth context rather than its own fetch. AuthProvider
+  // already refetches on window focus, so a permission change still shows
+  // or hides nav items without a reload — with one request, not three.
+  const { user: userInfo } = useAuth();
   // Soya is a separate, admin-only business line living entirely under /soya.
   const workspace = workspaceForPath(pathname);
   const isAdmin = userInfo?.role === "admin";
@@ -151,37 +154,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       setIsLoggingOut(false);
     }
   };
-
-  useEffect(() => {
-    let active = true;
-
-    const fetchUser = async () => {
-      try {
-        const response = await fetch("/api/auth/me");
-        if (!active || !response.ok) return;
-        const payload = await response.json();
-        if (!active) return;
-        setUserInfo(payload.user ?? null);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchUser();
-
-    // Permissions are checked live on the server, but this client copy is
-    // only fetched once on mount — refetch on focus so a permission change
-    // shows/hides nav items without requiring a page reload.
-    const onFocus = () => fetchUser();
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-
-    return () => {
-      active = false;
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-    };
-  }, []);
 
   useEffect(() => {
     setExpandedSections((current) => {

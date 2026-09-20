@@ -12,6 +12,15 @@ import { can, type ModuleKey } from "../lib/permissions";
 
 type AuthContextValue = {
   user: SessionUser | null;
+  /**
+   * True until we know who the user is.
+   *
+   * This matters more than a spinner usually does. Permission checks answer
+   * "false" while loading, which is indistinguishable from "you are not
+   * allowed" — so a screen rendered during this window shows no Add, Edit or
+   * Delete controls at all, then pops them in a moment later. Screens gate on
+   * this so they show a skeleton instead of a wrong answer.
+   */
   loading: boolean;
   canView: (module: ModuleKey) => boolean;
   canEdit: (module: ModuleKey) => boolean;

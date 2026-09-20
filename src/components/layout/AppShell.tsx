@@ -14,14 +14,17 @@ import {
   LogOut,
 } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { SessionUser } from "@/features/auth/types";
+import { AuthGate } from "./AuthGate";
+import { useAuth } from "@/features/auth/components/AuthProvider";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [userInfo, setUserInfo] = useState<SessionUser | null>(null);
+  // Shared with the sidebar and every permission check, so the page makes
+  // ONE /api/auth/me request instead of three identical ones.
+  const { user: userInfo } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -92,27 +95,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         item.keywords.toLowerCase().includes(query)
     );
   }, [searchItems, searchTerm]);
-
-  useEffect(() => {
-    let active = true;
-
-    const fetchUser = async () => {
-      try {
-        const response = await fetch("/api/auth/me");
-        if (!response.ok || !active) return;
-        const payload = await response.json();
-        if (!active) return;
-        setUserInfo(payload.user ?? null);
-      } catch {
-        // ignore fetch errors in shell profile widget
-      }
-    };
-
-    fetchUser();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -357,7 +339,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </div>
                 </div>
               </header>
-              {children}
+              <AuthGate>{children}</AuthGate>
             </div>
           </main>
         </div>
