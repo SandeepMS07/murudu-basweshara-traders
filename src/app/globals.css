@@ -1037,6 +1037,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   display: none;
 }
 
+/*
+ * Fallback only. The orientation of anything this app prints is set at runtime
+ * (src/lib/print-orientation.ts), which rewrites these rules in place — the
+ * named sheets included, because a `position: fixed` print root is out of flow
+ * and Chrome then ignores its `page:` name, falling back to the unnamed @page.
+ */
 @page {
   size: A4 portrait;
   margin: 12mm;
@@ -1044,7 +1050,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
 @media print {
   @page purchase-sheet {
-    size: A4 landscape;
+    size: A4 portrait;
     margin: 4mm;
   }
 

@@ -6,9 +6,13 @@ import type { EInvoiceSeller } from "@/features/soya-invoices/lib/einvoice-paylo
 import type { SoyaInvoice } from "@/features/soya-invoices/schemas";
 import { stateNameForCode } from "@/features/soya/lib/gst";
 import { formatNumberIN } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 /**
- * The printed tax invoice — A4 portrait, on plain white.
+ * The printed tax invoice — A4, portrait by default, on plain white.
  *
  * Every element here is required by Rule 46 of the CGST Rules: the words "Tax
  * Invoice", both GSTINs, the HSN per line, the tax broken out by head, the
@@ -16,9 +20,10 @@ import { formatNumberIN } from "@/lib/number-format";
  * conventional on purpose — this is a document a buyer's accounts department
  * has to recognise at a glance, not a place to be inventive.
  *
- * Print CSS mirrors the Sales statement: `@page { size: A4 portrait }`, headers
- * repeated via table-header-group, and `tfoot` forced to table-row-group so the
- * totals print once rather than on every page.
+ * Print CSS mirrors the Sales statement: headers repeated via
+ * table-header-group, and `tfoot` forced to table-row-group so the totals print
+ * once rather than on every page. The paper orientation is the user's choice
+ * (see usePrintOrientation); landscape widens the sheet accordingly.
  */
 
 function amountInWords(value: number): string {
@@ -81,6 +86,10 @@ export function SoyaInvoicePrintView({
     return () => window.clearTimeout(timer);
   }, [autoPrint]);
 
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "soya-invoice",
+  });
+
   const isIntra = invoice.igst <= 0;
   const taxTotal = invoice.cgst + invoice.sgst + invoice.igst;
 
@@ -98,7 +107,7 @@ export function SoyaInvoicePrintView({
   return (
     <>
       <style>{`
-        @page { size: A4 portrait; margin: 10mm; }
+        /* Page size/orientation comes from usePrintOrientation. */
         .inv-root {
           background: #fff;
           color: #111;
@@ -138,9 +147,17 @@ export function SoyaInvoicePrintView({
           .inv-table { font-size: 9px; }
           .inv-table th, .inv-table td { padding: 2px 4px; }
         }
+        /* Landscape A4 has ~277mm of usable width; let the sheet use it. */
+        html[data-print-orientation="landscape"] .inv-root {
+          max-width: 277mm;
+        }
       `}</style>
 
-      <div className="no-print">
+      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <PrintOrientationToggle
+          orientation={orientation}
+          onChange={setOrientation}
+        />
         <button
           type="button"
           onClick={() => window.print()}

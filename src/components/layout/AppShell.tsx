@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchTerm, setSearchTerm] = useState("");
   // Shared with the sidebar and every permission check, so the page makes
   // ONE /api/auth/me request instead of three identical ones.
-  const { user: userInfo } = useAuth();
+  const { user: userInfo, refresh } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -128,6 +128,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      // Clear the cached session too, or the context keeps serving the old
+      // user after the cookie is gone — the mirror image of the login bug.
+      await refresh();
       setProfileOpen(false);
       router.push("/login");
       router.refresh();

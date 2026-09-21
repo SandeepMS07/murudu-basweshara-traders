@@ -1,5 +1,6 @@
 import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
+import { selectAll } from "@/lib/supabase/select-all";
 import {
   EmployeeInput,
   ExpenseCategory,
@@ -109,17 +110,17 @@ export async function getExpenses(): Promise<ExpenseEntry[]> {
   await requireAuth();
   await ensureDefaultEmployees();
 
-  const { data, error } = await supabaseServer
-    .from("expenses")
-    .select("*")
-    .order("expense_date", { ascending: false })
-    .order("created_at", { ascending: false });
+  // Paged: a single response is capped at 1000 rows and truncates silently.
+  const data = await selectAll<ExpenseEntryRow>((from, to) =>
+    supabaseServer
+      .from("expenses")
+      .select("*")
+      .order("expense_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(from, to),
+  );
 
-  if (error) {
-    throw new Error(`Failed to load expenses: ${error.message}`);
-  }
-
-  return (data as ExpenseEntryRow[]).map(toExpense);
+  return data.map(toExpense);
 }
 
 export async function createExpenseEmployee(input: EmployeeInput): Promise<ExpenseEmployee> {

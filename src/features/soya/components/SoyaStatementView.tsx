@@ -6,6 +6,10 @@ import { ArrowLeft, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatCurrencyINR } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 /**
  * One printable Statement of Account for both Soya modules.
@@ -79,6 +83,12 @@ export function SoyaStatementView<T extends { id: string }>({
   backHref,
   hideBackLink = false,
 }: SoyaStatementViewProps<T>) {
+  // Wide ledgers often read better on landscape paper; the choice is the
+  // user's and is remembered per statement.
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "soya-statement",
+  });
+
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const balance = totalBilled - totalPaid;
 
@@ -106,14 +116,20 @@ export function SoyaStatementView<T extends { id: string }>({
               </Button>
             </Link>
           )}
-          <Button
-            type="button"
-            onClick={() => window.print()}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex items-center gap-2">
+            <PrintOrientationToggle
+              orientation={orientation}
+              onChange={setOrientation}
+            />
+            <Button
+              type="button"
+              onClick={() => window.print()}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
 
         <div className="statement-doc rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">

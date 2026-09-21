@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -24,6 +25,17 @@ type AuthContextValue = {
   loading: boolean;
   canView: (module: ModuleKey) => boolean;
   canEdit: (module: ModuleKey) => boolean;
+  /**
+   * Re-reads the session from the server.
+   *
+   * Required after signing in. This provider lives in the root layout, so a
+   * client-side navigation from /login to /dashboard does NOT remount it and
+   * does NOT refetch — it would keep serving the `null` user it got from the
+   * 401 on the login page, leaving the sidebar empty and every permission
+   * check answering "no" until a hard refresh. router.refresh() cannot fix
+   * that: it re-renders server components and does not touch client state.
+   */
+  refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue>({
@@ -31,26 +43,28 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   canView: () => false,
   canEdit: () => false,
+  refresh: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      const data = res.ok ? await res.json() : null;
+      setUser(data?.user ?? null);
+    } catch {
+      // Leave the last known user in place: a dropped request is not proof
+      // the session ended, and blanking it would empty the nav mid-session.
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    const fetchUser = () =>
-      fetch("/api/auth/me")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (!active) return;
-          setUser(data?.user ?? null);
-          setLoading(false);
-        })
-        .catch(() => {
-          if (active) setLoading(false);
-        });
+  useEffect(() => {
+    const fetchUser = () => refresh();
 
     fetchUser();
 
@@ -63,11 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     document.addEventListener("visibilitychange", onFocus);
 
     return () => {
-      active = false;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, []);
+  }, [refresh]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -75,8 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       canView: (module) => can(user, module, "view"),
       canEdit: (module) => can(user, module, "edit"),
+      refresh,
     }),
-    [user, loading],
+    [user, loading, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

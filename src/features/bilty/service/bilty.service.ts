@@ -9,6 +9,7 @@ import {
 import { calculateBilty } from "../utils/calculations";
 import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
+import { selectAll } from "@/lib/supabase/select-all";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 
 type BiltyRow = {
@@ -397,18 +398,20 @@ export async function getNextBiltyBillNoPreview(billDate?: string): Promise<numb
 }
 
 export async function getBiltys(): Promise<Bilty[]> {
-  const [{ data, error }, partiesResult] = await Promise.all([
-    supabaseServer
-      .from("bilty")
-      .select("*")
-      .order("bill_no", { ascending: false, nullsFirst: false })
-      .order("date", { ascending: false }),
+  // Bilty is paged (a single response is capped at 1000 rows and truncates
+  // silently); the party lookup is a small master and stays a single read.
+  const [data, partiesResult] = await Promise.all([
+    selectAll<BiltyRow>((from, to) =>
+      supabaseServer
+        .from("bilty")
+        .select("*")
+        .order("bill_no", { ascending: false, nullsFirst: false })
+        .order("date", { ascending: false })
+        .range(from, to),
+    ),
     supabaseServer.from("bilty_parties").select("name, place, mob"),
   ]);
 
-  if (error) {
-    throw new Error(`Failed to load bilty records: ${error.message}`);
-  }
   if (partiesResult.error) {
     throw new Error(`Failed to load bilty party details: ${partiesResult.error.message}`);
   }

@@ -13,10 +13,22 @@ import {
 import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
 import { SalesReceivablesCards } from "@/features/dashboard/components/SalesReceivablesCards";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
-import { getFinancialYearBounds } from "@/lib/financial-year";
+import { DashboardFilterBar } from "@/features/dashboard/components/DashboardFilterBar";
+import { isWithinRange, resolvePreset, type DateRange } from "@/lib/date-range";
+import { format } from "date-fns";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    from?: string;
+    to?: string;
+    range?: string;
+    customer?: string;
+  }>;
+}) {
   const user = await requireAuth();
+  const filters = await searchParams;
   const [purchases, sales, biltys, buyerCompanies] = await Promise.all([
     getPurchases(),
     getSales(),
@@ -34,16 +46,71 @@ export default async function DashboardPage() {
   const nowIst = new Date(
     new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
   );
-  const { start: fyStart, end: fyEnd } = getFinancialYearBounds(nowIst);
-  const scopedPurchases = purchases.filter(
-    (p) => p.date >= fyStart && p.date <= fyEnd,
+  /**
+   * The window every figure below is measured over.
+   *
+   * Defaults to the current month. Note this is NOT what the page showed
+   * before it gained filters — that was the whole financial year — so the
+   * headline figures are deliberately smaller now. "This FY" is one click
+   * away when the year-to-date view is wanted.
+   *
+   * "All time" is an explicit choice and carries ?range=all, because an empty
+   * from/to is indistinguishable from no filter at all.
+   */
+  const range: DateRange =
+    filters.range === "all"
+      ? { from: "", to: "" }
+      : filters.from || filters.to
+        ? { from: filters.from ?? "", to: filters.to ?? "" }
+        : resolvePreset("this_month", nowIst);
+
+  const companyNameById = new Map(
+    buyerCompanies.map((company) => [company.id, company.name]),
   );
-  const scopedSales = sales.filter(
-    (s) => s.sale_date >= fyStart && s.sale_date <= fyEnd,
+
+  /**
+   * The customer a sale belongs to, resolved the same way everywhere on this
+   * page: the linked buyer company when there is one, otherwise the free-text
+   * party. Filtering on this resolved name rather than on company_id keeps a
+   * sale recorded only as text reachable from the dropdown.
+   */
+  const customerOf = (sale: (typeof sales)[number]) =>
+    (
+      (sale.sale_company_id
+        ? companyNameById.get(sale.sale_company_id)
+        : null) ||
+      sale.party ||
+      "Unknown"
+    ).trim() || "Unknown";
+
+  const customerOptions = [...new Set(sales.map(customerOf))].sort((a, b) =>
+    a.localeCompare(b),
   );
-  const scopedBiltys = biltys.filter(
-    (b) => b.date >= fyStart && b.date <= fyEnd,
-  );
+  // An unknown customer in the URL is ignored rather than yielding an empty
+  // dashboard that looks like a data problem.
+  const customer =
+    filters.customer && customerOptions.includes(filters.customer)
+      ? filters.customer
+      : "";
+
+  const scopedPurchases = purchases.filter((p) => isWithinRange(p.date, range));
+  const scopedBiltys = biltys.filter((b) => isWithinRange(b.date, range));
+
+  /**
+   * Two sale sets, and the difference matters.
+   *
+   * `scopedSales` honours the customer filter and drives everything that is
+   * genuinely about that customer — sales value, pending, overdue, the
+   * company table.
+   *
+   * `rangeSales` ignores it, and drives stock. Stock is bags in minus bags out
+   * for the whole business; subtracting one customer's sales from every
+   * supplier's purchases would produce a figure that describes nothing.
+   */
+  const rangeSales = sales.filter((s) => isWithinRange(s.sale_date, range));
+  const scopedSales = customer
+    ? rangeSales.filter((s) => customerOf(s) === customer)
+    : rangeSales;
 
   // Payments are allocated FIFO across a company's entire sale history (see
   // computeEffectiveSalePending), so this must run over ALL sales, not just
@@ -85,7 +152,8 @@ export default async function DashboardPage() {
   );
   const totalPurchasedBags =
     purchasedBagsFromPurchases + purchasedBagsFromBilty;
-  const totalSoldBags = scopedSales.reduce(
+  // rangeSales, not scopedSales — see the note where they are defined.
+  const totalSoldBags = rangeSales.reduce(
     (acc, s) => acc + Number(s.bags || 0),
     0,
   );
@@ -111,7 +179,7 @@ export default async function DashboardPage() {
   );
   const totalPurchasedNetWeight =
     purchasedWeightFromPurchases + purchasedWeightFromBilty;
-  const totalSoldNetWeight = scopedSales.reduce(
+  const totalSoldNetWeight = rangeSales.reduce(
     (acc, s) => acc + Number(s.net_weight || 0),
     0,
   );
@@ -139,9 +207,6 @@ export default async function DashboardPage() {
     today.getMonth(),
     today.getDate(),
   );
-  const buyerCompanyNameById = new Map(
-    buyerCompanies.map((company) => [company.id, company.name]),
-  );
   const companySummary = new Map<
     string,
     {
@@ -153,13 +218,7 @@ export default async function DashboardPage() {
   >();
 
   for (const sale of scopedSales) {
-    const companyName =
-      (sale.sale_company_id
-        ? buyerCompanyNameById.get(sale.sale_company_id)
-        : null) ||
-      sale.party ||
-      "Unknown";
-    const company = companyName.trim() || "Unknown";
+    const company = customerOf(sale);
     const pending = effectivePending(sale);
     const dueDate = getDueDate(sale.sale_date, sale.payment_terms);
     const dueStart = dueDate
@@ -195,6 +254,27 @@ export default async function DashboardPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6 text-zinc-100">
+        <DashboardFilterBar
+          range={range}
+          customer={customer}
+          customers={customerOptions}
+          today={format(nowIst, "yyyy-MM-dd")}
+          matched={scopedSales.length}
+          total={sales.length}
+        />
+
+        {/* A customer only exists on the sell side. Purchases, bilty and the
+            stock figures derived from them have no customer to filter by, so
+            they stay whole-business — said plainly rather than left for
+            someone to discover by checking the arithmetic. */}
+        {customer ? (
+          <p className="-mt-2 rounded-lg border border-[#2a3a44] bg-[#0f1a1f] px-3 py-2 text-xs text-sky-200/80">
+            Showing <strong className="text-sky-200">{customer}</strong>. Sales,
+            pending and overdue figures are for this customer; purchase, bilty
+            and stock figures have no customer and remain whole-business.
+          </p>
+        ) : null}
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card className="border-[#1f2229] bg-gradient-to-b from-[#17191f] to-[#14161b] text-zinc-100">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

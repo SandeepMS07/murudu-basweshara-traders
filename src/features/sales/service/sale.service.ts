@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 
 import { requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
+import { selectAll } from "@/lib/supabase/select-all";
 import { Sale, SaleInput, SalesImportSummary } from "@/features/sales/schemas";
 import { calculateSale } from "@/features/sales/utils/calculations";
 import { Company } from "@/features/companies/schemas";
@@ -198,22 +199,22 @@ async function resolveIssuerCompanyId(input: SaleInput): Promise<string | null> 
 }
 
 export async function getSales(filters?: SalesFilters): Promise<Sale[]> {
-  let query = supabaseServer
-    .from("sales")
-    .select("*")
-    .order("sale_date", { ascending: false })
-    .order("bill_number", { ascending: false });
+  // Paged: a single response is capped at 1000 rows and truncates silently.
+  const data = await selectAll<SaleRow>((from, to) => {
+    let query = supabaseServer
+      .from("sales")
+      .select("*")
+      .order("sale_date", { ascending: false })
+      .order("bill_number", { ascending: false })
+      .range(from, to);
 
-  if (filters?.buyerCompanyId) {
-    query = query.eq("sale_company_id", filters.buyerCompanyId);
-  }
+    if (filters?.buyerCompanyId) {
+      query = query.eq("sale_company_id", filters.buyerCompanyId);
+    }
+    return query;
+  });
 
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to load sales: ${error.message}`);
-  }
-
-  return (data as SaleRow[]).map(toSale);
+  return data.map(toSale);
 }
 
 export async function getSalesByIds(ids: string[]): Promise<Sale[]> {

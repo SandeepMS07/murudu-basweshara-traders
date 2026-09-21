@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/components/AuthProvider";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 
@@ -38,6 +39,7 @@ type RememberedLogin = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -106,6 +108,16 @@ export default function LoginPage() {
       }
 
       toast.success("Login Successful", { description: "Welcome back!" });
+
+      // Pull the new session into the auth context BEFORE navigating.
+      //
+      // AuthProvider lives in the root layout, so pushing to /dashboard does
+      // not remount it — without this it would still be holding the `null`
+      // user from the 401 it got on this page, and the sidebar would render
+      // empty until a hard refresh. router.refresh() below only re-renders
+      // server components; it cannot update client state.
+      await refresh();
+
       router.push("/dashboard");
       router.refresh();
     } catch {

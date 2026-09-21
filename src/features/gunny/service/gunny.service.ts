@@ -1,6 +1,7 @@
 import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { getFinancialYearBounds } from "@/lib/financial-year";
 import { supabaseServer } from "@/lib/supabase/server";
+import { selectAll } from "@/lib/supabase/select-all";
 import {
   type GunnyRecord,
   type GunnyRecordInput,
@@ -133,14 +134,16 @@ function toPaymentAllocation(
 
 export async function getGunnyRecords(): Promise<GunnyRecord[]> {
   await requireAuth();
-  const { data, error } = await supabaseServer
-    .from("gunny_bags")
-    .select("*")
-    .order("bill_no", { ascending: false, nullsFirst: false })
-    .order("date", { ascending: false });
-
-  if (error) throw new Error(`Failed to load gunny records: ${error.message}`);
-  return (data as GunnyRow[]).map(toGunny);
+  // Paged: a single response is capped at 1000 rows and truncates silently.
+  const data = await selectAll<GunnyRow>((from, to) =>
+    supabaseServer
+      .from("gunny_bags")
+      .select("*")
+      .order("bill_no", { ascending: false, nullsFirst: false })
+      .order("date", { ascending: false })
+      .range(from, to),
+  );
+  return data.map(toGunny);
 }
 
 export async function getGunnyRecordById(id: string): Promise<GunnyRecord | null> {

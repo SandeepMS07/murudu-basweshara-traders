@@ -26,6 +26,10 @@ import {
 import { Company } from "@/features/companies/schemas";
 import { Input } from "@/components/ui/input";
 import { useCanEdit } from "@/features/auth/components/AuthProvider";
+import {
+  PrintOrientationToggle,
+  usePrintOrientationChoice,
+} from "@/components/print/PrintOrientationToggle";
 
 function SaleActionsCell({
   sale,
@@ -103,6 +107,12 @@ function SaleActionsCell({
     });
   };
 
+  // The invoice prints from a hidden iframe, so the choice rides along in the
+  // URL rather than being applied to this document.
+  const { orientation, setOrientation } = usePrintOrientationChoice({
+    storageKey: "sales-invoice",
+  });
+
   const handlePrintBill = () => {
     if (!previewInvoiceId) {
       toast.error("Generate preview first");
@@ -115,7 +125,7 @@ function SaleActionsCell({
     iframe.style.border = "0";
     iframe.style.opacity = "0";
     iframe.style.pointerEvents = "none";
-    iframe.src = `/sales/invoices/${previewInvoiceId}/print`;
+    iframe.src = `/sales/invoices/${previewInvoiceId}/print?orient=${orientation}`;
     document.body.appendChild(iframe);
 
     window.setTimeout(() => {
@@ -255,25 +265,35 @@ function SaleActionsCell({
             )}
           </div>
 
-          <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => setGenerateOpen(false)}
-              className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
-            >
-              Cancel
-            </Button>
+          <DialogFooter className="-mx-4 -mb-4 items-center rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4 sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500">Paper</span>
+              <PrintOrientationToggle
+                tone="dark"
+                orientation={orientation}
+                onChange={setOrientation}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => setGenerateOpen(false)}
+                className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+              >
+                Cancel
+              </Button>
 
-            <Button
-              type="button"
-              disabled={!previewInvoiceId || isPending}
-              onClick={handlePrintBill}
-              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-            >
-              Print Bill
-            </Button>
+              <Button
+                type="button"
+                disabled={!previewInvoiceId || isPending}
+                onClick={handlePrintBill}
+                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              >
+                Print Bill
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

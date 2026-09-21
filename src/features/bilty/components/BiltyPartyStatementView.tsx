@@ -7,6 +7,10 @@ import { Banknote, Printer, Receipt, User, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type Bilty, type BiltyPartyPayment } from "@/features/bilty/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 const formatDisplayDate = (value: string) => {
   try {
@@ -131,6 +135,12 @@ export function BiltyPartyStatementView({
     [payments],
   );
 
+  // Wide ledgers often read better on landscape paper; the choice is the
+  // user's and is remembered per statement.
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "bilty-party-statement",
+  });
+
   const totalAmount = biltys.reduce((sum, row) => sum + row.final_total, 0);
   const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const balancePayable = Math.max(totalAmount - totalPaid, 0);
@@ -156,14 +166,20 @@ export function BiltyPartyStatementView({
               ← Back to Parties
             </a>
           )}
-          <Button
-            type="button"
-            onClick={() => window.print()}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex items-center gap-2">
+            <PrintOrientationToggle
+              orientation={orientation}
+              onChange={setOrientation}
+            />
+            <Button
+              type="button"
+              onClick={() => window.print()}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
 
         <div className="statement-doc rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">

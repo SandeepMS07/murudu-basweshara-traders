@@ -12,6 +12,10 @@ import {
 } from "@/features/purchases/lib/record-filter";
 import { formatRangeLabel } from "@/lib/date-range";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 /**
  * The printable statement shared by Purchases and Bilty: the rows the overview
@@ -149,6 +153,12 @@ export function TradeStatementView<T extends LedgerRecord>({
     [records, bagLessOf],
   );
 
+  // Wide ledgers often read better on landscape paper; the choice is the
+  // user's and is remembered per statement.
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "purchases-statement",
+  });
+
   const summaryCards = [
     { label: "Records", value: whole(totals.count) },
     { label: "Total Bags", value: whole(totals.bags) },
@@ -173,7 +183,7 @@ export function TradeStatementView<T extends LedgerRecord>({
         .ledger-table .num { white-space: nowrap; overflow-wrap: normal; }
         /* Column titles stay on one line so the header row keeps an even height. */
         .ledger-table th { white-space: nowrap; vertical-align: bottom; }
-        @page { size: A4 portrait; margin: 10mm; }
+        /* Page size/orientation comes from usePrintOrientation. */
         @media print {
           html, body { height: auto !important; }
           /* Repeats the column headers on every printed page... */
@@ -201,14 +211,20 @@ export function TradeStatementView<T extends LedgerRecord>({
               ← Back to {backLabel}
             </a>
           )}
-          <Button
-            type="button"
-            onClick={() => window.print()}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex items-center gap-2">
+            <PrintOrientationToggle
+              orientation={orientation}
+              onChange={setOrientation}
+            />
+            <Button
+              type="button"
+              onClick={() => window.print()}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
 
         <div className="statement-doc rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">

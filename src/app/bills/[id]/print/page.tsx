@@ -8,6 +8,7 @@ import { getBiltyById, getBiltyParties } from "@/features/bilty/service/bilty.se
 import { Bill } from "@/features/bills/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
+import { isPrintOrientation } from "@/lib/print-orientation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,12 +18,14 @@ export default async function BillPrintPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ pid?: string; preview?: string }>;
+  searchParams?: Promise<{ pid?: string; preview?: string; orient?: string }>;
 }) {
   await requireAuth();
   const { id } = await params;
-  const { pid, preview } = (await searchParams) || {};
+  const { pid, preview, orient } = (await searchParams) || {};
   const previewMode = preview === "1";
+  // Two copies side by side fit landscape best, but the caller decides.
+  const orientation = isPrintOrientation(orient) ? orient : undefined;
   const purchase = pid ? await getPurchaseById(pid) : null;
   const bilty = !purchase && pid ? await getBiltyById(pid) : null;
   const biltyParty =
@@ -109,7 +112,9 @@ export default async function BillPrintPage({
 
   return (
     <main className={rootClassName}>
-      {!previewMode ? <BillPrintAuto redirectTo={redirectTo} /> : null}
+      {!previewMode ? (
+        <BillPrintAuto redirectTo={redirectTo} orientation={orientation} margin="4mm" />
+      ) : null}
       {copies.map((copy) => (
         <section className="bill-print-copy" key={copy}>
           <header className="bill-print-header">

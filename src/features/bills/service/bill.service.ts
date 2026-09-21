@@ -2,6 +2,7 @@ import { Bill, BillInput } from "../schemas";
 import { calculateBill } from "../utils/calculations";
 import { requireAuth, requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
+import { selectAll } from "@/lib/supabase/select-all";
 
 type BillRow = {
   id: string;
@@ -43,16 +44,16 @@ function toBill(row: BillRow): Bill {
 }
 
 export async function getBills(): Promise<Bill[]> {
-  const { data, error } = await supabaseServer
-    .from("bills")
-    .select("*")
-    .order("bill_date", { ascending: false });
+  // Paged: a single response is capped at 1000 rows and truncates silently.
+  const data = await selectAll<BillRow>((from, to) =>
+    supabaseServer
+      .from("bills")
+      .select("*")
+      .order("bill_date", { ascending: false })
+      .range(from, to),
+  );
 
-  if (error) {
-    throw new Error(`Failed to load bills: ${error.message}`);
-  }
-
-  return (data as BillRow[]).map(toBill);
+  return data.map(toBill);
 }
 
 export async function getNextBillNoPreview(): Promise<number> {

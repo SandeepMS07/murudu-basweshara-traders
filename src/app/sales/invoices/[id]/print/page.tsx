@@ -5,6 +5,7 @@ import { requireAuth } from "@/features/auth/lib/session";
 import { BillPrintAuto } from "@/features/bills/components/BillPrintAuto";
 import { getSalesInvoiceById } from "@/features/sales/service/sales-invoice.service";
 import { formatNumberIN } from "@/lib/number-format";
+import { isPrintOrientation } from "@/lib/print-orientation";
 
 type SnapshotShape = {
   issuer_company?: {
@@ -113,13 +114,14 @@ export default async function SalesInvoicePrintPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ preview?: string }>;
+  searchParams?: Promise<{ preview?: string; orient?: string }>;
 }) {
   await requireAuth();
 
   const { id } = await params;
-  const { preview } = (await searchParams) || {};
+  const { preview, orient } = (await searchParams) || {};
   const previewMode = preview === "1";
+  const orientation = isPrintOrientation(orient) ? orient : undefined;
 
   const invoice = await getSalesInvoiceById(id);
   if (!invoice) {
@@ -199,7 +201,13 @@ export default async function SalesInvoicePrintPage({
 
   return (
     <main className={rootClassName}>
-      {!previewMode ? <BillPrintAuto redirectTo="/sales" /> : null}
+      {!previewMode ? (
+        <BillPrintAuto
+          redirectTo="/sales"
+          orientation={orientation}
+          margin="5mm"
+        />
+      ) : null}
       {copies.map((copy) => (
         <section className="bill-print-copy bill-sales-invoice-copy" key={copy}>
           <div className="sales-invoice-title">INVOICE</div>

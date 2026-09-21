@@ -14,6 +14,10 @@ import {
 } from "@/features/sales/lib/sales-filter";
 import { formatRangeLabel } from "@/lib/date-range";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 /**
  * The printable Sales Statement: exactly the rows the overview filter selected,
@@ -144,6 +148,12 @@ export function SalesStatementView({
       "Unknown")
     : "All buyer companies";
 
+  // Wide ledgers often read better on landscape paper; the choice is the
+  // user's and is remembered per statement.
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "sales-statement",
+  });
+
   const summaryCards = [
     { label: "Bills", value: whole(totals.count) },
     { label: "Net Weight", value: `${whole(totals.netWeight)} kg` },
@@ -166,7 +176,7 @@ export function SalesStatementView({
         /* Column titles stay on one line so the header row keeps an even
            height; widths below are sized to the longest of them. */
         .sales-table th { white-space: nowrap; vertical-align: bottom; }
-        @page { size: A4 portrait; margin: 10mm; }
+        /* Page size/orientation comes from usePrintOrientation. */
         @media print {
           html, body { height: auto !important; }
           /* Repeats the column headers on every printed page. */
@@ -196,14 +206,20 @@ export function SalesStatementView({
               ← Back to Sales
             </a>
           )}
-          <Button
-            type="button"
-            onClick={() => window.print()}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex items-center gap-2">
+            <PrintOrientationToggle
+              orientation={orientation}
+              onChange={setOrientation}
+            />
+            <Button
+              type="button"
+              onClick={() => window.print()}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
 
         <div className="statement-doc rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">

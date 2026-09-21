@@ -17,6 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Company, CompanyPayment } from "@/features/companies/schemas";
 import { Sale } from "@/features/sales/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 const parseTermDays = (terms: string | null | undefined) => {
   const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
@@ -228,6 +232,12 @@ export function CompanyStatementView({
   companies,
   hideBackLink,
 }: CompanyStatementViewProps) {
+  // Wide ledgers often read better on landscape paper; the choice is the
+  // user's and is remembered per statement.
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "company-statement",
+  });
+
   const companyById = useMemo(
     () => new Map(companies.map((c) => [c.id, c])),
     [companies],
@@ -414,14 +424,20 @@ export function CompanyStatementView({
               ← Back to Companies
             </a>
           )}
-          <Button
-            type="button"
-            onClick={() => window.print()}
-            className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
+          <div className="flex items-center gap-2">
+            <PrintOrientationToggle
+              orientation={orientation}
+              onChange={setOrientation}
+            />
+            <Button
+              type="button"
+              onClick={() => window.print()}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
 
         <div className="statement-doc rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">

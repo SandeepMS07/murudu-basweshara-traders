@@ -25,6 +25,10 @@ import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { stripIndiaCountryCode } from "@/lib/phone-format";
 import { useCanEdit } from "@/features/auth/components/AuthProvider";
 import type { ModuleKey } from "@/features/auth/lib/permissions";
+import {
+  PrintOrientationToggle,
+  usePrintOrientationChoice,
+} from "@/components/print/PrintOrientationToggle";
 
 type PurchaseColumnsConfig = {
   entityLabelSingular?: string;
@@ -105,6 +109,14 @@ function PurchaseActionsCell({
         : "";
   const previewRate = purchase.rate;
 
+  // The sheet prints from a hidden iframe, so the choice rides along in the
+  // URL rather than being applied to this document. Landscape by default: the
+  // two copies sit side by side, which is what the sheet was drawn for.
+  const { orientation, setOrientation } = usePrintOrientationChoice({
+    storageKey: "purchase-bill",
+    defaultOrientation: "landscape",
+  });
+
   const handleDelete = () => {
     if (isManual) return;
     setConfirmOpen(true);
@@ -137,7 +149,7 @@ function PurchaseActionsCell({
         const bill = await (
           mergedConfig.generateBillAction ?? generateBillFromPurchaseAction
         )(purchase.id);
-        const printUrl = `/bills/${bill.id}/print?pid=${purchase.id}&_ts=${Date.now()}`;
+        const printUrl = `/bills/${bill.id}/print?pid=${purchase.id}&orient=${orientation}&_ts=${Date.now()}`;
 
         // Keep user on the same page and print using a hidden iframe.
         const iframe = document.createElement("iframe");
@@ -463,24 +475,34 @@ function PurchaseActionsCell({
               </section>
             </div>
           </div>
-          <DialogFooter className="-mx-4 -mb-4 rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => setGenerateOpen(false)}
-              className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={isPending}
-              onClick={confirmGenerateBill}
-              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
-            >
-              {isPending ? "Generating..." : "Generate Bill"}
-            </Button>
+          <DialogFooter className="-mx-4 -mb-4 items-center rounded-b-xl border-t border-[#2a2d34] bg-[#15171c] p-4 sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500">Paper</span>
+              <PrintOrientationToggle
+                tone="dark"
+                orientation={orientation}
+                onChange={setOrientation}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => setGenerateOpen(false)}
+                className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={isPending}
+                onClick={confirmGenerateBill}
+                className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+              >
+                {isPending ? "Generating..." : "Generate Bill"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

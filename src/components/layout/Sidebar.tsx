@@ -120,11 +120,16 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   // From the shared auth context rather than its own fetch. AuthProvider
   // already refetches on window focus, so a permission change still shows
   // or hides nav items without a reload — with one request, not three.
-  const { user: userInfo } = useAuth();
+  const { user: userInfo, loading: authLoading, refresh } = useAuth();
   // Soya is a separate, admin-only business line living entirely under /soya.
   const workspace = workspaceForPath(pathname);
   const isAdmin = userInfo?.role === "admin";
-  // Only show modules the user can view. Empty until the user loads.
+  // Only show modules the user can view.
+  //
+  // This is empty until the session arrives, and an empty nav is not a neutral
+  // "not ready" state — it is what a user with no access at all would see. So
+  // the render below shows placeholder rows while authLoading is true rather
+  // than an empty sidebar that looks like a permissions problem.
   const visibleNavItems = useMemo(
     () => (userInfo ? navItems.filter((item) => can(userInfo, item.module, "view")) : []),
     [userInfo],
@@ -146,6 +151,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
     setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      // Clear the cached session too, or the context keeps serving the old
+      // user after the cookie is gone — the mirror image of the login bug.
+      await refresh();
       router.push("/login");
       router.refresh();
     } catch (error) {
@@ -204,6 +212,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         <SoyaNav onNavigate={onNavigate} />
       ) : (
       <nav className="flex-1 space-y-1">
+        {authLoading ? <SidebarNavSkeleton /> : null}
         {visibleNavItems.map((item) => {
           const isActive =
             pathname.startsWith(item.href) ||
@@ -354,6 +363,32 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/**
+ * Placeholder nav rows, shown only while the session is still loading.
+ *
+ * Six rows because that is roughly what an admin sees; the point is that the
+ * sidebar has visible shape immediately instead of being blank, which reads as
+ * "you have no access" rather than "one moment".
+ */
+function SidebarNavSkeleton() {
+  return (
+    <div className="space-y-1" aria-hidden>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-3 rounded-md px-3 py-2"
+        >
+          <span className="h-5 w-5 shrink-0 animate-pulse rounded bg-[#1d2026]" />
+          <span
+            className="h-3.5 animate-pulse rounded bg-[#1d2026]"
+            style={{ width: `${58 + ((index * 17) % 34)}%` }}
+          />
+        </div>
+      ))}
     </div>
   );
 }

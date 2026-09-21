@@ -23,6 +23,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { billSchema, Bill } from "@/features/bills/schemas";
 import { createBillAction, updateBillAction } from "@/app/bills/actions";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
+import {
+  PrintOrientationToggle,
+  usePrintOrientation,
+} from "@/components/print/PrintOrientationToggle";
 
 interface BillFormProps {
   initialData?: Bill;
@@ -121,6 +125,12 @@ export function BillForm({ initialData }: BillFormProps) {
       setIsLoading(false);
     }
   }
+
+  const { orientation, setOrientation } = usePrintOrientation({
+    storageKey: "purchase-bill",
+    defaultOrientation: "landscape",
+    margin: "4mm",
+  });
 
   function handlePrintPdf() {
     window.print();
@@ -256,13 +266,19 @@ export function BillForm({ initialData }: BillFormProps) {
                   Cancel
                 </Button>
                 {isGenerateMode && isGenerated && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handlePrintPdf}
-                  >
-                    Print PDF
-                  </Button>
+                  <>
+                    <PrintOrientationToggle
+                      orientation={orientation}
+                      onChange={setOrientation}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handlePrintPdf}
+                    >
+                      Print PDF
+                    </Button>
+                  </>
                 )}
                 <Button type="submit" disabled={isLoading}>
                   {isLoading && (

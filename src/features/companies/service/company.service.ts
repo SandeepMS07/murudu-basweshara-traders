@@ -1,5 +1,6 @@
 import { requireModule } from "@/features/auth/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
+import { selectAll } from "@/lib/supabase/select-all";
 import {
   Company,
   CompanyPaymentAllocation,
@@ -353,22 +354,22 @@ export async function upsertBuyerCompanyByName(
 }
 
 export async function getCompanyPayments(companyId?: string): Promise<CompanyPayment[]> {
-  let query = supabaseServer
-    .from("company_payments")
-    .select("*")
-    .order("paid_on", { ascending: false })
-    .order("created_at", { ascending: false });
+  // Paged: a single response is capped at 1000 rows and truncates silently.
+  const data = await selectAll<CompanyPaymentRow>((from, to) => {
+    let query = supabaseServer
+      .from("company_payments")
+      .select("*")
+      .order("paid_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
-  if (companyId) {
-    query = query.eq("company_id", companyId);
-  }
+    if (companyId) {
+      query = query.eq("company_id", companyId);
+    }
+    return query;
+  });
 
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to load company payments: ${error.message}`);
-  }
-
-  return (data as CompanyPaymentRow[]).map(toCompanyPayment);
+  return data.map(toCompanyPayment);
 }
 
 export async function getCompanyPaymentAllocations(
