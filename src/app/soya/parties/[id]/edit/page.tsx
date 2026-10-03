@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
+import { getSoyaCompanies } from "@/features/soya-companies/service/soya-company.service";
+import { getSoyaCompanyScopeFor } from "@/features/soya/lib/company-scope";
 import { SoyaPartyForm } from "@/features/soya-parties/components/SoyaPartyForm";
 import {
   getSoyaParties,
@@ -22,9 +24,12 @@ export default async function EditSoyaPartyEntryPage({
     notFound();
   }
 
-  const [parties, factories] = await Promise.all([
-    getSoyaParties(),
-    getSoyaFactories(),
+  // Options come from the entry's own company, not the sidebar's.
+  const scope = await getSoyaCompanyScopeFor(entry.company_id);
+  const [parties, factories, companies] = await Promise.all([
+    getSoyaParties(scope),
+    getSoyaFactories(scope),
+    getSoyaCompanies(),
   ]);
 
   return (
@@ -38,6 +43,10 @@ export default async function EditSoyaPartyEntryPage({
         </p>
       </div>
       <SoyaPartyForm
+        companies={companies
+          .filter((company) => company.is_active)
+          .map((company) => ({ id: company.id, name: company.name }))}
+        defaultCompanyId={scope.companyId}
         initialData={entry}
         partyOptions={parties.map((party) => party.name)}
         factoryOptions={factories.map((factory) => factory.name)}

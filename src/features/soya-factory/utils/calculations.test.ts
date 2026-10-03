@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calculateSoyaFactoryEntry } from "@/features/soya-factory/utils/calculations";
 
 const base = {
+  company_id: "",
   sl_no: 3,
   factory: "ADM",
   date: "2026-04-03",

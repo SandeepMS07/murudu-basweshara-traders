@@ -19,6 +19,10 @@ import {
   updateSoyaParty,
   updateSoyaPartyEntry,
 } from "@/features/soya-parties/service/soya-party.service";
+import {
+  getActiveSoyaCompanyScope,
+  resolveSoyaCompanyScope,
+} from "@/features/soya/lib/company-scope";
 
 const LIST_PATH = "/soya/parties";
 const MASTER_PATH = "/soya/parties/companies";
@@ -34,7 +38,10 @@ export async function createSoyaPartyEntryAction(data: SoyaPartyEntryInput) {
     };
   }
   try {
-    const entry = await createSoyaPartyEntry(parsed.data);
+    const entry = await createSoyaPartyEntry(
+      parsed.data,
+      await getActiveSoyaCompanyScope(),
+    );
     revalidatePath(LIST_PATH);
     revalidatePath(MASTER_PATH);
     return { success: true as const, entry };
@@ -79,22 +86,32 @@ export async function deleteSoyaPartyEntryAction(id: string) {
   revalidatePath(MASTER_PATH);
 }
 
-export async function getNextSoyaPartyIdentifiersAction(date: string) {
-  return getNextSoyaPartyIdentifiers(date);
+export async function getNextSoyaPartyIdentifiersAction(
+  date: string,
+  companyId?: string,
+) {
+  return getNextSoyaPartyIdentifiers(await resolveSoyaCompanyScope(companyId), date);
 }
 
+/** `companyId` is the company chosen on the form; the check follows it. */
 export async function checkSoyaPartyBillNoAction(
   billNo: string,
   date: string,
   excludeId?: string,
+  companyId?: string,
 ) {
-  return isSoyaPartyBillNoAvailable(billNo, date, excludeId);
+  return isSoyaPartyBillNoAvailable(
+    await resolveSoyaCompanyScope(companyId),
+    billNo,
+    date,
+    excludeId,
+  );
 }
 
 // -------------------------------------------------------------- party master
 
 export async function createSoyaPartyAction(name: string) {
-  await createSoyaParty(name);
+  await createSoyaParty(name, await getActiveSoyaCompanyScope());
   revalidatePath(MASTER_PATH);
   revalidatePath(LIST_PATH);
 }

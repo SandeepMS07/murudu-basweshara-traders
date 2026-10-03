@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
+import { getActiveSoyaCompanyScope } from "@/features/soya/lib/company-scope";
 import { SoyaPartyLedger } from "@/features/soya-parties/components/SoyaPartyLedger";
 import {
   getSoyaParties,
@@ -15,14 +16,15 @@ import { getActiveSoyaCompanyId } from "@/features/soya/lib/active-company";
 
 export default async function SoyaPartyMasterPage() {
   await requireSoyaAdminPage();
+  const scope = await getActiveSoyaCompanyScope();
 
   // Until the migration is applied these reads fail; the page still renders a
   // notice naming the file to run instead of erroring outright.
   const [partiesResult, entriesResult, paymentsResult] =
     await Promise.allSettled([
-      getSoyaParties(),
-      getSoyaPartyEntries(),
-      getSoyaPartyPayments(),
+      getSoyaParties(scope),
+      getSoyaPartyEntries(scope),
+      getSoyaPartyPayments(scope),
     ]);
 
   if (partiesResult.status === "rejected") {

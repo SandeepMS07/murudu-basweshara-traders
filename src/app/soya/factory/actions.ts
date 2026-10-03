@@ -18,6 +18,10 @@ import {
   updateSoyaFactory,
   updateSoyaFactoryEntry,
 } from "@/features/soya-factory/service/soya-factory.service";
+import {
+  getActiveSoyaCompanyScope,
+  resolveSoyaCompanyScope,
+} from "@/features/soya/lib/company-scope";
 
 const LIST_PATH = "/soya/factory";
 const MASTER_PATH = "/soya/factory/parties";
@@ -39,7 +43,10 @@ export async function createSoyaFactoryEntryAction(
     };
   }
   try {
-    const entry = await createSoyaFactoryEntry(parsed.data);
+    const entry = await createSoyaFactoryEntry(
+      parsed.data,
+      await getActiveSoyaCompanyScope(),
+    );
     revalidatePath(LIST_PATH);
     revalidatePath(MASTER_PATH);
     return { success: true as const, entry };
@@ -84,14 +91,14 @@ export async function deleteSoyaFactoryEntryAction(id: string) {
   revalidatePath(MASTER_PATH);
 }
 
-export async function getNextSoyaFactorySlNoAction(date: string) {
-  return getNextSoyaFactorySlNo(date);
+export async function getNextSoyaFactorySlNoAction(date: string, companyId?: string) {
+  return getNextSoyaFactorySlNo(await resolveSoyaCompanyScope(companyId), date);
 }
 
 // ------------------------------------------------------------ factory master
 
 export async function createSoyaFactoryAction(name: string) {
-  await createSoyaFactory(name);
+  await createSoyaFactory(name, await getActiveSoyaCompanyScope());
   revalidatePath(MASTER_PATH);
   revalidatePath(LIST_PATH);
 }

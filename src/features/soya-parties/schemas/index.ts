@@ -38,6 +38,11 @@ export const soyaPartyEntrySchema = z.object({
   party: z.string().trim().min(1, "Party is required"),
   /** Which factory the goods came from; the ledger tabs record it. */
   factory: z.string().trim().default(""),
+  /**
+   * Which of our firms this belongs to. Empty means "the company open in the
+   * sidebar" on create, and "leave it where it is" on update.
+   */
+  company_id: z.string().trim().default(""),
 });
 
 export type SoyaPartyEntryInput = z.infer<typeof soyaPartyEntrySchema>;
@@ -68,6 +73,8 @@ export type SoyaPartyInput = z.infer<typeof soyaPartySchema>;
 export interface SoyaParty {
   id: string;
   name: string;
+  /** Null for a master created before companies existed. */
+  company_id: string | null;
 }
 
 /**

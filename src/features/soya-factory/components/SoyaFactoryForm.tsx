@@ -36,6 +36,10 @@ interface SoyaFactoryFormProps {
   nextSlNo?: number;
   factoryOptions?: string[];
   partyOptions?: string[];
+  /** Soya companies an entry can belong to. */
+  companies?: { id: string; name: string }[];
+  /** Preselected company: the entry's own on edit, the sidebar's on create. */
+  defaultCompanyId?: string;
 }
 
 const LIST_HREF = "/soya/factory";
@@ -45,6 +49,8 @@ export function SoyaFactoryForm({
   nextSlNo = 1,
   factoryOptions = [],
   partyOptions = [],
+  companies = [],
+  defaultCompanyId = "",
 }: SoyaFactoryFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +71,7 @@ export function SoyaFactoryForm({
           rate: initialData.rate,
           tcs: initialData.tcs,
           party: initialData.party,
+          company_id: initialData.company_id || defaultCompanyId,
         }
       : {
           sl_no: nextSlNo,
@@ -77,6 +84,7 @@ export function SoyaFactoryForm({
           rate: 0,
           tcs: 0,
           party: "",
+          company_id: defaultCompanyId,
         },
   });
 
@@ -143,6 +151,36 @@ export function SoyaFactoryForm({
                 Purchase Details
               </h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {companies.length > 0 ? (
+                  <FormField
+                    control={form.control}
+                    name="company_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>COMPANY</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            value={field.value ?? ""}
+                            className={`${fieldClassName} w-full rounded-md border px-3 text-sm`}
+                          >
+                            {companies.map((company) => (
+                              <option key={company.id} value={company.id}>
+                                {company.name}
+                              </option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <p className="text-xs text-zinc-500">
+                          {isEditing
+                            ? "Change to move this entry to another company."
+                            : "Defaults to the company open in the sidebar."}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
                 <FormField
                   control={form.control}
                   name="sl_no"

@@ -39,6 +39,10 @@ interface SoyaPartyFormProps {
   nextBillNo?: string;
   partyOptions?: string[];
   factoryOptions?: string[];
+  /** Soya companies an entry can belong to. */
+  companies?: { id: string; name: string }[];
+  /** Preselected company: the entry's own on edit, the sidebar's on create. */
+  defaultCompanyId?: string;
 }
 
 const LIST_HREF = "/soya/parties";
@@ -49,6 +53,8 @@ export function SoyaPartyForm({
   nextBillNo = "1",
   partyOptions = [],
   factoryOptions = [],
+  companies = [],
+  defaultCompanyId = "",
 }: SoyaPartyFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +79,7 @@ export function SoyaPartyForm({
           fright: initialData.fright,
           party: initialData.party,
           factory: initialData.factory,
+          company_id: initialData.company_id || defaultCompanyId,
         }
       : {
           sl_no: nextSlNo,
@@ -87,6 +94,7 @@ export function SoyaPartyForm({
           fright: 0,
           party: "",
           factory: "",
+          company_id: defaultCompanyId,
         },
   });
 
@@ -96,6 +104,7 @@ export function SoyaPartyForm({
   const tcs = watch("tcs") ?? 0;
   const billNo = watch("bill_no");
   const date = watch("date");
+  const companyId = watch("company_id");
 
   // Mirrors calculateSoyaPartyEntry so the preview always matches what the
   // server will store.
@@ -125,12 +134,13 @@ export function SoyaPartyForm({
           candidate,
           date,
           isEditing ? initialData?.id : undefined,
+          companyId || undefined,
         );
         if (billNoCheckSeqRef.current !== seq) return;
         if (!available) {
           form.setError("bill_no", {
             type: "manual",
-            message: "Bill no already exists for this financial year",
+            message: "Bill no already exists for this company in this financial year",
           });
         } else if (form.formState.errors.bill_no?.type === "manual") {
           form.clearErrors("bill_no");
@@ -143,7 +153,7 @@ export function SoyaPartyForm({
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [billNo, date, form, initialData?.id, isEditing]);
+  }, [billNo, companyId, date, form, initialData?.id, isEditing]);
 
   const fieldClassName =
     "h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100 placeholder:text-zinc-500";
@@ -240,6 +250,36 @@ export function SoyaPartyForm({
                 Sale Details
               </h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {companies.length > 0 ? (
+                  <FormField
+                    control={form.control}
+                    name="company_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>COMPANY</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            value={field.value ?? ""}
+                            className={`${fieldClassName} w-full rounded-md border px-3 text-sm`}
+                          >
+                            {companies.map((company) => (
+                              <option key={company.id} value={company.id}>
+                                {company.name}
+                              </option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <p className="text-xs text-zinc-500">
+                          {isEditing
+                            ? "Change to move this entry to another company."
+                            : "Defaults to the company open in the sidebar."}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
                 <FormField
                   control={form.control}
                   name="sl_no"
@@ -294,7 +334,7 @@ export function SoyaPartyForm({
                         </p>
                       ) : (
                         <p className="text-xs text-zinc-500">
-                          Unique per financial year. Text is allowed.
+                          Unique per company per financial year. Text is allowed.
                         </p>
                       )}
                       <FormMessage />

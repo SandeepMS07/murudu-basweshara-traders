@@ -29,6 +29,11 @@ export const soyaFactoryEntrySchema = z.object({
   tcs: z.number().min(0).default(0),
   /** Which party this lorry was sold on to; the ledger tabs record it. */
   party: z.string().trim().default(""),
+  /**
+   * Which of our firms this belongs to. Empty means "the company open in the
+   * sidebar" on create, and "leave it where it is" on update.
+   */
+  company_id: z.string().trim().default(""),
 });
 
 export type SoyaFactoryEntryInput = z.infer<typeof soyaFactoryEntrySchema>;
@@ -57,6 +62,8 @@ export type SoyaFactoryInput = z.infer<typeof soyaFactorySchema>;
 export interface SoyaFactory {
   id: string;
   name: string;
+  /** Null for a master created before companies existed. */
+  company_id: string | null;
 }
 
 /**

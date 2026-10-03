@@ -16,6 +16,11 @@ interface DashboardFilterBarProps {
   /** Rows the current filter matches, for the "n of m" readout. */
   matched: number;
   total: number;
+  /** Wording for the dropdown and readout. Defaults are the maize wording. */
+  customerLabel?: { singular: string; plural: string };
+  recordLabel?: string;
+  /** Params owned by the page (not this bar) that must survive a filter change. */
+  preserveParams?: Record<string, string>;
 }
 
 /**
@@ -33,13 +38,16 @@ export function DashboardFilterBar({
   today,
   matched,
   total,
+  customerLabel = { singular: "customer", plural: "customers" },
+  recordLabel = "sales",
+  preserveParams,
 }: DashboardFilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
   const apply = (next: { range?: DateRange; customer?: string }) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(preserveParams);
     const resolvedRange = next.range ?? range;
     const resolvedCustomer = next.customer ?? customer;
 
@@ -74,10 +82,10 @@ export function DashboardFilterBar({
       <select
         value={customer}
         onChange={(event) => apply({ customer: event.target.value })}
-        aria-label="Filter by customer"
+        aria-label={`Filter by ${customerLabel.singular}`}
         className="h-9 min-w-48 max-w-full cursor-pointer rounded-lg bg-[#0f1115] px-2.5 text-sm text-zinc-200 ring-1 ring-inset ring-[#242832]"
       >
-        <option value="">All customers</option>
+        <option value="">All {customerLabel.plural}</option>
         {customers.map((name) => (
           <option key={name} value={name}>
             {name}
@@ -86,7 +94,7 @@ export function DashboardFilterBar({
       </select>
 
       <span className="ml-auto text-xs text-zinc-500">
-        {isPending ? "Updating…" : `${matched} of ${total} sales · ${formatRangeLabel(range)}`}
+        {isPending ? "Updating…" : `${matched} of ${total} ${recordLabel} · ${formatRangeLabel(range)}`}
       </span>
     </div>
   );

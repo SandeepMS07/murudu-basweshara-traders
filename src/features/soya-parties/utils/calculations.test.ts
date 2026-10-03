@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calculateSoyaPartyEntry } from "@/features/soya-parties/utils/calculations";
 
 const base = {
+  company_id: "",
   sl_no: 3,
   date: "2026-04-03",
   bill_no: "3",

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { requireSoyaAdminPage } from "@/features/soya/lib/guard";
+import { getSoyaCompanyScopeFor } from "@/features/soya/lib/company-scope";
 import { SoyaPartyStatement } from "@/features/soya-parties/components/SoyaPartyStatement";
 import {
   getSoyaPartyById,
@@ -47,9 +48,12 @@ export default async function SoyaPartyStatementPage({
     notFound();
   }
 
+  // The statement follows the party's company, whichever one the sidebar has
+  // open, so a link from the dashboard's All companies view is correct.
+  const scope = await getSoyaCompanyScopeFor(party.company_id);
   const [entries, payments] = await Promise.all([
-    getSoyaPartyEntries(),
-    getSoyaPartyPayments(id),
+    getSoyaPartyEntries(scope),
+    getSoyaPartyPayments(scope, id),
   ]);
 
   const normalized = party.name.trim().toLowerCase();
