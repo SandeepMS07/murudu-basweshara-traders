@@ -190,9 +190,30 @@ export function roundOffTotal(grossValue: number): {
 export const GST_REGISTRATION_TYPES = [
   { value: "regular", label: "Regular" },
   { value: "composition", label: "Composition" },
-  { value: "unregistered", label: "Unregistered" },
+  { value: "unregistered", label: "Unregistered (URD)" },
   { value: "consumer", label: "Consumer" },
 ] as const;
 
 export type GstRegistrationType =
   (typeof GST_REGISTRATION_TYPES)[number]["value"];
+
+/**
+ * The registration a counterparty actually has, given its GSTIN.
+ *
+ * The GSTIN decides: without one, a party is an unregistered dealer (URD) —
+ * the customer's books label every no-GSTIN party that way — even though the
+ * master defaults to "regular". Left as stored, a URD party carried "regular"
+ * onto its invoice, which then failed validation for want of a GSTIN.
+ * "consumer" (an end buyer, also without a GSTIN) is kept. With a GSTIN,
+ * "unregistered" / "consumer" cannot be right, so it becomes "regular";
+ * "composition" is kept.
+ */
+export function effectiveRegistrationType(
+  gstin: string,
+  registrationType: string,
+): GstRegistrationType {
+  if (!gstin.trim()) {
+    return registrationType === "consumer" ? "consumer" : "unregistered";
+  }
+  return registrationType === "composition" ? "composition" : "regular";
+}

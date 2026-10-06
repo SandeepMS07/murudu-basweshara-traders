@@ -4,7 +4,15 @@ import {
   soyaCounterpartyGstFields,
   validateCounterpartyGst,
 } from "@/features/soya-companies/schemas";
-import { stateCodeFromGstin } from "@/features/soya/lib/gst";
+import {
+  effectiveRegistrationType,
+  stateCodeFromGstin,
+} from "@/features/soya/lib/gst";
+import {
+  companyScopeFilter,
+  getSoyaCompanyScopeFor,
+  type SoyaCompanyScope,
+} from "@/features/soya/lib/company-scope";
 import { z } from "zod";
 
 /**
@@ -25,6 +33,30 @@ const TABLES: Record<CounterpartyKind, string> = {
   party: "soya_parties",
 };
 
+/** Where a counterparty's bills and payments live, for the delete guard. */
+const USAGE: Record<
+  CounterpartyKind,
+  { entries: string; nameColumn: string; payments: string; idColumn: string; label: string }
+> = {
+  factory: {
+    entries: "soya_factory_entries",
+    nameColumn: "factory",
+    payments: "soya_factory_payments",
+    idColumn: "factory_id",
+    label: "Factory",
+  },
+  party: {
+    entries: "soya_party_entries",
+    nameColumn: "party",
+    payments: "soya_party_payments",
+    idColumn: "party_id",
+    label: "Party",
+  },
+};
+
+const COLUMNS =
+  "id,name,company_id,gstin,state_code,registration_type,address,place,pincode,phone";
+
 export interface SoyaCounterparty {
   id: string;
   name: string;
@@ -40,7 +72,6 @@ export interface SoyaCounterparty {
 
 export const counterpartyGstSchema = z
   .object(soyaCounterpartyGstFields)
-  .extend({ company_id: z.string().trim().default("") })
   .superRefine(validateCounterpartyGst);
 
 export type CounterpartyGstInput = z.infer<typeof counterpartyGstSchema>;
@@ -56,7 +87,12 @@ function toCounterparty(row: Record<string, unknown>): SoyaCounterparty {
     company_id: s(row.company_id as string),
     gstin: s(row.gstin as string),
     state_code: s(row.state_code as string),
-    registration_type: s(row.registration_type as string) || "regular",
+    // Read through the GSTIN rule, so a no-GSTIN party saved before it existed
+    // still reaches the invoice form as URD.
+    registration_type: effectiveRegistrationType(
+      s(row.gstin as string),
+      s(row.registration_type as string),
+    ),
     address: s(row.address as string),
     place: s(row.place as string),
     pincode: s(row.pincode as string),
@@ -65,18 +101,19 @@ function toCounterparty(row: Record<string, unknown>): SoyaCounterparty {
 }
 
 /**
- * Everyone on the master, whichever company they belong to.
- *
- * Deliberately NOT filtered by the open company: the three rows that predate
- * companies have company_id null, and hiding them would make them impossible to
- * assign. The UI shows which company each belongs to instead.
+ * The open company's counterparties, the same set its ledger lists — so the
+ * GST table and the ledger below it always agree. Deleted rows are left out.
+ * Unassigned rows belong to the default company (see company-scope.ts).
  */
 export async function getSoyaCounterparties(
   kind: CounterpartyKind,
+  scope: SoyaCompanyScope,
 ): Promise<SoyaCounterparty[]> {
   const { data, error } = await supabaseServer
     .from(TABLES[kind])
-    .select("id,name,company_id,gstin,state_code,registration_type,address,place,pincode,phone")
+    .select(COLUMNS)
+    .is("deleted_at", null)
+    .or(companyScopeFilter(scope))
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []).map(toCounterparty);
@@ -86,10 +123,7 @@ export async function getSoyaCounterparties(
 export async function getSoyaPartiesForInvoicing(
   companyId: string,
 ): Promise<SoyaCounterparty[]> {
-  const all = await getSoyaCounterparties("party");
-  // Unassigned parties stay available: excluding them would make an invoice
-  // impossible for exactly the rows that predate companies.
-  return all.filter((party) => !party.company_id || party.company_id === companyId);
+  return getSoyaCounterparties("party", await getSoyaCompanyScopeFor(companyId));
 }
 
 export async function updateSoyaCounterpartyGst(
@@ -107,11 +141,12 @@ export async function updateSoyaCounterpartyGst(
 
   const { data, error } = await supabaseServer
     .from(TABLES[kind])
+    // GST details only. Which company a counterparty belongs to is not edited
+    // here: each company's screen shows its own records.
     .update({
-      company_id: parsed.company_id || null,
       gstin: parsed.gstin,
       state_code: stateCode,
-      registration_type: parsed.registration_type,
+      registration_type: effectiveRegistrationType(parsed.gstin, parsed.registration_type),
       address: parsed.address,
       place: parsed.place,
       pincode: parsed.pincode,
@@ -119,17 +154,10 @@ export async function updateSoyaCounterpartyGst(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .select("id,name,company_id,gstin,state_code,registration_type,address,place,pincode,phone")
+    .select(COLUMNS)
     .single();
 
-  if (error) {
-    if (error.code === "23505") {
-      throw new Error(
-        "Another record with this name already belongs to that company. Names are unique per company.",
-      );
-    }
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   return toCounterparty(data);
 }
 
@@ -146,4 +174,61 @@ export async function assignUnassignedCounterparties(
     .select("id");
   if (error) throw new Error(error.message);
   return (data ?? []).length;
+}
+
+/**
+ * Hides a counterparty (sets deleted_at); nothing is erased, and adding the same
+ * name again in the same company brings it back.
+ *
+ * Refused while it has bills or payments in its company: its payments only
+ * count towards balances through a visible record, so hiding one in use would
+ * silently change what is owed.
+ */
+export async function softDeleteSoyaCounterparty(
+  kind: CounterpartyKind,
+  id: string,
+): Promise<void> {
+  await requireRole(["admin"]);
+  const usage = USAGE[kind];
+
+  const { data: row, error: rowError } = await supabaseServer
+    .from(TABLES[kind])
+    .select("id,name,company_id,deleted_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (rowError) throw new Error(rowError.message);
+  if (!row || row.deleted_at) throw new Error(`${usage.label} not found`);
+
+  const scope = await getSoyaCompanyScopeFor(row.company_id as string | null);
+  const [entries, payments] = await Promise.all([
+    supabaseServer
+      .from(usage.entries)
+      .select("id", { head: true, count: "exact" })
+      .eq(usage.nameColumn, row.name)
+      .or(companyScopeFilter(scope)),
+    supabaseServer
+      .from(usage.payments)
+      .select("id", { head: true, count: "exact" })
+      .eq(usage.idColumn, id),
+  ]);
+  if (entries.error) throw new Error(entries.error.message);
+  if (payments.error) throw new Error(payments.error.message);
+
+  const bills = entries.count ?? 0;
+  const paid = payments.count ?? 0;
+  if (bills > 0 || paid > 0) {
+    const parts = [
+      bills ? `${bills} bill${bills === 1 ? "" : "s"}` : "",
+      paid ? `${paid} payment${paid === 1 ? "" : "s"}` : "",
+    ].filter(Boolean);
+    throw new Error(
+      `Cannot delete ${row.name}: it still has ${parts.join(" and ")} in this company.`,
+    );
+  }
+
+  const { error } = await supabaseServer
+    .from(TABLES[kind])
+    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }

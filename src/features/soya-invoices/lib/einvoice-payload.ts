@@ -71,6 +71,7 @@ export interface EInvoicePayload {
   ItemList: Record<string, string | number>[];
   ValDtls: Record<string, number>;
   EwbDtls?: Record<string, string | number>;
+  RefDtls?: { PrecDocDtls: { InvNo: string; InvDt: string }[] };
 }
 
 /**
@@ -127,10 +128,20 @@ export function checkEInvoiceReady(
   const registered =
     invoice.party_registration_type === "regular" ||
     invoice.party_registration_type === "composition";
+  const isExport = (invoice.supply_type || "B2B").startsWith("EXP");
   if (registered) {
     if (!invoice.party_gstin) block("party_gstin", "A registered buyer must have a GSTIN");
     else if (!checkGstin(invoice.party_gstin).valid)
       block("party_gstin", "The buyer's GSTIN is not valid");
+  } else if (!isExport) {
+    // E-invoicing covers supplies to registered buyers and exports only. A
+    // domestic sale to an unregistered (URD) or consumer buyer is B2C and gets
+    // no IRN; the portal takes "URP" in place of a GSTIN for exports alone, so
+    // sending one would just come back as an error code.
+    block(
+      "party_registration_type",
+      "E-invoice does not apply to a URD (unregistered) buyer. Print this as a normal tax invoice. If it is ₹50,000 or more, generate the e-way bill directly on the e-way bill portal.",
+    );
   }
   if (!invoice.party_legal_name && !invoice.party_name)
     block("party_name", "The buyer has no name");
@@ -149,6 +160,12 @@ export function checkEInvoiceReady(
   if (!/^[A-Za-z0-9/-]+$/.test(invoice.invoice_no))
     block("invoice_no", "Invoice number may only contain letters, digits, / and -");
   if (!toPortalDate(invoice.invoice_date)) block("invoice_date", "Invoice date is not a date");
+  if (invoice.doc_type !== "INV") {
+    if (!invoice.original_invoice_no)
+      block("original_invoice_no", "A credit or debit note must quote the original invoice number");
+    if (!toPortalDate(invoice.original_invoice_date))
+      block("original_invoice_date", "A credit or debit note must quote the original invoice date");
+  }
 
   // The portal always refuses a document dated in the future.
   //
@@ -260,7 +277,9 @@ export function buildEInvoicePayload(
       Em: cap(seller.email, 100),
     },
     BuyerDtls: {
-      // The portal's placeholder for an unregistered buyer.
+      // "URP" (unregistered person) is the portal's placeholder for a foreign
+      // buyer on an export; checkEInvoiceReady stops a domestic URD sale
+      // before it gets here.
       Gstin: invoice.party_gstin || "URP",
       LglNm: cap(invoice.party_legal_name || invoice.party_name, 100),
       TrdNm: cap(invoice.party_name || invoice.party_legal_name, 100),
@@ -310,6 +329,18 @@ export function buildEInvoicePayload(
       TotInvVal: invoice.total_value,
     },
   };
+
+  // A note points back at the invoice it adjusts (CGST Rule 53).
+  if (invoice.doc_type !== "INV" && invoice.original_invoice_no) {
+    payload.RefDtls = {
+      PrecDocDtls: [
+        {
+          InvNo: cap(invoice.original_invoice_no, 16),
+          InvDt: toPortalDate(invoice.original_invoice_date),
+        },
+      ],
+    };
+  }
 
   // Only sent when it genuinely differs — the portal treats a present-but-empty
   // block as a claim that the goods came from somewhere else, and validates it.

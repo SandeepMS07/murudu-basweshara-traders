@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import type { EInvoiceSeller } from "@/features/soya-invoices/lib/einvoice-payload";
 import type { SoyaInvoice } from "@/features/soya-invoices/schemas";
@@ -63,6 +63,37 @@ function amountInWords(value: number): string {
   return `${value < 0 ? "Minus " : ""}${rupeeWords} Rupees${paiseWords} Only`;
 }
 
+/** CGST Rule 53: a note is titled as what it is, not as a tax invoice. */
+const DOC_TITLE: Record<string, string> = {
+  INV: "TAX INVOICE",
+  CRN: "CREDIT NOTE",
+  DBN: "DEBIT NOTE",
+};
+
+/**
+ * CGST Rule 48(1): an invoice for goods is made in triplicate, each copy
+ * marked for who keeps it.
+ */
+type Copy = "original" | "duplicate" | "triplicate";
+type CopyChoice = Copy | "all";
+const COPY_LABEL: Record<Copy, string> = {
+  original: "Original for Recipient",
+  duplicate: "Duplicate for Transporter",
+  triplicate: "Triplicate for Supplier",
+};
+const COPY_CHOICES: { value: CopyChoice; label: string }[] = [
+  { value: "original", label: "Original" },
+  { value: "duplicate", label: "Duplicate" },
+  { value: "triplicate", label: "Triplicate" },
+  { value: "all", label: "All three" },
+];
+
+/** yyyy-MM-dd → dd-MM-yyyy, the form Indian invoices use. */
+function displayDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return day && month && year ? `${day}-${month}-${year}` : iso;
+}
+
 function money(value: number): string {
   return formatNumberIN(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -72,13 +103,19 @@ interface SoyaInvoicePrintViewProps {
   seller: EInvoiceSeller;
   /** Opens the print dialog on load, for the "Print" link. */
   autoPrint?: boolean;
+  /** The e-invoice's signed QR code as SVG markup, when it has an IRN. */
+  qrSvg?: string;
 }
 
 export function SoyaInvoicePrintView({
   invoice,
   seller,
   autoPrint = false,
+  qrSvg = "",
 }: SoyaInvoicePrintViewProps) {
+  const [copyChoice, setCopyChoice] = useState<CopyChoice>("original");
+  const copies: Copy[] = copyChoice === "all" ? ["original", "duplicate", "triplicate"] : [copyChoice];
+  const isNote = invoice.doc_type !== "INV";
   useEffect(() => {
     if (!autoPrint) return;
     // One frame so fonts and layout settle before the dialog freezes the page.
@@ -138,9 +175,12 @@ export function SoyaInvoicePrintView({
         .inv-irn { border: 1px solid #111; border-top: 0; padding: 5px 7px; font-size: 9px; }
         .inv-irn code { font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
         .no-print { margin: 12px auto; max-width: 190mm; }
+        /* Each further copy starts on its own sheet. */
+        .inv-next-copy { margin-top: 12mm; border-top: 1px dashed #bbb; padding-top: 8mm; }
         @media print {
           .no-print { display: none !important; }
           .inv-root { padding: 0; max-width: none; }
+          .inv-next-copy { break-before: page; margin-top: 0; border-top: 0; padding-top: 0; }
           thead { display: table-header-group; }
           /* tfoot repeats on every page by default; totals must print once. */
           tfoot { display: table-row-group; }
@@ -158,6 +198,20 @@ export function SoyaInvoicePrintView({
           orientation={orientation}
           onChange={setOrientation}
         />
+        <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+          Copy
+          <select
+            value={copyChoice}
+            onChange={(event) => setCopyChoice(event.target.value as CopyChoice)}
+            style={{ border: "1px solid #ccc", borderRadius: 6, padding: "7px 8px", fontSize: 13 }}
+          >
+            {COPY_CHOICES.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           onClick={() => window.print()}
@@ -174,15 +228,10 @@ export function SoyaInvoicePrintView({
         </button>
       </div>
 
-      <div className="inv-root">
-        <div className="inv-title">TAX INVOICE</div>
-        <div className="inv-sub">
-          {invoice.doc_type === "CRN"
-            ? "Credit Note"
-            : invoice.doc_type === "DBN"
-              ? "Debit Note"
-              : "Original for Recipient"}
-        </div>
+      {copies.map((copy, index) => (
+      <div key={copy} className={index > 0 ? "inv-root inv-next-copy" : "inv-root"}>
+        <div className="inv-title">{DOC_TITLE[invoice.doc_type] ?? "TAX INVOICE"}</div>
+        <div className="inv-sub">{COPY_LABEL[copy]}</div>
 
         <div style={{ height: 6 }} />
 
@@ -193,7 +242,9 @@ export function SoyaInvoicePrintView({
             {seller.address ? <div>{seller.address}</div> : null}
             <div>
               {[seller.place, seller.pincode].filter(Boolean).join(" - ")}
-              {seller.state_code ? `, ${stateNameForCode(seller.state_code)}` : ""}
+              {seller.state_code
+                ? `, ${stateNameForCode(seller.state_code)} (${seller.state_code})`
+                : ""}
             </div>
             {seller.gstin ? (
               <div style={{ marginTop: 3 }}>
@@ -207,13 +258,25 @@ export function SoyaInvoicePrintView({
             <table style={{ width: "100%", fontSize: 11 }}>
               <tbody>
                 <tr>
-                  <td className="inv-label">Invoice No</td>
+                  <td className="inv-label">{isNote ? "Note No" : "Invoice No"}</td>
                   <td style={{ textAlign: "right", fontWeight: 700 }}>{invoice.invoice_no}</td>
                 </tr>
                 <tr>
                   <td className="inv-label">Date</td>
-                  <td style={{ textAlign: "right" }}>{invoice.invoice_date}</td>
+                  <td style={{ textAlign: "right" }}>{displayDate(invoice.invoice_date)}</td>
                 </tr>
+                {isNote ? (
+                  // CGST Rule 53: the invoice this note adjusts.
+                  <tr>
+                    <td className="inv-label">Against Invoice</td>
+                    <td style={{ textAlign: "right" }}>
+                      {invoice.original_invoice_no || "—"}
+                      {invoice.original_invoice_date
+                        ? ` dated ${displayDate(invoice.original_invoice_date)}`
+                        : ""}
+                    </td>
+                  </tr>
+                ) : null}
                 <tr>
                   <td className="inv-label">Place of Supply</td>
                   <td style={{ textAlign: "right" }}>
@@ -242,15 +305,18 @@ export function SoyaInvoicePrintView({
             <div className="inv-label">Bill To</div>
             <div className="inv-name">{invoice.party_legal_name || invoice.party_name}</div>
             {invoice.bill_to_address ? <div>{invoice.bill_to_address}</div> : null}
+            {/* State name with its code: CGST Rule 46 requires both for an
+                unregistered buyer at ₹50,000 or more, and it is the usual form
+                for every buyer. */}
             <div>
               {[invoice.bill_to_place, invoice.bill_to_pincode].filter(Boolean).join(" - ")}
               {invoice.party_state_code
-                ? `, ${stateNameForCode(invoice.party_state_code)}`
+                ? `, ${stateNameForCode(invoice.party_state_code)} (${invoice.party_state_code})`
                 : ""}
             </div>
             <div style={{ marginTop: 3 }}>
               <span className="inv-label">GSTIN </span>
-              <strong>{invoice.party_gstin || "Unregistered"}</strong>
+              <strong>{invoice.party_gstin || "URD"}</strong>
             </div>
           </div>
           <div className="inv-cell">
@@ -262,7 +328,7 @@ export function SoyaInvoicePrintView({
                 <div>
                   {[invoice.ship_to_place, invoice.ship_to_pincode].filter(Boolean).join(" - ")}
                   {invoice.ship_to_state_code
-                    ? `, ${stateNameForCode(invoice.ship_to_state_code)}`
+                    ? `, ${stateNameForCode(invoice.ship_to_state_code)} (${invoice.ship_to_state_code})`
                     : ""}
                 </div>
               </>
@@ -280,7 +346,7 @@ export function SoyaInvoicePrintView({
                     .filter(Boolean)
                     .join(" - ")}
                   {invoice.dispatch_from_state_code
-                    ? `, ${stateNameForCode(invoice.dispatch_from_state_code)}`
+                    ? `, ${stateNameForCode(invoice.dispatch_from_state_code)} (${invoice.dispatch_from_state_code})`
                     : ""}
                 </div>
               </div>
@@ -454,7 +520,21 @@ export function SoyaInvoicePrintView({
 
         {/* ------------------------------------------------------ e-invoice */}
         {invoice.irn ? (
-          <div className="inv-irn" style={{ borderTop: "1px solid #111", marginTop: 8 }}>
+          <div
+            className="inv-irn"
+            style={{ borderTop: "1px solid #111", marginTop: 8, display: "flex", gap: 10 }}
+          >
+            {qrSvg ? (
+              // CGST Rule 48(4): an e-invoice carries the IRP's signed QR code.
+              // The SVG is generated server-side by the qrcode library from the
+              // portal's own payload, never from user input.
+              <div
+                aria-label="e-Invoice QR code"
+                style={{ width: "30mm", height: "30mm", flex: "none" }}
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+              />
+            ) : null}
+            <div style={{ minWidth: 0, flex: 1 }}>
             <div>
               <span className="inv-label">IRN </span>
               <code>{invoice.irn}</code>
@@ -481,6 +561,7 @@ export function SoyaInvoicePrintView({
                 ) : null}
               </div>
             ) : null}
+            </div>
           </div>
         ) : null}
 
@@ -504,6 +585,7 @@ export function SoyaInvoicePrintView({
           </div>
         </div>
       </div>
+      ))}
     </>
   );
 }

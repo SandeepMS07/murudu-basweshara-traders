@@ -11,8 +11,6 @@ import {
 } from "@/features/soya-factory/service/soya-factory.service";
 import { CounterpartyGstCard } from "@/features/soya/components/CounterpartyGstCard";
 import { getSoyaCounterparties } from "@/features/soya/service/counterparty-gst.service";
-import { getSoyaCompanies } from "@/features/soya-companies/service/soya-company.service";
-import { getActiveSoyaCompanyId } from "@/features/soya/lib/active-company";
 
 export default async function SoyaFactoryMasterPage() {
   await requireSoyaAdminPage();
@@ -54,11 +52,8 @@ export default async function SoyaFactoryMasterPage() {
 
   // Additive: absent if the company layer is not migrated, leaving the trading
   // ledger below untouched.
-  const [gstRows, companies, activeCompanyId] = await Promise.all([
-    getSoyaCounterparties("factory").catch(() => null),
-    getSoyaCompanies().catch(() => []),
-    getActiveSoyaCompanyId().catch(() => ""),
-  ]);
+  // Same company scope as the ledger below, so the two lists always match.
+  const gstRows = await getSoyaCounterparties("factory", scope).catch(() => null);
 
   return (
     <AppShell>
@@ -75,8 +70,7 @@ export default async function SoyaFactoryMasterPage() {
         <CounterpartyGstCard
           kind="factory"
           rows={gstRows}
-          companies={companies.map((company) => ({ id: company.id, name: company.name }))}
-          activeCompanyId={activeCompanyId}
+          activeCompanyId={scope.companyId}
           label="Factory"
         />
       ) : null}

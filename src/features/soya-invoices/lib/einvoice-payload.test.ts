@@ -114,6 +114,8 @@ function invoice(overrides: Partial<SoyaInvoice> = {}): SoyaInvoice {
     distance_km: 250,
     transport_doc_no: "",
     transport_doc_date: "",
+    original_invoice_no: "",
+    original_invoice_date: "",
 
     einvoice_status: "pending",
     irn: "",
@@ -225,12 +227,31 @@ describe("buildEInvoicePayload", () => {
     expect(payload.EwbDtls?.Distance).toBe(250);
   });
 
-  it("marks an unregistered buyer as URP", () => {
+  it("marks an export buyer without a GSTIN as URP", () => {
     const payload = buildEInvoicePayload(
-      invoice({ party_gstin: "", party_registration_type: "unregistered" }),
+      invoice({ party_gstin: "", party_registration_type: "unregistered", supply_type: "EXPWP" }),
       SELLER,
     );
     expect(payload.BuyerDtls.Gstin).toBe("URP");
+  });
+
+  it("sends a credit note's original invoice as PrecDocDtls", () => {
+    const payload = buildEInvoicePayload(
+      invoice({
+        doc_type: "CRN",
+        original_invoice_no: "SGT/2026-27/0012",
+        original_invoice_date: "2026-09-30",
+      }),
+      SELLER,
+    );
+    expect(payload.DocDtls.Typ).toBe("CRN");
+    expect(payload.RefDtls?.PrecDocDtls).toEqual([
+      { InvNo: "SGT/2026-27/0012", InvDt: "30/09/2026" },
+    ]);
+  });
+
+  it("sends no RefDtls on a tax invoice", () => {
+    expect(buildEInvoicePayload(invoice(), SELLER).RefDtls).toBeUndefined();
   });
 
   it("sets Pos from place of supply, not from the buyer's address", () => {
@@ -277,10 +298,32 @@ describe("checkEInvoiceReady", () => {
     expect(blocking(invoice({ party_gstin: "" }))).toContain("party_gstin");
   });
 
-  it("allows an unregistered buyer with no GSTIN", () => {
+  it("does not ask a URD buyer for a GSTIN", () => {
     expect(
       blocking(invoice({ party_gstin: "", party_registration_type: "unregistered" })),
     ).not.toContain("party_gstin");
+  });
+
+  it("blocks e-invoicing a domestic sale to a URD or consumer buyer (B2C)", () => {
+    for (const type of ["unregistered", "consumer"]) {
+      expect(
+        blocking(invoice({ party_gstin: "", party_registration_type: type })),
+      ).toContain("party_registration_type");
+    }
+  });
+
+  it("allows e-invoicing an export to a buyer with no GSTIN", () => {
+    expect(
+      blocking(
+        invoice({ party_gstin: "", party_registration_type: "unregistered", supply_type: "EXPWOP" }),
+      ),
+    ).not.toContain("party_registration_type");
+  });
+
+  it("blocks a credit note that does not quote its invoice", () => {
+    const paths = blocking(invoice({ doc_type: "CRN" }));
+    expect(paths).toContain("original_invoice_no");
+    expect(paths).toContain("original_invoice_date");
   });
 
   it("blocks an invoice dated in the future", () => {

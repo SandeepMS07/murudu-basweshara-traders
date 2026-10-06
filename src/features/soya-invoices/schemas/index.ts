@@ -87,6 +87,10 @@ export interface SoyaInvoiceItem extends SoyaInvoiceItemInput {
 
 /* -------------------------------------------------------------- invoices */
 
+/** CGST Rule 46(e): the taxable value at which a URD buyer's address and
+ *  state become mandatory on the invoice. */
+export const URD_DETAILS_THRESHOLD = 50000;
+
 const addressBlock = {
   address: z.string().trim().default(""),
   place: z.string().trim().default(""),
@@ -165,6 +169,10 @@ export const soyaInvoiceSchema = z
     transport_doc_no: z.string().trim().default(""),
     transport_doc_date: z.string().trim().default(""),
 
+    /** Credit / debit notes only: the invoice they adjust (CGST Rule 53). */
+    original_invoice_no: z.string().trim().default(""),
+    original_invoice_date: z.string().trim().default(""),
+
     notes: z.string().trim().default(""),
 
     items: z.array(soyaInvoiceItemSchema).min(1, "Add at least one item"),
@@ -188,6 +196,49 @@ export const soyaInvoiceSchema = z
         message: "A regular or composition dealer must have a GSTIN",
         path: ["party_gstin"],
       });
+    }
+
+    // CGST Rule 53: a credit or debit note must quote the invoice it adjusts.
+    if (invoice.doc_type !== "INV") {
+      if (!invoice.original_invoice_no) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter the original invoice number this note adjusts",
+          path: ["original_invoice_no"],
+        });
+      }
+      if (!invoice.original_invoice_date) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter the original invoice date",
+          path: ["original_invoice_date"],
+        });
+      }
+    }
+
+    // CGST Rule 46(e): for an unregistered (URD) buyer, a supply with taxable
+    // value of ₹50,000 or more must carry the buyer's address and state.
+    if (!invoice.party_gstin) {
+      const taxable = invoice.items.reduce(
+        (sum, item) => sum + Math.max(item.quantity * item.rate - item.discount, 0),
+        0,
+      );
+      if (taxable >= URD_DETAILS_THRESHOLD) {
+        if (!invoice.bill_to_address) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "A URD buyer's address is required at ₹50,000 or more",
+            path: ["bill_to_address"],
+          });
+        }
+        if (!invoice.party_state_code) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "A URD buyer's state is required at ₹50,000 or more",
+            path: ["party_state_code"],
+          });
+        }
+      }
     }
 
     if (invoice.ship_to_gstin && !checkGstin(invoice.ship_to_gstin).valid) {
@@ -297,6 +348,9 @@ export interface SoyaInvoice {
   distance_km: number;
   transport_doc_no: string;
   transport_doc_date: string;
+
+  original_invoice_no: string;
+  original_invoice_date: string;
 
   einvoice_status: EInvoiceStatus;
   irn: string;

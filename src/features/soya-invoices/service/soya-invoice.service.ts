@@ -128,6 +128,8 @@ function toInvoice(row: Row, lines: SoyaInvoiceItem[]): SoyaInvoice {
     distance_km: Math.trunc(n(row.distance_km as number)),
     transport_doc_no: s(row.transport_doc_no as string),
     transport_doc_date: String(row.transport_doc_date ?? "").slice(0, 10),
+    original_invoice_no: s(row.original_invoice_no as string),
+    original_invoice_date: String(row.original_invoice_date ?? "").slice(0, 10),
 
     einvoice_status: (s(row.einvoice_status as string) || "pending") as EInvoiceStatus,
     irn: s(row.irn as string),
@@ -330,6 +332,10 @@ async function persist(
     distance_km: parsed.distance_km,
     transport_doc_no: parsed.transport_doc_no,
     transport_doc_date: parsed.transport_doc_date || null,
+    // Only a note refers back to an invoice; a tax invoice keeps these empty.
+    original_invoice_no: parsed.doc_type === "INV" ? "" : parsed.original_invoice_no,
+    original_invoice_date:
+      parsed.doc_type === "INV" ? null : parsed.original_invoice_date || null,
 
     notes: parsed.notes,
     updated_at: now,

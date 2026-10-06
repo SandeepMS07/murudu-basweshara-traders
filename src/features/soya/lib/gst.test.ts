@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  effectiveRegistrationType,
   checkGstin,
   computeTaxSplit,
   roundOffTotal,
@@ -169,5 +170,24 @@ describe("roundOffTotal", () => {
     const { rounded, roundOff } = roundOffTotal(1415005.6);
     expect(rounded).toBe(1415006);
     expect(roundOff).toBe(0.4);
+  });
+});
+
+describe("effectiveRegistrationType", () => {
+  it("treats a party with no GSTIN as URD, even when stored as regular", () => {
+    expect(effectiveRegistrationType("", "regular")).toBe("unregistered");
+    expect(effectiveRegistrationType("  ", "composition")).toBe("unregistered");
+    expect(effectiveRegistrationType("", "")).toBe("unregistered");
+  });
+
+  it("keeps a consumer without a GSTIN as a consumer", () => {
+    expect(effectiveRegistrationType("", "consumer")).toBe("consumer");
+  });
+
+  it("treats a party with a GSTIN as registered", () => {
+    expect(effectiveRegistrationType("29AAWCA5892P1ZB", "unregistered")).toBe("regular");
+    expect(effectiveRegistrationType("29AAWCA5892P1ZB", "consumer")).toBe("regular");
+    expect(effectiveRegistrationType("29AAWCA5892P1ZB", "regular")).toBe("regular");
+    expect(effectiveRegistrationType("29AAWCA5892P1ZB", "composition")).toBe("composition");
   });
 });

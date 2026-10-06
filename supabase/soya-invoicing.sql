@@ -271,3 +271,15 @@ create unique index if not exists idx_soya_invoice_items_line_unique
 -- is what makes the read-then-write safe: a racing insert fails rather than
 -- duplicating, and the caller retries.
 -- ============================================================================
+
+-- ============================================================================
+-- Credit / debit notes: the invoice they adjust. CGST Rule 53 requires a note
+-- to quote the original invoice's number and date, and the e-Invoice portal
+-- carries them as RefDtls.PrecDocDtls. Empty on a tax invoice.
+-- Added after the first version of this file; "if not exists" keeps a re-run
+-- safe on a database that already has the table.
+-- ============================================================================
+alter table public.soya_invoices
+  add column if not exists original_invoice_no text not null default '';
+alter table public.soya_invoices
+  add column if not exists original_invoice_date date;

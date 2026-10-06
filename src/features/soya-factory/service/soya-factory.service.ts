@@ -103,6 +103,7 @@ export async function getSoyaFactories(
   const { data, error } = await supabaseServer
     .from(MASTER)
     .select(MASTER_COLUMNS)
+    .is("deleted_at", null)
     .order("name", { ascending: true })
     .or(companyScopeFilter(scope));
 
@@ -134,13 +135,29 @@ async function findSoyaFactoryByName(
 ): Promise<SoyaFactory | null> {
   const { data, error } = await supabaseServer
     .from(MASTER)
-    .select(MASTER_COLUMNS)
+    .select(`${MASTER_COLUMNS}, deleted_at`)
     .ilike("name", name.replace(/[\\%_]/g, "\\$&"))
     .or(companyScopeFilter(scope));
 
   if (error) throw new Error(`Failed to look up soya factory: ${error.message}`);
-  const rows = (data as EntryRow[]).map(toFactory);
-  return rows.find((row) => row.company_id) ?? rows[0] ?? null;
+  const rows = data as EntryRow[];
+  // A live row beats a deleted one; an assigned row beats an unassigned one.
+  const rank = (row: EntryRow) => (row.deleted_at ? 2 : 0) + (row.company_id ? 0 : 1);
+  const best = [...rows].sort((a, b) => rank(a) - rank(b))[0];
+  if (!best) return null;
+
+  // Adding a name that was deleted brings the same record back, with its GST
+  // details, instead of failing on the per-company unique name.
+  if (best.deleted_at) {
+    const { error: restoreError } = await supabaseServer
+      .from(MASTER)
+      .update({ deleted_at: null, updated_at: new Date().toISOString() })
+      .eq("id", String(best.id));
+    if (restoreError) {
+      throw new Error(`Failed to restore soya factory: ${restoreError.message}`);
+    }
+  }
+  return toFactory(best);
 }
 
 /** Finds a factory by name within the company, creating it if it's new. */

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Pencil, TriangleAlert } from "lucide-react";
+import { BadgeCheck, Pencil, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   assignUnassignedCounterpartiesAction,
+  softDeleteCounterpartyAction,
   updateCounterpartyGstAction,
 } from "@/app/soya/counterparties/actions";
 import type {
@@ -37,7 +38,6 @@ const fieldClass =
 const selectClass = cn("h-9 w-full cursor-pointer rounded-md border px-2 text-sm", fieldClass);
 
 type FormState = {
-  company_id: string;
   gstin: string;
   state_code: string;
   registration_type: string;
@@ -49,8 +49,8 @@ type FormState = {
 
 interface CounterpartyGstCardProps {
   kind: CounterpartyKind;
+  /** The open company's records only — the same set as its ledger. */
   rows: SoyaCounterparty[];
-  companies: { id: string; name: string }[];
   activeCompanyId: string;
   label: string;
 }
@@ -65,7 +65,6 @@ interface CounterpartyGstCardProps {
 export function CounterpartyGstCard({
   kind,
   rows,
-  companies,
   activeCompanyId,
   label,
 }: CounterpartyGstCardProps) {
@@ -73,6 +72,7 @@ export function CounterpartyGstCard({
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<SoyaCounterparty | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
+  const [deleting, setDeleting] = useState<SoyaCounterparty | null>(null);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => (current ? { ...current, [key]: value } : current));
@@ -90,7 +90,6 @@ export function CounterpartyGstCard({
 
   const openEdit = (row: SoyaCounterparty) => {
     setForm({
-      company_id: row.company_id || activeCompanyId,
       gstin: row.gstin,
       state_code: row.state_code,
       registration_type: row.registration_type,
@@ -117,6 +116,21 @@ export function CounterpartyGstCard({
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not save");
       }
+    });
+  };
+
+  const confirmDelete = () => {
+    if (!deleting) return;
+    const target = deleting;
+    startTransition(async () => {
+      const result = await softDeleteCounterpartyAction(kind, target.id);
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(`${target.name} deleted`);
+      setDeleting(null);
+      router.refresh();
     });
   };
 
@@ -163,8 +177,8 @@ export function CounterpartyGstCard({
         <p className="mb-3 flex items-start gap-2 rounded-md border border-[#3d3418] bg-[#2a2412]/40 px-3 py-2 text-xs text-[#f7e3b0]">
           <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            {incomplete.length} of {rows.length} have no GSTIN yet. An invoice to a
-            registered dealer cannot be filed without one.
+            {incomplete.length} of {rows.length} are URD (unregistered dealer, no
+            GSTIN). If any of them is registered, add its GSTIN before invoicing it.
           </span>
         </p>
       ) : null}
@@ -176,21 +190,19 @@ export function CounterpartyGstCard({
               <th className="py-2 pr-3 font-medium">{label}</th>
               <th className="py-2 pr-3 font-medium">GSTIN</th>
               <th className="py-2 pr-3 font-medium">State</th>
-              <th className="py-2 pr-3 font-medium">Company</th>
               <th className="py-2 pr-3 font-medium">Place</th>
-              <th className="w-10 py-2" />
+              <th className="w-20 py-2" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-6 text-center text-zinc-600">
+                <td colSpan={5} className="py-6 text-center text-zinc-600">
                   Nothing on the master yet.
                 </td>
               </tr>
             ) : (
               rows.map((row) => {
-                const company = companies.find((candidate) => candidate.id === row.company_id);
                 return (
                   <tr key={row.id} className="border-b border-[#1d2026] last:border-0">
                     <td className="py-2 pr-3 font-medium text-zinc-200">{row.name}</td>
@@ -201,27 +213,38 @@ export function CounterpartyGstCard({
                           {row.gstin}
                         </span>
                       ) : (
-                        <span className="text-amber-400/70">not set</span>
+                        // No GSTIN = unregistered dealer, which is how the
+                        // customer's books (Tally) label it.
+                        <span className="text-zinc-400" title="Unregistered dealer">
+                          URD
+                        </span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-zinc-400">
                       {stateNameForCode(row.state_code) || "—"}
                     </td>
-                    <td className="py-2 pr-3 text-zinc-400">
-                      {company?.name ?? (
-                        <span className="text-amber-400/70">unassigned</span>
-                      )}
-                    </td>
                     <td className="py-2 pr-3 text-zinc-400">{row.place || "—"}</td>
                     <td className="py-2">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(row)}
-                        aria-label={`Edit GST details for ${row.name}`}
-                        className="cursor-pointer rounded-md p-1.5 text-zinc-500 hover:bg-[#1d2026] hover:text-zinc-100"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(row)}
+                          aria-label={`Edit GST details for ${row.name}`}
+                          title="Edit"
+                          className="cursor-pointer rounded-md p-1.5 text-zinc-500 hover:bg-[#1d2026] hover:text-zinc-100"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(row)}
+                          aria-label={`Delete ${row.name}`}
+                          title="Delete"
+                          className="cursor-pointer rounded-md p-1.5 text-zinc-500 hover:bg-[#2a1616] hover:text-red-300"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -243,25 +266,6 @@ export function CounterpartyGstCard({
 
           {form ? (
             <div className="grid gap-4 py-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="cp-company" className="text-xs text-zinc-400">
-                  Company
-                </Label>
-                <select
-                  id="cp-company"
-                  value={form.company_id}
-                  onChange={(event) => set("company_id", event.target.value)}
-                  className={selectClass}
-                >
-                  <option value="">— unassigned —</option>
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className="grid gap-1.5">
                 <Label htmlFor="cp-gstin" className="text-xs text-zinc-400">
                   GSTIN
@@ -396,6 +400,36 @@ export function CounterpartyGstCard({
               className="cursor-pointer bg-[#ff6a3d] text-white hover:bg-[#ff7f57]"
             >
               {isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(deleting)} onOpenChange={(next) => (next ? null : setDeleting(null))}>
+        <DialogContent className="border-[#2a2d34] bg-[#14161b] text-zinc-100 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete {deleting?.name}?</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              It will be removed from this company&apos;s {label.toLowerCase()} list and
+              dropdowns. A {label.toLowerCase()} that still has bills or payments here
+              cannot be deleted. Adding the same name again brings it back.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleting(null)}
+              disabled={isPending}
+              className="cursor-pointer text-zinc-400"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDelete}
+              disabled={isPending}
+              className="cursor-pointer bg-red-600 text-white hover:bg-red-500"
+            >
+              {isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

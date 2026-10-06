@@ -24,6 +24,7 @@ import {
   VEHICLE_TYPE_OPTIONS,
 } from "@/features/soya/lib/einvoice-codes";
 import {
+  effectiveRegistrationType,
   checkGstin,
   GST_STATE_OPTIONS,
   stateCodeFromGstin,
@@ -104,6 +105,10 @@ export function SoyaInvoiceForm({
   const [invoiceNo, setInvoiceNo] = useState(invoice?.invoice_no ?? "");
   const [invoiceDate, setInvoiceDate] = useState(invoice?.invoice_date ?? today);
   const [docType, setDocType] = useState(invoice?.doc_type ?? "INV");
+  const [originalInvoiceNo, setOriginalInvoiceNo] = useState(invoice?.original_invoice_no ?? "");
+  const [originalInvoiceDate, setOriginalInvoiceDate] = useState(
+    invoice?.original_invoice_date ?? "",
+  );
 
   const [partyId, setPartyId] = useState(invoice?.party_id ?? "");
   const [partyName, setPartyName] = useState(invoice?.party_name ?? "");
@@ -226,7 +231,7 @@ export function SoyaInvoiceForm({
     setBillToPlace(party.place);
     setBillToPincode(party.pincode);
     setPartyPhone(party.phone);
-    setRegistrationType(party.registration_type || "regular");
+    setRegistrationType(effectiveRegistrationType(party.gstin, party.registration_type));
     setPlaceOfSupply(party.state_code || stateCodeFromGstin(party.gstin));
   };
 
@@ -275,6 +280,8 @@ export function SoyaInvoiceForm({
       invoice_no: invoiceNo.trim(),
       invoice_date: invoiceDate,
       doc_type: docType,
+      original_invoice_no: docType === "INV" ? "" : originalInvoiceNo.trim(),
+      original_invoice_date: docType === "INV" ? "" : originalInvoiceDate,
       supply_type: "B2B",
       reverse_charge: false,
 
@@ -386,6 +393,29 @@ export function SoyaInvoiceForm({
               <option value="DBN">Debit Note</option>
             </select>
           </Field>
+          {docType !== "INV" ? (
+            <>
+              {/* CGST Rule 53: a note must quote the invoice it adjusts. */}
+              <Field label="Against invoice no" htmlFor="inv-orig-no">
+                <Input
+                  id="inv-orig-no"
+                  value={originalInvoiceNo}
+                  onChange={(event) => setOriginalInvoiceNo(event.target.value)}
+                  placeholder="The invoice this note adjusts"
+                  className={fieldClass}
+                />
+              </Field>
+              <Field label="Against invoice date" htmlFor="inv-orig-date">
+                <Input
+                  id="inv-orig-date"
+                  type="date"
+                  value={originalInvoiceDate}
+                  onChange={(event) => setOriginalInvoiceDate(event.target.value)}
+                  className={fieldClass}
+                />
+              </Field>
+            </>
+          ) : null}
         </div>
       </Section>
 
@@ -431,6 +461,9 @@ export function SoyaInvoiceForm({
               onChange={(event) => {
                 const next = event.target.value.toUpperCase();
                 setPartyGstin(next);
+                // Typing a GSTIN makes the buyer registered; clearing it makes
+                // them URD.
+                setRegistrationType((current) => effectiveRegistrationType(next, current));
                 const derived = stateCodeFromGstin(next);
                 if (derived) {
                   setPartyStateCode(derived);
@@ -460,7 +493,7 @@ export function SoyaInvoiceForm({
             >
               <option value="regular">Regular</option>
               <option value="composition">Composition</option>
-              <option value="unregistered">Unregistered</option>
+              <option value="unregistered">Unregistered (URD)</option>
               <option value="consumer">Consumer</option>
             </select>
           </Field>
