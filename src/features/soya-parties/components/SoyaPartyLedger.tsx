@@ -8,6 +8,7 @@ import {
   type SoyaLedgerCounterparty,
   type SoyaLedgerPayment,
 } from "@/features/soya/components/SoyaLedgerManager";
+import type { SoyaCounterparty } from "@/features/soya/service/counterparty-gst.service";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import type { SoyaPartyEntry } from "@/features/soya-parties/schemas";
 import {
@@ -68,23 +69,32 @@ const columns: SoyaLedgerColumn<SoyaPartyEntry>[] = [
 
 export function SoyaPartyLedger({
   parties,
+  gstRows,
+  activeCompanyId,
   entries,
   payments,
 }: {
   parties: SoyaLedgerCounterparty[];
+  gstRows: SoyaCounterparty[] | null;
+  activeCompanyId: string;
   entries: SoyaPartyEntry[];
   payments: SoyaLedgerPayment[];
 }) {
   return (
     <SoyaLedgerManager
+      title="Party master"
+      kind="party"
       counterpartyLabel="Party"
       counterparties={parties}
+      gstRows={gstRows}
+      activeCompanyId={activeCompanyId}
       entries={entries}
       entryOwnerName={(entry) => entry.party}
       entryTotal={(entry) => entry.total_amount}
       entryColumns={columns}
       payments={payments}
       showRemarks
+      paidLabel="Total Received"
       billedLabel="Total Sales"
       balanceLabel="Balance Receivable"
       statementHrefBase="/soya/parties/companies"

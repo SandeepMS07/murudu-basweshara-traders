@@ -9,7 +9,6 @@ import {
   getSoyaFactoryEntries,
   getSoyaFactoryPayments,
 } from "@/features/soya-factory/service/soya-factory.service";
-import { CounterpartyGstCard } from "@/features/soya/components/CounterpartyGstCard";
 import { getSoyaCounterparties } from "@/features/soya/service/counterparty-gst.service";
 
 export default async function SoyaFactoryMasterPage() {
@@ -50,32 +49,15 @@ export default async function SoyaFactoryMasterPage() {
   const payments =
     paymentsResult.status === "fulfilled" ? paymentsResult.value : [];
 
-  // Additive: absent if the company layer is not migrated, leaving the trading
-  // ledger below untouched.
-  // Same company scope as the ledger below, so the two lists always match.
+  // GST identity of the same records, shown as a tab in the ledger. Absent
+  // (null) if the company layer is not migrated; the ledger works without it.
   const gstRows = await getSoyaCounterparties("factory", scope).catch(() => null);
 
   return (
     <AppShell>
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">
-          Factory Parties
-        </h1>
-        <p className="text-zinc-500">
-          The factory master, its entries, and the payments made to it.
-        </p>
-      </div>
-
-      {gstRows ? (
-        <CounterpartyGstCard
-          kind="factory"
-          rows={gstRows}
-          activeCompanyId={scope.companyId}
-          label="Factory"
-        />
-      ) : null}
-
       <SoyaFactoryLedger
+        gstRows={gstRows}
+        activeCompanyId={scope.companyId}
         factories={factoriesResult.value}
         entries={entriesResult.status === "fulfilled" ? entriesResult.value : []}
         payments={payments.map((payment) => ({
