@@ -114,22 +114,30 @@ export function companyNameKey(value: string): string {
 }
 
 export async function getCompanies(type?: "issuer" | "buyer"): Promise<Company[]> {
-  let query = supabaseServer
-    .from("companies")
-    .select("*")
-    .order("type", { ascending: true })
-    .order("name", { ascending: true });
+  // Paged: a single response is capped at 1000 rows and truncates silently.
+  // The id tie-break keeps page boundaries stable between requests.
+  try {
+    const data = await selectAll<CompanyRow>((from, to) => {
+      let query = supabaseServer
+        .from("companies")
+        .select("*")
+        .order("type", { ascending: true })
+        .order("name", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to);
 
-  if (type) {
-    query = query.eq("type", type);
+      if (type) {
+        query = query.eq("type", type);
+      }
+      return query;
+    });
+
+    return data.map(toCompany);
+  } catch (error) {
+    throw new Error(
+      `Failed to load companies: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to load companies: ${error.message}`);
-  }
-
-  return (data as CompanyRow[]).map(toCompany);
 }
 
 export async function getCompanyById(id: string): Promise<Company | null> {
@@ -375,21 +383,30 @@ export async function getCompanyPayments(companyId?: string): Promise<CompanyPay
 export async function getCompanyPaymentAllocations(
   saleIds?: string[]
 ): Promise<CompanyPaymentAllocation[]> {
-  let query = supabaseServer
-    .from("company_payment_allocations")
-    .select("*")
-    .order("created_at", { ascending: false });
+  // Paged: a single response is capped at 1000 rows and truncates silently —
+  // and a missing allocation makes FIFO pending read too HIGH, with no error.
+  // The id tie-break keeps page boundaries stable between requests.
+  try {
+    const data = await selectAll<CompanyPaymentAllocationRow>((from, to) => {
+      let query = supabaseServer
+        .from("company_payment_allocations")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to);
 
-  if (saleIds && saleIds.length > 0) {
-    query = query.in("sale_id", saleIds);
+      if (saleIds && saleIds.length > 0) {
+        query = query.in("sale_id", saleIds);
+      }
+      return query;
+    });
+
+    return data.map(toCompanyPaymentAllocation);
+  } catch (error) {
+    throw new Error(
+      `Failed to load payment allocations: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to load payment allocations: ${error.message}`);
-  }
-
-  return (data as CompanyPaymentAllocationRow[]).map(toCompanyPaymentAllocation);
 }
 
 export async function createCompanyPayment(
