@@ -334,6 +334,40 @@ export async function getNextSoyaFactorySlNo(
   return Math.max(Math.trunc(n((data as { sl_no?: number } | null)?.sl_no)) + 1, 1);
 }
 
+/**
+ * What the company has bought from `factory` this financial year, before the
+ * bill dated `date` (bills on the same day count as before it): amount + GST,
+ * the value the TCS threshold is measured on. `excludeId` leaves out the entry
+ * being edited.
+ */
+export async function getSoyaFactoryYearToDate(
+  scope: SoyaCompanyScope,
+  factory: string,
+  date: string,
+  excludeId?: string,
+): Promise<number> {
+  const name = normalizeName(factory);
+  if (!name || !date) return 0;
+  const { start } = getFinancialYearBounds(date);
+
+  const rows = await selectAll<{ id: string; amount: number | string | null; gst_amount: number | string | null }>(
+    (from, to) =>
+      supabaseServer
+        .from(ENTRIES)
+        .select("id, amount, gst_amount")
+        .ilike("factory", name.replace(/[\\%_]/g, "\\$&"))
+        .or(companyScopeFilter(scope))
+        .gte("date", start)
+        .lte("date", date)
+        .order("id", { ascending: true })
+        .range(from, to),
+  );
+
+  return rows
+    .filter((row) => row.id !== excludeId)
+    .reduce((sum, row) => sum + n(row.amount) + n(row.gst_amount), 0);
+}
+
 function buildEntryPayload(entry: SoyaFactoryEntry) {
   return {
     company_id: entry.company_id || null,

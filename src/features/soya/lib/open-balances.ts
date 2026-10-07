@@ -100,3 +100,38 @@ export function computeOpenBalances(
 
   return result.sort((a, b) => b.pending - a.pending);
 }
+
+export type OpenBill = OpenBalanceBill & { id: string };
+
+/**
+ * What is still unpaid on each bill, by bill id, with paid money clearing each
+ * counterparty's oldest bills first — the same FIFO as computeOpenBalances.
+ * A fully paid bill maps to 0.
+ */
+export function computeOpenBills(
+  masters: { id: string; name: string }[],
+  bills: OpenBill[],
+  payments: OpenBalancePayment[],
+): Map<string, number> {
+  const keyById = new Map(masters.map((m) => [m.id, ownerKey(m.name)]));
+  const paidByKey = new Map<string, number>();
+  for (const payment of payments) {
+    const k = keyById.get(payment.ownerId);
+    if (!k) continue;
+    paidByKey.set(k, (paidByKey.get(k) ?? 0) + payment.amount);
+  }
+
+  const oldestFirst = [...bills].sort(
+    (a, b) => a.date.localeCompare(b.date) || (a.sl_no ?? 0) - (b.sl_no ?? 0),
+  );
+  const open = new Map<string, number>();
+  for (const bill of oldestFirst) {
+    const k = ownerKey(bill.owner);
+    const unallocated = paidByKey.get(k) ?? 0;
+    const cleared = Math.min(unallocated, bill.total);
+    paidByKey.set(k, unallocated - cleared);
+    const left = bill.total - cleared;
+    open.set(bill.id, left > EPSILON ? left : 0);
+  }
+  return open;
+}

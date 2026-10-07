@@ -18,6 +18,44 @@ const whole = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 const num = (value: number) => formatNumberIN(value, whole);
 const money = (value: number) => formatCurrencyINR(value, whole);
+/**
+ * Where an unpaid bill stands: its age in days, and against the party's credit
+ * days when they are set. Absent for a bill that is fully paid.
+ */
+export type SoyaBillDue = {
+  open: number;
+  age: number;
+  /** Days left before it is due (0 = due today); null without credit days. */
+  dueIn: number | null;
+};
+
+function DueCell({ due }: { due: SoyaBillDue | undefined }) {
+  if (!due) return <span className="text-emerald-400/80">Paid</span>;
+  const title = `${money(due.open)} unpaid · ${due.age} day${due.age === 1 ? "" : "s"} old`;
+  if (due.dueIn === null) {
+    return (
+      <span title={title} className="text-zinc-300">
+        {due.age} d
+      </span>
+    );
+  }
+  if (due.dueIn < 0) {
+    return (
+      <span
+        title={title}
+        className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-xs font-medium text-red-300"
+      >
+        Overdue {-due.dueIn} d
+      </span>
+    );
+  }
+  return (
+    <span title={title} className={due.dueIn <= 3 ? "text-amber-300" : "text-zinc-300"}>
+      {due.dueIn === 0 ? "Due today" : `Due in ${due.dueIn} d`}
+    </span>
+  );
+}
+
 const nowrap = {
   headClassName: "whitespace-nowrap",
   cellClassName: "whitespace-nowrap",
@@ -25,6 +63,7 @@ const nowrap = {
 
 export function createSoyaPartyColumns(
   deleteAction: (id: string) => Promise<void>,
+  dueById?: Record<string, SoyaBillDue>,
 ): ColumnDef<SoyaPartyEntry>[] {
   return [
     {
@@ -45,6 +84,24 @@ export function createSoyaPartyColumns(
       },
       meta: nowrap,
     },
+    ...(dueById
+      ? [
+          {
+            id: "due",
+            header: "DUE",
+            accessorFn: (entry: SoyaPartyEntry) => {
+              const due = dueById[entry.id];
+              // Sorts overdue first, then soonest due, then paid.
+              if (!due) return Number.MAX_SAFE_INTEGER;
+              return due.dueIn ?? -due.age;
+            },
+            cell: ({ row }: { row: { original: SoyaPartyEntry } }) => (
+              <DueCell due={dueById[row.original.id]} />
+            ),
+            meta: nowrap,
+          } satisfies ColumnDef<SoyaPartyEntry>,
+        ]
+      : []),
     {
       accessorKey: "bill_no",
       header: "BILL NO",

@@ -17,6 +17,7 @@ import {
   deleteSoyaPartyAction,
   deleteSoyaPartyPaymentAction,
   updateSoyaPartyAction,
+  updateSoyaPartyCreditDaysAction,
 } from "@/app/soya/parties/actions";
 
 /**
@@ -71,12 +72,15 @@ export function SoyaPartyLedger({
   parties,
   gstRows,
   activeCompanyId,
+  creditDays,
   entries,
   payments,
 }: {
   parties: SoyaLedgerCounterparty[];
   gstRows: SoyaCounterparty[] | null;
   activeCompanyId: string;
+  /** Credit days by party id. */
+  creditDays: Record<string, number>;
   entries: SoyaPartyEntry[];
   payments: SoyaLedgerPayment[];
 }) {
@@ -104,6 +108,7 @@ export function SoyaPartyLedger({
       deleteAction={deleteSoyaPartyAction}
       createPaymentAction={createSoyaPartyPaymentAction}
       deletePaymentAction={deleteSoyaPartyPaymentAction}
+      creditDays={{ byId: creditDays, save: updateSoyaPartyCreditDaysAction }}
     />
   );
 }

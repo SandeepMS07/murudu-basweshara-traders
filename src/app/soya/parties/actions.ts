@@ -17,6 +17,7 @@ import {
   getNextSoyaPartyIdentifiers,
   isSoyaPartyBillNoAvailable,
   updateSoyaParty,
+  updateSoyaPartyCreditDays,
   updateSoyaPartyEntry,
 } from "@/features/soya-parties/service/soya-party.service";
 import {
@@ -126,6 +127,24 @@ export async function deleteSoyaPartyAction(id: string) {
   await deleteSoyaParty(id);
   revalidatePath(MASTER_PATH);
   revalidatePath(LIST_PATH);
+}
+
+/**
+ * Returns the outcome rather than throwing: a production build replaces a
+ * thrown server-action message with a generic one.
+ */
+export async function updateSoyaPartyCreditDaysAction(id: string, days: number | null) {
+  try {
+    await updateSoyaPartyCreditDays(id, days);
+  } catch (error) {
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : "Could not save credit days",
+    };
+  }
+  revalidatePath(MASTER_PATH);
+  revalidatePath(LIST_PATH);
+  return { success: true as const };
 }
 
 // ------------------------------------------------------------ party payments

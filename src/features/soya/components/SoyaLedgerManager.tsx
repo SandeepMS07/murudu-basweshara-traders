@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import {
   ArrowDownUp,
   BadgeCheck,
+  CalendarClock,
   Download,
   Pencil,
   Plus,
@@ -115,6 +116,17 @@ interface SoyaLedgerManagerProps<T extends { id: string }> {
   deleteAction: (id: string) => Promise<void>;
   createPaymentAction: (draft: SoyaLedgerPaymentDraft) => Promise<void>;
   deletePaymentAction: (id: string) => Promise<void>;
+  /**
+   * Days a counterparty gets to pay, by id, and how to change them. Parties
+   * only; the Parties overview uses them to show what is overdue.
+   */
+  creditDays?: {
+    byId: Record<string, number>;
+    save: (
+      id: string,
+      days: number | null,
+    ) => Promise<{ success: true } | { success: false; message: string }>;
+  };
 }
 
 /** Under half a rupee is rounding, not money owed. */
@@ -202,6 +214,7 @@ export function SoyaLedgerManager<T extends { id: string }>({
   deleteAction,
   createPaymentAction,
   deletePaymentAction,
+  creditDays,
 }: SoyaLedgerManagerProps<T>) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -217,6 +230,8 @@ export function SoyaLedgerManager<T extends { id: string }>({
   const [deleteTarget, setDeleteTarget] =
     useState<SoyaLedgerCounterparty | null>(null);
   const [gstEditing, setGstEditing] = useState<SoyaCounterparty | null>(null);
+  const [creditOpen, setCreditOpen] = useState(false);
+  const [creditDraft, setCreditDraft] = useState("");
 
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paidOn, setPaidOn] = useState(() => format(new Date(), "yyyy-MM-dd"));
@@ -385,6 +400,28 @@ export function SoyaLedgerManager<T extends { id: string }>({
             : `Failed to delete ${counterpartyLabel.toLowerCase()}`,
         );
       }
+    });
+  };
+
+  const activeCreditDays = active ? creditDays?.byId[active.id] : undefined;
+
+  const saveCreditDays = () => {
+    if (!active || !creditDays) return;
+    const raw = creditDraft.trim();
+    const days = raw === "" ? null : Number(raw);
+    if (days !== null && (!Number.isInteger(days) || days < 0 || days > 365)) {
+      toast.error("Enter whole days from 0 to 365, or leave it empty");
+      return;
+    }
+    startTransition(async () => {
+      const result = await creditDays.save(active.id, days);
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(days === null ? "Credit days cleared" : `Credit days set to ${days}`);
+      setCreditOpen(false);
+      router.refresh();
     });
   };
 
@@ -695,6 +732,23 @@ export function SoyaLedgerManager<T extends { id: string }>({
                       ) : null}
                     </p>
                   ) : null}
+                  {creditDays ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreditDraft(
+                          activeCreditDays === undefined ? "" : String(activeCreditDays),
+                        );
+                        setCreditOpen(true);
+                      }}
+                      className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[#2a2d34] px-2 py-1 text-xs text-zinc-300 hover:border-[#3a3e47] hover:text-zinc-100"
+                    >
+                      <CalendarClock className="h-3.5 w-3.5 text-zinc-500" />
+                      {activeCreditDays === undefined
+                        ? "Set credit days"
+                        : `Credit: ${activeCreditDays} days`}
+                    </button>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Button
@@ -976,6 +1030,73 @@ export function SoyaLedgerManager<T extends { id: string }>({
         row={gstEditing}
         onClose={() => setGstEditing(null)}
       />
+
+      <Dialog open={creditOpen} onOpenChange={setCreditOpen}>
+        <DialogContent className="border border-[#2a2d34] bg-[#15171c] text-zinc-100 sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Credit days — {active?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label
+              htmlFor="credit-days"
+              className="text-xs uppercase tracking-wide text-zinc-400"
+            >
+              Days to pay a bill
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {[15, 20, 30, 45].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setCreditDraft(String(days))}
+                  className={cn(
+                    "h-7 cursor-pointer rounded-full border px-3 text-xs",
+                    creditDraft === String(days)
+                      ? "border-[#ff6a3d]/50 bg-[#ff6a3d]/12 text-[#ff8f6b]"
+                      : "border-[#2a2d34] text-zinc-400 hover:text-zinc-100",
+                  )}
+                >
+                  {days} days
+                </button>
+              ))}
+            </div>
+            <Input
+              id="credit-days"
+              type="number"
+              min={0}
+              max={365}
+              step={1}
+              value={creditDraft}
+              onChange={(event) => setCreditDraft(event.target.value)}
+              placeholder="e.g. 30"
+              className="h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100"
+            />
+            <p className="text-xs text-zinc-500">
+              A bill unpaid after this many days shows as overdue on Parties
+              overview. Leave empty for no credit limit.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => setCreditOpen(false)}
+              className="border-[#2a2d34] bg-[#1b1e24] text-zinc-200 hover:bg-[#23262e] hover:text-zinc-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={saveCreditDays}
+              className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
+            >
+              {isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ------------------------------------------------------ dialogs */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

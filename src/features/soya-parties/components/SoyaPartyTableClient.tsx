@@ -6,7 +6,10 @@ import { Plus } from "lucide-react";
 
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
-import { createSoyaPartyColumns } from "@/features/soya-parties/components/Columns";
+import {
+  createSoyaPartyColumns,
+  type SoyaBillDue,
+} from "@/features/soya-parties/components/Columns";
 import type { SoyaPartyEntry } from "@/features/soya-parties/schemas";
 import { deleteSoyaPartyEntryAction } from "@/app/soya/parties/actions";
 
@@ -14,18 +17,21 @@ interface SoyaPartyTableClientProps {
   data: SoyaPartyEntry[];
   partyNames: string[];
   addHref?: string;
+  /** Unpaid bills by entry id; adds the DUE column. */
+  dueById?: Record<string, SoyaBillDue>;
 }
 
 export function SoyaPartyTableClient({
   data,
   partyNames,
   addHref = "/soya/parties/new",
+  dueById,
 }: SoyaPartyTableClientProps) {
   const [selectedParty, setSelectedParty] = useState("");
 
   const columns = useMemo(
-    () => createSoyaPartyColumns(deleteSoyaPartyEntryAction),
-    [],
+    () => createSoyaPartyColumns(deleteSoyaPartyEntryAction, dueById),
+    [dueById],
   );
 
   const filteredData = useMemo(() => {

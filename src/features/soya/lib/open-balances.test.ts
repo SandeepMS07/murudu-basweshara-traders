@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { computeOpenBalances, type OpenBalanceBill } from "@/features/soya/lib/open-balances";
+import {
+  computeOpenBalances,
+  computeOpenBills,
+  type OpenBalanceBill,
+} from "@/features/soya/lib/open-balances";
 
 const bill = (owner: string, date: string, total: number, sl_no = 1): OpenBalanceBill => ({
   owner,
@@ -77,5 +81,31 @@ describe("computeOpenBalances", () => {
       [],
     );
     expect(rows.map((row) => row.name)).toEqual(["Betul Oil", "ANNAM"]);
+  });
+});
+
+describe("computeOpenBills", () => {
+  const masters = [{ id: "p1", name: "ANNAM" }];
+  const bills = [
+    { id: "b2", owner: "ANNAM", date: "2026-09-10", sl_no: 2, total: 1000 },
+    { id: "b1", owner: "annam ", date: "2026-09-01", sl_no: 1, total: 1000 },
+    { id: "b3", owner: "ANNAM", date: "2026-09-20", sl_no: 3, total: 1000 },
+  ];
+
+  it("clears the oldest bill first and leaves the rest open", () => {
+    const open = computeOpenBills(masters, bills, [{ ownerId: "p1", amount: 1500 }]);
+    expect(open.get("b1")).toBe(0);
+    expect(open.get("b2")).toBe(500);
+    expect(open.get("b3")).toBe(1000);
+  });
+
+  it("treats sub-rupee leftovers as paid", () => {
+    const open = computeOpenBills(masters, bills, [{ ownerId: "p1", amount: 2999.7 }]);
+    expect(open.get("b3")).toBe(0);
+  });
+
+  it("leaves every bill open without payments", () => {
+    const open = computeOpenBills(masters, bills, []);
+    expect([...open.values()]).toEqual([1000, 1000, 1000]);
   });
 });

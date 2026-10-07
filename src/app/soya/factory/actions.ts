@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireRole } from "@/features/auth/lib/session";
+
 import {
   soyaFactoryEntrySchema,
   soyaFactoryPaymentSchema,
@@ -15,6 +17,7 @@ import {
   deleteSoyaFactoryEntry,
   deleteSoyaFactoryPayment,
   getNextSoyaFactorySlNo,
+  getSoyaFactoryYearToDate,
   updateSoyaFactory,
   updateSoyaFactoryEntry,
 } from "@/features/soya-factory/service/soya-factory.service";
@@ -93,6 +96,22 @@ export async function deleteSoyaFactoryEntryAction(id: string) {
 
 export async function getNextSoyaFactorySlNoAction(date: string, companyId?: string) {
   return getNextSoyaFactorySlNo(await resolveSoyaCompanyScope(companyId), date);
+}
+
+/** This year's purchases from a factory before a bill, for the TCS threshold. */
+export async function getSoyaFactoryYearToDateAction(input: {
+  factory: string;
+  date: string;
+  companyId?: string;
+  excludeId?: string;
+}) {
+  await requireRole(["admin"]);
+  return getSoyaFactoryYearToDate(
+    await resolveSoyaCompanyScope(input.companyId),
+    input.factory,
+    input.date,
+    input.excludeId,
+  );
 }
 
 // ------------------------------------------------------------ factory master

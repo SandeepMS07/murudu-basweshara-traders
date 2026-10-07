@@ -21,6 +21,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrencyINR } from "@/lib/number-format";
 import { round2, round4 } from "@/features/soya/lib/money";
 import {
+  computeThresholdTcs,
+  TCS_PERCENT,
+} from "@/features/soya-factory/utils/tcs";
+import {
   GST_PERCENT,
   soyaFactoryEntrySchema,
   type SoyaFactoryEntry,
@@ -28,6 +32,7 @@ import {
 } from "@/features/soya-factory/schemas";
 import {
   createSoyaFactoryEntryAction,
+  getSoyaFactoryYearToDateAction,
   updateSoyaFactoryEntryAction,
 } from "@/app/soya/factory/actions";
 
@@ -55,6 +60,10 @@ export function SoyaFactoryForm({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!initialData;
+  // TCS follows the 0.1%-above-Rs-50-lakh rule until someone types a figure.
+  // An entry being edited keeps the TCS it was saved with.
+  const [tcsAuto, setTcsAuto] = useState(!initialData);
+  const [yearToDate, setYearToDate] = useState<number | null>(null);
 
   const form = useForm<SoyaFactoryEntryDraft>({
     resolver: zodResolver(soyaFactoryEntrySchema),
@@ -92,6 +101,9 @@ export function SoyaFactoryForm({
   const weight = watch("weight") ?? 0;
   const rate = watch("rate") ?? 0;
   const tcs = watch("tcs") ?? 0;
+  const factory = watch("factory") ?? "";
+  const date = watch("date") ?? "";
+  const companyId = watch("company_id") ?? "";
 
   // Mirrors calculateSoyaFactoryEntry so the preview always matches what the
   // server will store.
@@ -102,6 +114,44 @@ export function SoyaFactoryForm({
   useEffect(() => {
     if (!isEditing) form.setValue("sl_no", nextSlNo);
   }, [form, isEditing, nextSlNo]);
+
+  // This year's purchases from the factory before this bill, for the TCS
+  // threshold. Debounced: the factory name is typed.
+  const excludeId = initialData?.id;
+  useEffect(() => {
+    if (!factory.trim() || !date) {
+      setYearToDate(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      getSoyaFactoryYearToDateAction({
+        factory,
+        date,
+        companyId: companyId || undefined,
+        excludeId,
+      })
+        .then((value) => {
+          if (!cancelled) setYearToDate(value);
+        })
+        .catch(() => {
+          if (!cancelled) setYearToDate(null);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [factory, date, companyId, excludeId]);
+
+  const autoTcs =
+    yearToDate === null ? null : computeThresholdTcs(yearToDate, amount + gstAmount);
+
+  useEffect(() => {
+    if (tcsAuto && autoTcs !== null && autoTcs !== form.getValues("tcs")) {
+      form.setValue("tcs", autoTcs);
+    }
+  }, [form, tcsAuto, autoTcs]);
 
   const fieldClassName =
     "h-10 border-[#2a2d34] bg-[#14161b] text-zinc-100 placeholder:text-zinc-500";
@@ -404,12 +454,37 @@ export function SoyaFactoryForm({
                             className={`${fieldClassName} pl-7`}
                             {...field}
                             value={field.value === 0 ? "" : field.value}
-                            onChange={(event) =>
-                              field.onChange(parseFloat(event.target.value) || 0)
-                            }
+                            onChange={(event) => {
+                              setTcsAuto(false);
+                              field.onChange(parseFloat(event.target.value) || 0);
+                            }}
                           />
                         </div>
                       </FormControl>
+                      {yearToDate === null ? (
+                        <p className="text-xs text-zinc-500">
+                          {TCS_PERCENT}% above ₹50 lakh a year per factory. Pick
+                          the factory to work it out.
+                        </p>
+                      ) : tcsAuto ? (
+                        <p className="text-xs text-zinc-500">
+                          Auto: {TCS_PERCENT}% above ₹50 lakh. Bought this year
+                          before this bill:{" "}
+                          {formatCurrencyINR(yearToDate, { maximumFractionDigits: 0 })}.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-zinc-500">
+                          Entered by hand.{" "}
+                          <button
+                            type="button"
+                            onClick={() => setTcsAuto(true)}
+                            className="cursor-pointer text-[#ff8f6b] underline-offset-2 hover:underline"
+                          >
+                            Use auto{" "}
+                            {formatCurrencyINR(autoTcs ?? 0, { maximumFractionDigits: 2 })}
+                          </button>
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

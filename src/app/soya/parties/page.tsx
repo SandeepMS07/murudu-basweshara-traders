@@ -7,11 +7,21 @@ import { getActiveSoyaCompanyScope } from "@/features/soya/lib/company-scope";
 import { SoyaPartyTableClient } from "@/features/soya-parties/components/SoyaPartyTableClient";
 import {
   getSoyaParties,
+  getSoyaPartyCreditDays,
   getSoyaPartyEntries,
   getSoyaPartyPayments,
 } from "@/features/soya-parties/service/soya-party.service";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { getFinancialYearBounds } from "@/lib/financial-year";
+import { computeOpenBills, ownerKey } from "@/features/soya/lib/open-balances";
+import type { SoyaBillDue } from "@/features/soya-parties/components/Columns";
+
+const DAY_MS = 86_400_000;
+
+/** Whole days from one yyyy-MM-dd date to another. */
+function daysBetween(from: string, to: string) {
+  return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);
+}
 
 export default async function SoyaPartiesPage() {
   await requireSoyaAdminPage();
@@ -61,6 +71,40 @@ export default async function SoyaPartiesPage() {
   const scoped = entries.filter(
     (entry) => entry.date >= fyStart && entry.date <= fyEnd,
   );
+
+  // Unpaid bills, oldest cleared first by payments, against each party's
+  // credit days. Every bill, not just this year's: an old unpaid bill is
+  // still overdue.
+  const creditDays = await getSoyaPartyCreditDays(scope);
+  const creditByName = new Map(
+    parties
+      .filter((party) => creditDays.has(party.id))
+      .map((party) => [ownerKey(party.name), creditDays.get(party.id)!]),
+  );
+  const today = nowIst.toLocaleDateString("en-CA");
+  const openById = computeOpenBills(
+    parties,
+    entries.map((entry) => ({
+      id: entry.id,
+      owner: entry.party,
+      date: entry.date,
+      sl_no: entry.sl_no,
+      total: entry.total_amount,
+    })),
+    payments.map((payment) => ({ ownerId: payment.party_id, amount: payment.amount })),
+  );
+  const dueById: Record<string, SoyaBillDue> = {};
+  for (const entry of entries) {
+    const open = openById.get(entry.id) ?? 0;
+    if (open <= 0) continue;
+    const age = Math.max(daysBetween(entry.date, today), 0);
+    const credit = creditByName.get(ownerKey(entry.party));
+    dueById[entry.id] = {
+      open,
+      age,
+      dueIn: credit === undefined ? null : credit - age,
+    };
+  }
 
   const totalBags = scoped.reduce((sum, entry) => sum + entry.bags, 0);
   const totalNetWt = scoped.reduce((sum, entry) => sum + entry.net_wt, 0);
@@ -112,6 +156,7 @@ export default async function SoyaPartiesPage() {
         data={entries}
         partyNames={parties.map((party) => party.name)}
         addHref="/soya/parties/new"
+        dueById={dueById}
       />
     </AppShell>
   );
