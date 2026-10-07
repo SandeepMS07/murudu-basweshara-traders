@@ -13,6 +13,7 @@ const base = {
   freight: 260,
   fright: 90480,
   party: "ANNAM",
+  payment_terms: "",
   factory: "ADM",
 };
 

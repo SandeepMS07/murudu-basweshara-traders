@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -8,7 +8,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import {
   createSoyaPartyColumns,
-  type SoyaBillDue,
+  getSoyaPartyDueDate,
 } from "@/features/soya-parties/components/Columns";
 import type { SoyaPartyEntry } from "@/features/soya-parties/schemas";
 import { deleteSoyaPartyEntryAction } from "@/app/soya/parties/actions";
@@ -17,21 +17,55 @@ interface SoyaPartyTableClientProps {
   data: SoyaPartyEntry[];
   partyNames: string[];
   addHref?: string;
-  /** Unpaid bills by entry id; adds the DUE column. */
-  dueById?: Record<string, SoyaBillDue>;
+  /** Unpaid amount per bill; adds the due columns and row colours. */
+  pendingById?: Record<string, number>;
 }
+
+/** The maize Sales legend, colours and order included. */
+const LEGEND = [
+  { label: "Overdue (date crossed)", box: "border-[#3b1b1b] bg-[#2a1111]/40", dot: "bg-[#ef4444]" },
+  { label: "Due Today", box: "border-[#3d3418] bg-[#2a2412]/40", dot: "bg-[#f59e0b]" },
+  { label: "Cleared", box: "border-[#1d3a27] bg-[#102015]/30", dot: "bg-[#22c55e]" },
+  { label: "Upcoming", box: "border-[#2a2d34] bg-[#15171c]", dot: "bg-[#71717a]" },
+];
 
 export function SoyaPartyTableClient({
   data,
   partyNames,
   addHref = "/soya/parties/new",
-  dueById,
+  pendingById,
 }: SoyaPartyTableClientProps) {
   const [selectedParty, setSelectedParty] = useState("");
 
   const columns = useMemo(
-    () => createSoyaPartyColumns(deleteSoyaPartyEntryAction, dueById),
-    [dueById],
+    () => createSoyaPartyColumns(deleteSoyaPartyEntryAction, pendingById),
+    [pendingById],
+  );
+
+  const todayStart = useMemo(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }, []);
+
+  // Same statuses and colours as maize Sales.
+  const getRowClassName = useCallback(
+    (entry: SoyaPartyEntry) => {
+      if (!pendingById) return "";
+      if ((pendingById[entry.id] ?? 0) <= 0) {
+        return "bg-[#102015]/30 text-[#c7f2d2] hover:bg-[#16301f]/45";
+      }
+      const dueDate = getSoyaPartyDueDate(entry);
+      if (!dueDate) return "";
+      const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+      if (dueStart.getTime() < todayStart.getTime()) {
+        return "bg-[#2a1111]/40 text-[#f5d3d3] hover:bg-[#361616]/50";
+      }
+      if (dueStart.getTime() === todayStart.getTime()) {
+        return "bg-[#2a2412]/40 text-[#f7e3b0] hover:bg-[#352d16]/50";
+      }
+      return "";
+    },
+    [pendingById, todayStart],
   );
 
   const filteredData = useMemo(() => {
@@ -55,8 +89,24 @@ export function SoyaPartyTableClient({
           .some((field) => field.toLowerCase().includes(query));
       }}
       toolbarRight={null}
+      rowClassName={(row) => getRowClassName(row.original)}
       toolbarBelow={
-        <div className="flex w-full justify-end">
+        <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          {pendingById ? (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+              {LEGEND.map((item) => (
+                <div
+                  key={item.label}
+                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border px-2 py-1 text-xs text-zinc-200 ${item.box}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${item.dot}`} />
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
           <select
             value={selectedParty}
             onChange={(event) => setSelectedParty(event.target.value)}

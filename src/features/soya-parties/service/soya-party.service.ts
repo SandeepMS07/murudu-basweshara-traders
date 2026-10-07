@@ -74,6 +74,7 @@ function toEntry(row: Row): SoyaPartyEntry {
     freight: n(row.freight as number),
     fright: n(row.fright as number),
     party: s(row.party as string),
+    payment_terms: s(row.payment_terms as string),
     factory: s(row.factory as string),
     company_id: s(row.company_id as string),
   };
@@ -204,50 +205,6 @@ export async function createSoyaParty(
   const party = await upsertSoyaPartyByName(name, scope);
   if (!party) throw new Error("Party name is required");
   return party;
-}
-
-/**
- * Credit days per party id, for the open company. Read on its own, and empty
- * until supabase/soya-party-credit-days.sql has run, so a missing column never
- * breaks the party list.
- */
-export async function getSoyaPartyCreditDays(
-  scope: SoyaCompanyScope,
-): Promise<Map<string, number>> {
-  const { data, error } = await supabaseServer
-    .from(MASTER)
-    .select("id, credit_days")
-    .is("deleted_at", null)
-    .not("credit_days", "is", null)
-    .or(companyScopeFilter(scope));
-  if (error) return new Map();
-  return new Map(
-    (data as { id: string; credit_days: number }[]).map((row) => [
-      String(row.id),
-      Number(row.credit_days),
-    ]),
-  );
-}
-
-/** Sets a party's credit days; null clears them. */
-export async function updateSoyaPartyCreditDays(
-  id: string,
-  days: number | null,
-): Promise<void> {
-  await requireRole(["admin"]);
-  if (days !== null && (!Number.isInteger(days) || days < 0 || days > 365)) {
-    throw new Error("Credit days must be a whole number from 0 to 365");
-  }
-  const { error } = await supabaseServer
-    .from(MASTER)
-    .update({ credit_days: days, updated_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) {
-    if (error.message.includes("credit_days")) {
-      throw new Error("Run supabase/soya-party-credit-days.sql to enable credit days");
-    }
-    throw new Error(`Failed to save credit days: ${error.message}`);
-  }
 }
 
 export async function updateSoyaParty(
@@ -457,6 +414,7 @@ function buildEntryPayload(entry: SoyaPartyEntry) {
     freight: entry.freight,
     fright: entry.fright,
     party: entry.party,
+    payment_terms: entry.payment_terms,
     factory: entry.factory,
     updated_at: new Date().toISOString(),
   };

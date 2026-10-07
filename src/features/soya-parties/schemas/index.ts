@@ -36,6 +36,11 @@ export const soyaPartyEntrySchema = z.object({
   freight: z.number().min(0).default(0),
   fright: z.number().min(0).default(0),
   party: z.string().trim().min(1, "Party is required"),
+  /**
+   * Credit allowed on this bill, e.g. "30 Days" — as on maize Sales. The
+   * leading number is the days; the due date is the bill date plus that.
+   */
+  payment_terms: z.string().trim().default(""),
   /** Which factory the goods came from; the ledger tabs record it. */
   factory: z.string().trim().default(""),
   /**

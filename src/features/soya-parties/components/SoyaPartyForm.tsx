@@ -78,6 +78,7 @@ export function SoyaPartyForm({
           freight: initialData.freight,
           fright: initialData.fright,
           party: initialData.party,
+          payment_terms: initialData.payment_terms,
           factory: initialData.factory,
           company_id: initialData.company_id || defaultCompanyId,
         }
@@ -93,6 +94,7 @@ export function SoyaPartyForm({
           freight: 0,
           fright: 0,
           party: "",
+          payment_terms: "",
           factory: "",
           company_id: defaultCompanyId,
         },
@@ -403,6 +405,24 @@ export function SoyaPartyForm({
                           <option key={option} value={option} />
                         ))}
                       </datalist>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payment_terms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PAYMENT TERMS</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value ?? ""}
+                          placeholder="Ex: 30 Days"
+                          className={fieldClassName}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -6,7 +6,6 @@ import { getActiveSoyaCompanyScope } from "@/features/soya/lib/company-scope";
 import { SoyaPartyLedger } from "@/features/soya-parties/components/SoyaPartyLedger";
 import {
   getSoyaParties,
-  getSoyaPartyCreditDays,
   getSoyaPartyEntries,
   getSoyaPartyPayments,
 } from "@/features/soya-parties/service/soya-party.service";
@@ -52,17 +51,13 @@ export default async function SoyaPartyMasterPage() {
 
   // GST identity of the same records, shown as a tab in the ledger. Absent
   // (null) if the company layer is not migrated; the ledger works without it.
-  const [gstRows, creditDays] = await Promise.all([
-    getSoyaCounterparties("party", scope).catch(() => null),
-    getSoyaPartyCreditDays(scope),
-  ]);
+  const gstRows = await getSoyaCounterparties("party", scope).catch(() => null);
 
   return (
     <AppShell>
       <SoyaPartyLedger
         gstRows={gstRows}
         activeCompanyId={scope.companyId}
-        creditDays={Object.fromEntries(creditDays)}
         parties={partiesResult.value}
         entries={entriesResult.status === "fulfilled" ? entriesResult.value : []}
         payments={payments.map((payment) => ({

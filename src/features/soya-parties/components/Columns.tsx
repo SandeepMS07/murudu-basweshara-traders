@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format, parseISO } from "date-fns";
+import { addDays, format, isValid, parseISO } from "date-fns";
 
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { SoyaRowActions } from "@/features/soya/components/SoyaRowActions";
@@ -18,42 +18,19 @@ const whole = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 const num = (value: number) => formatNumberIN(value, whole);
 const money = (value: number) => formatCurrencyINR(value, whole);
-/**
- * Where an unpaid bill stands: its age in days, and against the party's credit
- * days when they are set. Absent for a bill that is fully paid.
- */
-export type SoyaBillDue = {
-  open: number;
-  age: number;
-  /** Days left before it is due (0 = due today); null without credit days. */
-  dueIn: number | null;
-};
 
-function DueCell({ due }: { due: SoyaBillDue | undefined }) {
-  if (!due) return <span className="text-emerald-400/80">Paid</span>;
-  const title = `${money(due.open)} unpaid · ${due.age} day${due.age === 1 ? "" : "s"} old`;
-  if (due.dueIn === null) {
-    return (
-      <span title={title} className="text-zinc-300">
-        {due.age} d
-      </span>
-    );
-  }
-  if (due.dueIn < 0) {
-    return (
-      <span
-        title={title}
-        className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-xs font-medium text-red-300"
-      >
-        Overdue {-due.dueIn} d
-      </span>
-    );
-  }
-  return (
-    <span title={title} className={due.dueIn <= 3 ? "text-amber-300" : "text-zinc-300"}>
-      {due.dueIn === 0 ? "Due today" : `Due in ${due.dueIn} d`}
-    </span>
-  );
+/** Leading number of days in "30 Days"; 0 when absent, as on maize Sales. */
+function parseTermDays(terms: string | null | undefined) {
+  const parsed = Number.parseInt(String(terms ?? "").trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
+/** Bill date plus its payment terms — the maize Sales due-date rule. */
+export function getSoyaPartyDueDate(entry: SoyaPartyEntry): Date | null {
+  const billDate = parseISO(entry.date);
+  if (!isValid(billDate)) return null;
+  return addDays(billDate, parseTermDays(entry.payment_terms));
 }
 
 const nowrap = {
@@ -63,7 +40,8 @@ const nowrap = {
 
 export function createSoyaPartyColumns(
   deleteAction: (id: string) => Promise<void>,
-  dueById?: Record<string, SoyaBillDue>,
+  /** Unpaid amount per bill (FIFO); adds PAYMENT / PENDING / DUE DATE. */
+  pendingById?: Record<string, number>,
 ): ColumnDef<SoyaPartyEntry>[] {
   return [
     {
@@ -84,24 +62,6 @@ export function createSoyaPartyColumns(
       },
       meta: nowrap,
     },
-    ...(dueById
-      ? [
-          {
-            id: "due",
-            header: "DUE",
-            accessorFn: (entry: SoyaPartyEntry) => {
-              const due = dueById[entry.id];
-              // Sorts overdue first, then soonest due, then paid.
-              if (!due) return Number.MAX_SAFE_INTEGER;
-              return due.dueIn ?? -due.age;
-            },
-            cell: ({ row }: { row: { original: SoyaPartyEntry } }) => (
-              <DueCell due={dueById[row.original.id]} />
-            ),
-            meta: nowrap,
-          } satisfies ColumnDef<SoyaPartyEntry>,
-        ]
-      : []),
     {
       accessorKey: "bill_no",
       header: "BILL NO",
@@ -176,6 +136,32 @@ export function createSoyaPartyColumns(
       header: "PARTY",
       cell: ({ row }) => row.original.party || "-",
     },
+    ...(pendingById
+      ? ([
+          {
+            accessorKey: "payment_terms",
+            header: "PAYMENT",
+            cell: ({ row }) => row.original.payment_terms || "-",
+            meta: nowrap,
+          },
+          {
+            id: "pending",
+            header: "PENDING",
+            accessorFn: (entry) => pendingById[entry.id] ?? 0,
+            cell: ({ row }) => money(Math.max(pendingById[row.original.id] ?? 0, 0)),
+            meta: nowrap,
+          },
+          {
+            id: "due_date",
+            header: "DUE DATE",
+            cell: ({ row }) => {
+              const dueDate = getSoyaPartyDueDate(row.original);
+              return dueDate ? format(dueDate, "dd-MM-yyyy") : "-";
+            },
+            meta: nowrap,
+          },
+        ] satisfies ColumnDef<SoyaPartyEntry>[])
+      : []),
     {
       accessorKey: "fright",
       header: "FRIGHT",
