@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/AppShell";
@@ -23,6 +24,11 @@ export default async function CompaniesPage() {
     getCompanyPaymentAllocations(),
   ]);
 
+  // "Today" in IST so the date presets match what the server considers today.
+  const nowIst = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+  );
+
   return (
     <AppShell>
       <CompaniesManager
@@ -30,6 +36,7 @@ export default async function CompaniesPage() {
         sales={sales}
         payments={payments}
         allocations={allocations}
+        todayIso={format(nowIst, "yyyy-MM-dd")}
       />
     </AppShell>
   );

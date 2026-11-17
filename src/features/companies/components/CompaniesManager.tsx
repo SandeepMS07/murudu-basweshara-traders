@@ -38,6 +38,16 @@ import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import { computeEffectiveSalePending } from "@/features/companies/lib/payment-allocation";
 import { exportWorkbookToXlsx } from "@/lib/excel/client-export";
 import { printIframeAs } from "@/lib/print-iframe";
+import { DateRangeFilter } from "@/components/shared/DateRangeFilter";
+import {
+  sliceStatementPeriod,
+  type EarlierOutstanding,
+} from "@/features/companies/lib/statement-period";
+import {
+  formatRangeLabel,
+  normalizeRange,
+  type DateRange,
+} from "@/lib/date-range";
 
 type CompanyDraft = {
   type: "issuer" | "buyer";
@@ -72,13 +82,18 @@ interface CompaniesManagerProps {
   sales: Sale[];
   payments: CompanyPayment[];
   allocations: CompanyPaymentAllocation[];
+  /** "Today" (IST, yyyy-MM-dd) so the date presets agree with the server. */
+  todayIso: string;
 }
+
+const ALL_TIME: DateRange = { from: "", to: "" };
 
 export function CompaniesManager({
   companies,
   sales,
   payments,
   allocations,
+  todayIso,
 }: CompaniesManagerProps) {
   const canEdit = useCanEdit("sales");
   const [data, setData] = useState(companies);
@@ -91,6 +106,9 @@ export function CompaniesManager({
   const [activeBuyerId, setActiveBuyerId] = useState<string | null>(null);
   const [detailsTab, setDetailsTab] = useState<"sales" | "ledger">("sales");
   const [statementOpen, setStatementOpen] = useState(false);
+  const [rawRange, setRange] = useState<DateRange>(ALL_TIME);
+  const range = useMemo(() => normalizeRange(rawRange), [rawRange]);
+  const today = useMemo(() => parseISO(todayIso), [todayIso]);
   const statementFrameRef = useRef<HTMLIFrameElement | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -153,6 +171,30 @@ export function CompaniesManager({
       ),
     [activeBuyerAllocations, activeBuyerPayments, activeBuyerSales],
   );
+
+  // The date range narrows what is *shown* (table, export, statement) only.
+  // Pending is still computed over every bill above, because FIFO settles the
+  // oldest bill first — narrowing the allocator's input would move money
+  // between bills.
+  const period = useMemo(
+    () =>
+      sliceStatementPeriod(
+        activeBuyerSales,
+        activeBuyerPayments,
+        activeBuyerPending.pendingBySaleId,
+        range,
+      ),
+    [activeBuyerPayments, activeBuyerPending, activeBuyerSales, range],
+  );
+  const { earlierOutstanding } = period;
+  const isRangeActive = Boolean(range.from || range.to);
+  const statementSrc = useMemo(() => {
+    if (!activeBuyer) return "";
+    const params = new URLSearchParams({ embed: "1" });
+    if (range.from) params.set("from", range.from);
+    if (range.to) params.set("to", range.to);
+    return `/companies/${activeBuyer.id}/statement?${params.toString()}`;
+  }, [activeBuyer, range]);
 
   const submitDraft = () => {
     startTransition(async () => {
@@ -279,6 +321,28 @@ export function CompaniesManager({
                 onDelete={(company) => setDeleteTarget(company)}
                 isPending={isPending}
               />
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#252932] bg-[#14161b] p-2">
+                <DateRangeFilter
+                  value={rawRange}
+                  onChange={setRange}
+                  today={today}
+                />
+                {isRangeActive ? (
+                  <span className="text-xs text-zinc-400">
+                    Showing {period.sales.length} of {activeBuyerSales.length}{" "}
+                    bills · {formatRangeLabel(range)}
+                  </span>
+                ) : null}
+                {earlierOutstanding && earlierOutstanding.count > 0 ? (
+                  <span className="text-xs text-red-400">
+                    + {formatCurrencyINR(earlierOutstanding.amount, {
+                      maximumFractionDigits: 0,
+                    })}{" "}
+                    pending from {earlierOutstanding.count} earlier{" "}
+                    {earlierOutstanding.count === 1 ? "bill" : "bills"}
+                  </span>
+                ) : null}
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="inline-flex rounded-md border border-[#252932] bg-[#14161b] p-1">
                   <button
@@ -316,9 +380,12 @@ export function CompaniesManager({
 
               {detailsTab === "sales" ? (
                 <SalesDetailsTable
+                  key={`${activeBuyer.id}|${range.from}|${range.to}`}
                   companyName={activeBuyer.display_name || activeBuyer.name}
-                  sales={activeBuyerSales}
-                  payments={activeBuyerPayments}
+                  sales={period.sales}
+                  payments={period.payments}
+                  range={range}
+                  earlierOutstanding={earlierOutstanding}
                   pendingBySaleId={activeBuyerPending.pendingBySaleId}
                   companies={data}
                 />
@@ -584,7 +651,9 @@ export function CompaniesManager({
                   const name = activeBuyer.display_name || activeBuyer.name;
                   printIframeAs(
                     statementFrameRef.current?.contentWindow,
-                    `${name} Statement ${format(new Date(), "dd-MM-yyyy")}`,
+                    isRangeActive
+                      ? `${name} Statement ${formatRangeLabel(range)}`
+                      : `${name} Statement ${format(new Date(), "dd-MM-yyyy")}`,
                   );
                 }}
                 className="border border-[#ff6a3d] bg-[#ff6a3d] text-white hover:bg-[#ff5a28]"
@@ -606,7 +675,7 @@ export function CompaniesManager({
           {activeBuyer && statementOpen ? (
             <iframe
               ref={statementFrameRef}
-              src={`/companies/${activeBuyer.id}/statement?embed=1`}
+              src={statementSrc}
               title="Statement of Account"
               className="min-h-0 flex-1 bg-white"
             />
@@ -717,12 +786,16 @@ function SalesDetailsTable({
   payments,
   pendingBySaleId,
   companies,
+  range,
+  earlierOutstanding,
 }: {
   companyName: string;
   sales: Sale[];
   payments: CompanyPayment[];
   pendingBySaleId: Record<string, number>;
   companies: Company[];
+  range: DateRange;
+  earlierOutstanding: EarlierOutstanding | null;
 }) {
   const PAGE_SIZE = 8;
   const companyNameById = useMemo(
@@ -845,6 +918,15 @@ function SalesDetailsTable({
 
     const summaryRows = [
       { Metric: "Company", Value: companyName },
+      { Metric: "Period", Value: formatRangeLabel(range) },
+      ...(earlierOutstanding && earlierOutstanding.count > 0
+        ? [
+            {
+              Metric: "Pending From Earlier Bills",
+              Value: earlierOutstanding.amount,
+            },
+          ]
+        : []),
       { Metric: "Total Sales Amount", Value: totalAmountSummary },
       { Metric: "Total Received", Value: totalReceived },
       { Metric: "Total Pending", Value: totalPendingSummary },
@@ -929,7 +1011,11 @@ function SalesDetailsTable({
         },
       ],
       {
-      fileName: `company-report-${companyName.replace(/\s+/g, "-").toLowerCase()}`,
+      fileName: `company-report-${companyName.replace(/\s+/g, "-").toLowerCase()}${
+        range.from || range.to
+          ? `-${formatRangeLabel(range).replace(/\s+/g, "-").toLowerCase()}`
+          : ""
+      }`,
       emptyMessage: "No company data found",
       }
     );

@@ -11,6 +11,16 @@ import {
   getCompanyPayments,
 } from "@/features/companies/service/company.service";
 import { getSales } from "@/features/sales/service/sale.service";
+import { sliceStatementPeriod } from "@/features/companies/lib/statement-period";
+import {
+  formatRangeLabel,
+  normalizeRange,
+  type DateRange,
+} from "@/lib/date-range";
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const readDate = (value: string | undefined) =>
+  value && ISO_DATE.test(value) ? value : "";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +50,7 @@ export default async function CompanyStatementPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ embed?: string }>;
+  searchParams?: Promise<{ embed?: string; from?: string; to?: string }>;
 }) {
   const user = await requireAuth();
   if (user.role !== "admin") {
@@ -48,7 +58,11 @@ export default async function CompanyStatementPage({
   }
 
   const { id } = await params;
-  const { embed } = (await searchParams) || {};
+  const { embed, from, to } = (await searchParams) || {};
+  const range: DateRange = normalizeRange({
+    from: readDate(from),
+    to: readDate(to),
+  });
 
   const [companies, sales, payments, allocations] = await Promise.all([
     getCompanies(),
@@ -79,6 +93,14 @@ export default async function CompanyStatementPage({
     buyerAllocations,
   );
 
+  // The period only narrows what is printed; pending above is full-history.
+  const period = sliceStatementPeriod(
+    buyerSales,
+    buyerPayments,
+    pendingBySaleId,
+    range,
+  );
+
   return (
     <div className={inter.className}>
       <CompanyStatementView
@@ -86,8 +108,14 @@ export default async function CompanyStatementPage({
         companyAddress={buyer.address || undefined}
         companyPhone={buyer.phone || undefined}
         companyGstin={buyer.gstin || undefined}
-        sales={buyerSales}
-        payments={buyerPayments}
+        sales={period.sales}
+        payments={period.payments}
+        lookupSales={buyerSales}
+        earlierOutstanding={period.earlierOutstanding}
+        periodStart={range.from || undefined}
+        periodLabel={
+          range.from || range.to ? formatRangeLabel(range) : undefined
+        }
         pendingBySaleId={pendingBySaleId}
         saleIdsByPaymentId={saleIdsByPaymentId}
         companies={companies}

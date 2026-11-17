@@ -15,6 +15,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Company, CompanyPayment } from "@/features/companies/schemas";
+import type { EarlierOutstanding } from "@/features/companies/lib/statement-period";
 import { Sale } from "@/features/sales/schemas";
 import { formatCurrencyINR, formatNumberIN } from "@/lib/number-format";
 import {
@@ -218,6 +219,17 @@ interface CompanyStatementViewProps {
   saleIdsByPaymentId: Record<string, string[]>;
   companies: Company[];
   hideBackLink?: boolean;
+  /** Shown under the title when the statement is limited to a date range. */
+  periodLabel?: string;
+  /**
+   * Every bill for this customer, used only to resolve the bill numbers a
+   * payment settled — a payment inside the period can clear a bill dated
+   * before it. Defaults to `sales`.
+   */
+  lookupSales?: Sale[];
+  /** Unpaid bills dated before the period (only when a start date is set). */
+  earlierOutstanding?: EarlierOutstanding | null;
+  periodStart?: string;
 }
 
 export function CompanyStatementView({
@@ -231,6 +243,10 @@ export function CompanyStatementView({
   saleIdsByPaymentId,
   companies,
   hideBackLink,
+  periodLabel,
+  lookupSales,
+  earlierOutstanding,
+  periodStart,
 }: CompanyStatementViewProps) {
   // Wide ledgers often read better on landscape paper; the choice is the
   // user's and is remembered per statement.
@@ -247,8 +263,8 @@ export function CompanyStatementView({
     [companies],
   );
   const saleById = useMemo(
-    () => new Map(sales.map((sale) => [sale.id, sale])),
-    [sales],
+    () => new Map((lookupSales ?? sales).map((sale) => [sale.id, sale])),
+    [lookupSales, sales],
   );
 
   const today = new Date();
@@ -464,6 +480,21 @@ export function CompanyStatementView({
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#c2410c]">
                   Statement of Account
                 </div>
+                {periodLabel ? (
+                  <div className="mt-1 text-xs font-medium text-zinc-700">
+                    Period: {periodLabel}
+                  </div>
+                ) : null}
+                {earlierOutstanding && earlierOutstanding.count > 0 && periodStart ? (
+                  <div className="mt-1 text-xs font-medium text-red-700">
+                    Also pending before {formatDisplayDate(periodStart)}:{" "}
+                    {formatCurrencyINR(earlierOutstanding.amount, {
+                      maximumFractionDigits: 0,
+                    })}{" "}
+                    ({earlierOutstanding.count}{" "}
+                    {earlierOutstanding.count === 1 ? "bill" : "bills"})
+                  </div>
+                ) : null}
                 <div className="mt-1 text-xs text-zinc-500">
                   Generated on {format(new Date(), "dd-MM-yyyy")}
                 </div>

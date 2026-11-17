@@ -82,6 +82,14 @@ export function matchingPreset(
   return null;
 }
 
+/** Swaps the bounds if they were entered backwards (e.g. typed by hand). */
+export function normalizeRange(range: DateRange): DateRange {
+  if (range.from && range.to && range.from > range.to) {
+    return { from: range.to, to: range.from };
+  }
+  return range;
+}
+
 /** Inclusive date test. An empty bound is open-ended. */
 export function isWithinRange(date: string, range: DateRange): boolean {
   if (range.from && date < range.from) return false;
